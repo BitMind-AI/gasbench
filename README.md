@@ -1,6 +1,6 @@
 # GASBench
 
-A benchmark evaluation package for ML models, providing tools for evaluating AI-generated content detection models on image and video datasets.
+A benchmark evaluation package for discriminative models on [Bittensor Subnet 34 (GAS - Generative Adversarial Subnet)](https://github.com/BitMind-AI/bitmind-subnet). This tool evaluates AI-generated content detection models on diverse image and video datasets.
 
 ## Overview
 

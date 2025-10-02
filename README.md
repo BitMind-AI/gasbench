@@ -180,9 +180,9 @@ Benchmark results are automatically saved to a timestamped JSON file with the fo
     }
   },
   "validation": {
-    "input_shape": "(1, 3, 224, 224)",
+    "input_shape": "['batch', 3, 'height', 'width']",
     "input_type": "tensor(uint8)",
-    "output_shape": "(1, 2)"
+    "output_shape": "['batch', 2]"
   },
   "errors": []
 }
@@ -190,13 +190,7 @@ Benchmark results are automatically saved to a timestamped JSON file with the fo
 
 ## Model Requirements
 
-Your ONNX model should:
-- Accept inputs of shape `(1, 3, 224, 224)` for images or `(1, 16, 3, 224, 224)` for videos
-- Use `uint8` data type (0-255 range)
-- Output one of:
-  - **Binary**: 2 outputs `[human_prob, ai_prob]`
-  - **3-class**: 3 outputs `[real_prob, synthetic_prob, semisynthetic_prob]`
-  - **Single sigmoid**: 1 output where >0.5 indicates AI-generated
+For detailed ONNX model requirements, see the [ONNX Model Specification](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/ONNX.md) from the BitMind Subnet documentation.
 
 ## Datasets
 

@@ -21,7 +21,7 @@ Example usage:
 
 from .benchmarks.image_bench import run_image_benchmark
 from .benchmarks.video_bench import run_video_benchmark
-from .benchmark import run_benchmark, print_benchmark_summary
+from .benchmark import run_benchmark, print_benchmark_summary, save_results_to_json
 from .model.inference import create_inference_session
 
 __version__ = "0.1.0"
@@ -33,4 +33,5 @@ __all__ = [
     "run_benchmark",
     "create_inference_session",
     "print_benchmark_summary",
+    "save_results_to_json",
 ]

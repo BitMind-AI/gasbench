@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 import os
+import json
 import time
 import uuid
 import asyncio
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional
 
 from .logger import get_logger
@@ -37,7 +40,7 @@ async def run_benchmark(
 
     configure_huggingface_cache(cache_dir)
     run_id = str(uuid.uuid4())
-    
+
     benchmark_results = {
         "model_path": model_path,
         "modality": modality,
@@ -62,13 +65,19 @@ async def run_benchmark(
         session, input_specs = await load_model_for_benchmark(
             model_path, modality, benchmark_results
         )
-        
+
         if not session:
             return benchmark_results
 
         # Run benchmark for the specified modality
         benchmark_score = await execute_benchmark(
-            session, input_specs, modality, benchmark_results, debug_mode, gasstation_only, cache_dir
+            session,
+            input_specs,
+            modality,
+            benchmark_results,
+            debug_mode,
+            gasstation_only,
+            cache_dir,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -101,9 +110,11 @@ async def run_benchmark(
     return benchmark_results
 
 
-async def load_model_for_benchmark(model_path: str, modality: str, benchmark_results: Dict):
+async def load_model_for_benchmark(
+    model_path: str, modality: str, benchmark_results: Dict
+):
     """Load and validate ONNX model for benchmarking."""
-    
+
     if not os.path.exists(model_path):
         benchmark_results["errors"].append(f"Model file not found: {model_path}")
         return None, None
@@ -134,16 +145,16 @@ async def load_model_for_benchmark(model_path: str, modality: str, benchmark_res
 
 
 async def execute_benchmark(
-    session, 
-    input_specs, 
-    modality: str, 
-    benchmark_results: Dict, 
-    debug_mode: bool, 
+    session,
+    input_specs,
+    modality: str,
+    benchmark_results: Dict,
+    debug_mode: bool,
     gasstation_only: bool = False,
-    cache_dir: str = "/.cache/gasbench"
+    cache_dir: str = "/.cache/gasbench",
 ) -> float:
     """Execute the actual benchmark evaluation."""
-    
+
     logger.info(f"Running {modality} benchmark (gasstation_only={gasstation_only})")
     if modality == "image":
         benchmark_score = await run_image_benchmark(
@@ -156,26 +167,26 @@ async def execute_benchmark(
         )
     elif modality == "video":
         benchmark_score = await run_video_benchmark(
-            session, 
-            input_specs, 
-            benchmark_results, 
-            debug_mode, 
-            gasstation_only, 
-            cache_dir
+            session,
+            input_specs,
+            benchmark_results,
+            debug_mode,
+            gasstation_only,
+            cache_dir,
         )
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")
-    
+
     return benchmark_score
 
 
 def print_benchmark_summary(benchmark_results: Dict):
     """Print a comprehensive summary of benchmark results."""
-    
-    print("\n" + "="*80)
+
+    print("\n" + "=" * 80)
     print("BENCHMARK RESULTS SUMMARY")
-    print("="*80)
-    
+    print("=" * 80)
+
     print(f"Model Path: {benchmark_results.get('model_path', 'N/A')}")
     print(f"Modality: {benchmark_results.get('modality', 'N/A').upper()}")
     print(f"Run ID: {benchmark_results.get('run_id', 'N/A')}")
@@ -184,64 +195,64 @@ def print_benchmark_summary(benchmark_results: Dict):
     print(f"Completed: {benchmark_results.get('benchmark_completed', False)}")
     duration = benchmark_results.get("metrics", {}).get("benchmark_duration_seconds", 0)
     print(f"Duration: {duration:.2f} seconds")
-    
+
     score = benchmark_results.get("benchmark_score", 0.0)
     print(f"\n🎯 OVERALL SCORE: {score:.2%}")
-    
+
     # Modality-specific results
     modality = benchmark_results.get("modality")
     if modality:
         results_key = f"{modality}_results"
         if results_key in benchmark_results:
             results = benchmark_results[results_key]
-            
+
             print(f"\n📊 {modality.upper()} RESULTS:")
             print(f"  Total Samples: {results.get('total_samples', 0)}")
             print(f"  Correct Predictions: {results.get('correct_predictions', 0)}")
             print(f"  Accuracy: {results.get('benchmark_score', 0.0):.2%}")
-            
-            avg_time = results.get('avg_inference_time_ms', 0)
-            p95_time = results.get('p95_inference_time_ms', 0)
+
+            avg_time = results.get("avg_inference_time_ms", 0)
+            p95_time = results.get("p95_inference_time_ms", 0)
             if avg_time > 0:
                 print(f"  Avg Inference Time: {avg_time:.1f}ms")
             if p95_time > 0:
                 print(f"  P95 Inference Time: {p95_time:.1f}ms")
-            
-            binary_mcc = results.get('binary_mcc', 0.0)
-            multiclass_mcc = results.get('multiclass_mcc', 0.0)
+
+            binary_mcc = results.get("binary_mcc", 0.0)
+            multiclass_mcc = results.get("multiclass_mcc", 0.0)
             if binary_mcc != 0.0:
                 print(f"  Binary MCC: {binary_mcc:.4f}")
             if multiclass_mcc != 0.0:
                 print(f"  Multiclass MCC: {multiclass_mcc:.4f}")
-            
-            per_dataset = results.get('per_dataset_results', {})
+
+            per_dataset = results.get("per_dataset_results", {})
             if per_dataset:
                 print(f"\n📋 PER-DATASET RESULTS:")
                 for dataset_name, dataset_results in per_dataset.items():
-                    accuracy = dataset_results.get('accuracy', 0.0)
-                    total = dataset_results.get('total', 0)
-                    correct = dataset_results.get('correct', 0)
+                    accuracy = dataset_results.get("accuracy", 0.0)
+                    total = dataset_results.get("total", 0)
+                    correct = dataset_results.get("correct", 0)
                     print(f"  {dataset_name}: {accuracy:.2%} ({correct}/{total})")
-            
-            per_source = results.get('per_source_accuracy', {})
+
+            per_source = results.get("per_source_accuracy", {})
             if per_source:
                 print(f"\n🎭 PER-SOURCE ACCURACY:")
                 for source_type, datasets in per_source.items():
                     print(f"  {source_type.upper()}:")
                     for dataset_name, stats in datasets.items():
-                        correct = stats.get('correct', 0)
-                        incorrect = stats.get('incorrect', 0)
+                        correct = stats.get("correct", 0)
+                        incorrect = stats.get("incorrect", 0)
                         total = correct + incorrect
                         accuracy = correct / total if total > 0 else 0.0
                         print(f"    {dataset_name}: {accuracy:.2%} ({correct}/{total})")
-    
+
     validation = benchmark_results.get("validation", {})
     if validation:
         print(f"\n🔍 MODEL VALIDATION:")
         print(f"  Input Shape: {validation.get('input_shape', 'N/A')}")
         print(f"  Input Type: {validation.get('input_type', 'N/A')}")
         print(f"  Output Shape: {validation.get('output_shape', 'N/A')}")
-    
+
     errors = benchmark_results.get("errors", [])
     if errors:
         print(f"\n❌ ERRORS ({len(errors)}):")
@@ -249,5 +260,105 @@ def print_benchmark_summary(benchmark_results: Dict):
             print(f"  {i}. {error}")
         if len(errors) > 5:
             print(f"  ... and {len(errors) - 5} more errors")
-    
-    print("="*80)
+
+    print("=" * 80)
+
+
+def save_results_to_json(
+    benchmark_results: Dict, output_dir: Optional[str] = None
+) -> str:
+    """
+    Save benchmark results to a timestamped JSON file.
+
+    Args:
+        benchmark_results: Dictionary containing all benchmark results
+        output_dir: Directory to save the JSON file (defaults to current directory)
+
+    Returns:
+        Path to the saved JSON file
+    """
+    if output_dir is None:
+        output_dir = "."
+
+    # Create output directory if it doesn't exist
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Generate timestamped filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    modality = benchmark_results.get("modality", "unknown")
+    filename = f"gasbench_results_{modality}_{timestamp}.json"
+    filepath = output_path / filename
+
+    # Prepare results for JSON serialization
+    output_data = {
+        "metadata": {
+            "run_id": benchmark_results.get("run_id"),
+            "timestamp": benchmark_results.get("timestamp"),
+            "datetime": datetime.fromtimestamp(
+                benchmark_results.get("timestamp", time.time())
+            ).isoformat(),
+            "model_path": benchmark_results.get("model_path"),
+            "modality": benchmark_results.get("modality"),
+            "debug_mode": benchmark_results.get("debug_mode", False),
+            "gasstation_only": benchmark_results.get("gasstation_only", False),
+            "benchmark_completed": benchmark_results.get("benchmark_completed", False),
+            "duration_seconds": benchmark_results.get("metrics", {}).get(
+                "benchmark_duration_seconds", 0
+            ),
+        },
+        "overall_score": benchmark_results.get("benchmark_score", 0.0),
+        "validation": benchmark_results.get("validation", {}),
+        "errors": benchmark_results.get("errors", []),
+    }
+
+    # Add modality-specific results
+    modality = benchmark_results.get("modality")
+    if modality:
+        results_key = f"{modality}_results"
+        if results_key in benchmark_results:
+            results = benchmark_results[results_key]
+
+            # Extract detailed metrics
+            output_data["results"] = {
+                "total_samples": results.get("total_samples", 0),
+                "correct_predictions": results.get("correct_predictions", 0),
+                "accuracy": results.get("benchmark_score", 0.0),
+                "avg_inference_time_ms": results.get("avg_inference_time_ms", 0),
+                "p95_inference_time_ms": results.get("p95_inference_time_ms", 0),
+                "binary_mcc": results.get("binary_mcc", 0.0),
+                "multiclass_mcc": results.get("multiclass_mcc", 0.0),
+            }
+
+            # Per-source accuracy
+            per_source = results.get("per_source_accuracy", {})
+            if per_source:
+                output_data["per_source_accuracy"] = {}
+                for source_type, datasets in per_source.items():
+                    output_data["per_source_accuracy"][source_type] = {}
+                    for dataset_name, stats in datasets.items():
+                        correct = stats.get("correct", 0)
+                        incorrect = stats.get("incorrect", 0)
+                        total = correct + incorrect
+                        accuracy = correct / total if total > 0 else 0.0
+                        output_data["per_source_accuracy"][source_type][
+                            dataset_name
+                        ] = {
+                            "samples": total,
+                            "correct": correct,
+                            "incorrect": incorrect,
+                            "accuracy": accuracy,
+                        }
+
+            # Dataset info
+            dataset_info = results.get("dataset_info", {})
+            if dataset_info:
+                output_data["dataset_info"] = dataset_info
+
+    # Write to JSON file
+    with open(filepath, "w") as f:
+        json.dump(output_data, f, indent=2)
+
+    logger.info(f"💾 Results saved to: {filepath}")
+
+    return str(filepath)

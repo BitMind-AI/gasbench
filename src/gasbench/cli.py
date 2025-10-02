@@ -6,7 +6,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-from .benchmark import run_benchmark, print_benchmark_summary
+from .benchmark import run_benchmark, print_benchmark_summary, save_results_to_json
 
 
 def main():
@@ -51,6 +51,10 @@ Examples:
         help="Directory for caching datasets (default: /.cache/gasbench)"
     )
     parser.add_argument(
+        "--output-dir",
+        help="Directory to save JSON results file (default: current directory)"
+    )
+    parser.add_argument(
         "--version", 
         action="version", 
         version="%(prog)s 0.1.0"
@@ -89,6 +93,10 @@ Examples:
         )
         
         print_benchmark_summary(results)
+        
+        # Save results to JSON file
+        output_path = save_results_to_json(results, output_dir=args.output_dir)
+        print(f"\n💾 Results saved to: {output_path}")
         
         if results.get("benchmark_completed"):
             print("\n✅ Benchmark completed successfully!")

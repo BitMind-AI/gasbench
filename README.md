@@ -54,13 +54,17 @@ gasbench model.onnx image --gasstation-only
 
 # Custom cache directory
 gasbench model.onnx video --cache-dir /tmp/my_cache
+
+# Save JSON results to a specific directory
+gasbench model.onnx image --output-dir ./results
 ```
+Results are automatically saved to a timestamped JSON file (e.g., `gasbench_results_image_20241002_143022.json`) in the current directory or the directory specified by `--output-dir`.
 
 ### Python API
 
 ```python
 import asyncio
-from gasbench import run_benchmark, print_benchmark_summary
+from gasbench import run_benchmark, print_benchmark_summary, save_results_to_json
 
 async def evaluate_model():
     results = await run_benchmark(
@@ -71,6 +75,10 @@ async def evaluate_model():
     )
     
     print_benchmark_summary(results)
+    
+    output_path = save_results_to_json(results, output_dir="./results")
+    print(f"Results saved to: {output_path}")
+    
     return results
 
 results = asyncio.run(evaluate_model())
@@ -127,6 +135,58 @@ Use `gasstation_only=True` to evaluate only on gasstation datasets for faster, f
 ### Cache Directory
 
 By default, datasets are cached at `/tmp/benchmark_data/`. Specify a custom location with `cache_dir` parameter or `--cache-dir` flag.
+
+### JSON Output
+
+Benchmark results are automatically saved to a timestamped JSON file with the following structure:
+
+```json
+{
+  "metadata": {
+    "run_id": "unique-run-identifier",
+    "timestamp": 1696258822.0,
+    "datetime": "2024-10-02T14:30:22",
+    "model_path": "path/to/model.onnx",
+    "modality": "image",
+    "debug_mode": false,
+    "gasstation_only": false,
+    "benchmark_completed": true,
+    "duration_seconds": 123.45
+  },
+  "overall_score": 0.1111,
+  "results": {
+    "total_samples": 5000,
+    "correct_predictions": 4261,
+    "accuracy": 0.1234,
+    "avg_inference_time_ms": 12.3,
+    "p95_inference_time_ms": 45.6,
+    "binary_mcc": 0.4321,
+    "multiclass_mcc": 0.1234
+  },
+  "per_source_accuracy": {
+    "real": {
+      "dataset_name": {
+        "samples": 1000,
+        "correct": 890,
+        "incorrect": 110,
+        "accuracy": 0.89
+      }
+    },
+    "synthetic": {
+      "...": "..."
+    },
+    "semisynthetic": {
+      "...": "..."
+    }
+  },
+  "validation": {
+    "input_shape": "(1, 3, 224, 224)",
+    "input_type": "tensor(uint8)",
+    "output_shape": "(1, 2)"
+  },
+  "errors": []
+}
+```
 
 ## Model Requirements
 

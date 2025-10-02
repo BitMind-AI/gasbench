@@ -18,9 +18,16 @@ logger = get_logger(__name__)
 class DatasetIterator:
     """Unified iterator for benchmark datasets with caching support."""
 
-    def __init__(self, dataset_config: BenchmarkDatasetConfig, max_samples: int = None, cache_dir: str = "/.cache/gasbench"):
+    def __init__(
+        self,
+        dataset_config: BenchmarkDatasetConfig,
+        max_samples: int = None,
+        cache_dir: str = "/.cache/gasbench",
+    ):
         self.config = dataset_config
-        self.max_samples = max_samples or min(IMAGE_BENCHMARK_SIZE, VIDEO_BENCHMARK_SIZE)
+        self.max_samples = max_samples or min(
+            IMAGE_BENCHMARK_SIZE, VIDEO_BENCHMARK_SIZE
+        )
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.dataset_dir = f"{cache_dir}/datasets/{dataset_config.name}"
@@ -48,52 +55,89 @@ class DatasetIterator:
             if self._has_cached_dataset():
                 logger.info(f"📂 Using cached dataset: {self.config.name}")
                 yield from self._load_from_cache()
-                return
-
-            logger.info(f"No cached datasets found.\nDownloading {self.config.name} (max {self.max_samples} samples)")
-
-            samples_dir = os.path.join(self.dataset_dir, "samples")
-            Path(samples_dir).mkdir(parents=True, exist_ok=True)
-            
-            sample_metadata = {}
-            sample_count = 0
-
-            for sample in download_and_extract(
-                self.config,
-                images_per_parquet=self.config.images_per_parquet,
-                videos_per_zip=self.config.videos_per_zip,
-                parquet_per_dataset=self.config.parquet_per_dataset,
-                zips_per_dataset=self.config.zips_per_dataset,
-                temp_dir=f"{self.cache_dir}/temp_downloads",
-                force_download=False,
-                cache_dir=self.cache_dir,
-            ):
-                if sample_count >= self.max_samples:
-                    break
-                
-                filename = save_sample_to_cache(sample, self.config, samples_dir, sample_count)
-                if filename:
-                    sample_metadata[filename] = {
-                        "source_file": sample.get("source_file", ""),
-                        "model_name": sample.get("model_name", ""),
-                        "media_type": sample.get("media_type", ""),
-                    }
-                    sample_count += 1
-                    
-                    if sample_count % 50 == 0:
-                        logger.info(f"📥 Downloaded {sample_count}/{self.max_samples} samples to cache...")
-
-            if sample_count > 0:
-                save_dataset_cache_files(self.config, self.dataset_dir, sample_metadata, sample_count)
-                logger.info(f"✅ DOWNLOAD COMPLETE: Saved {sample_count} samples to cache for {self.config.name}")
-                
-                yield from self._load_from_cache()
             else:
-                logger.warning(f"⚠️  No samples were downloaded for {self.config.name}")
+                # Download and cache, then yield from cache
+                self._download_and_cache()
+                yield from self._load_from_cache()
 
         except Exception as e:
             logger.error(f"❌ Failed to get samples from {self.config.name}: {e}")
             return
+
+    def _download_and_cache(self):
+        """Download samples and save them to cache with incremental checkpointing."""
+        samples_dir = os.path.join(self.dataset_dir, "samples")
+        metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
+
+        sample_metadata = {}
+        sample_count = 0
+
+        if os.path.exists(metadata_file):
+            try:
+                with open(metadata_file, "r") as f:
+                    sample_metadata = json.load(f)
+                sample_count = len(sample_metadata)
+                logger.info(
+                    f"📂 Found partial cache with {sample_count} samples, resuming download..."
+                )
+            except Exception as e:
+                logger.warning(f"Failed to load partial metadata, starting fresh: {e}")
+                sample_metadata = {}
+                sample_count = 0
+        else:
+            logger.info(
+                f"No cached datasets found.\nDownloading {self.config.name} (max {self.max_samples} samples)"
+            )
+
+        if sample_count >= self.max_samples:
+            logger.info(f"✅ Cache already complete with {sample_count} samples")
+            return
+
+        Path(samples_dir).mkdir(parents=True, exist_ok=True)
+
+        for sample in download_and_extract(
+            self.config,
+            images_per_parquet=self.config.images_per_parquet,
+            videos_per_zip=self.config.videos_per_zip,
+            parquet_per_dataset=self.config.parquet_per_dataset,
+            zips_per_dataset=self.config.zips_per_dataset,
+            temp_dir=f"{self.cache_dir}/temp_downloads",
+            force_download=False,
+            cache_dir=self.cache_dir,
+        ):
+            if sample_count >= self.max_samples:
+                break
+
+            filename = save_sample_to_cache(
+                sample, self.config, samples_dir, sample_count
+            )
+            if filename:
+                sample_metadata[filename] = {
+                    "source_file": sample.get("source_file", ""),
+                    "model_name": sample.get("model_name", ""),
+                    "media_type": sample.get("media_type", ""),
+                }
+                sample_count += 1
+
+                # Save metadata incrementally every 50 samples
+                if sample_count % 50 == 0:
+                    save_dataset_cache_files(
+                        self.config, self.dataset_dir, sample_metadata, sample_count
+                    )
+                    logger.info(
+                        f"📥 Downloaded {sample_count}/{self.max_samples} samples (checkpoint saved)..."
+                    )
+
+        # Save final metadata
+        if sample_count > 0:
+            save_dataset_cache_files(
+                self.config, self.dataset_dir, sample_metadata, sample_count
+            )
+            logger.info(
+                f"✅ DOWNLOAD COMPLETE: Saved {sample_count} samples to cache for {self.config.name}"
+            )
+        else:
+            logger.warning(f"⚠️  No samples were downloaded for {self.config.name}")
 
     def _has_cached_dataset(self) -> bool:
         """Check if dataset is cached locally."""
@@ -129,7 +173,9 @@ class DatasetIterator:
             if self.max_samples:
                 sample_files = sample_files[: self.max_samples]
 
-            logger.info(f"📂 Loading {len(sample_files)} cached samples for {self.config.name}")
+            logger.info(
+                f"📂 Loading {len(sample_files)} cached samples for {self.config.name}"
+            )
 
             for filename in sample_files:
                 if self.samples_yielded >= self.max_samples:

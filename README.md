@@ -12,27 +12,15 @@ This package provides a self-contained benchmark evaluation system for testing m
 
 ## Installation
 
-### From Source
-
 ```bash
 cd gasbench
+pip install -e .[gpu] 
+```
+
+To install onnxruntime without CUDA support:
+
+```bash
 pip install -e .
-```
-
-### GPU Support (Optional)
-
-For GPU acceleration:
-
-```bash
-pip install -e .[gpu]
-```
-
-### Development
-
-For development with additional tools:
-
-```bash
-pip install -e .[dev]
 ```
 
 ## Usage

@@ -2,6 +2,11 @@
 
 A benchmark evaluation package for discriminative models on [Bittensor Subnet 34 (GAS - Generative Adversarial Subnet)](https://github.com/BitMind-AI/bitmind-subnet). This tool evaluates AI-generated content detection models on diverse image and video datasets.
 
+## STATUS 
+- Initial standalone benchmark tool version complete
+- Next: Integrate with `bitmind-subnet` **(This code is not yet used by the subnet!)**
+  - ETA on this integration is 10/3 8am UTC
+
 ## Overview
 
 This package provides a self-contained benchmark evaluation system for testing models on diverse datasets:
@@ -110,7 +115,13 @@ async def evaluate_model():
 asyncio.run(evaluate_model())
 ```
 
+## Model Requirements
+
+For detailed ONNX model requirements, see the [ONNX Model Specification](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/ONNX.md) from the BitMind Subnet documentation.
+
 ## Configuration
+
+Please see the BitMind Subnet's [Incentive Mechanism docs](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/Incentive.md) for a full list of data sources (expand the dropdowns at the top)
 
 ### Debug Mode
 
@@ -175,64 +186,3 @@ Benchmark results are automatically saved to a timestamped JSON file with the fo
   "errors": []
 }
 ```
-
-## Model Requirements
-
-For detailed ONNX model requirements, see the [ONNX Model Specification](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/ONNX.md) from the BitMind Subnet documentation.
-
-## Datasets
-
-### Image Datasets
-- **Real**: CelebA-HQ, FFHQ, MS-COCO, OpenImages
-- **Synthetic**: JourneyDB, GenImage, Midjourney outputs
-- **Semisynthetic**: Face-swap and modified content
-- **Gasstation**: Primary benchmark dataset
-
-### Video Datasets
-- **Real**: PE-Video, ImageNet-VidVRD
-- **Synthetic**: Veo2/3 preferences, AI-generated videos
-- **Semisynthetic**: Modified/edited video content
-- **Gasstation**: Primary benchmark dataset
-
-## Metrics
-
-### Classification Metrics
-- **Accuracy** - Overall classification accuracy
-- **Binary MCC** - Matthews Correlation Coefficient for binary classification
-- **Multiclass MCC** - MCC for 3-class classification
-
-### Performance Metrics
-- **Avg Inference Time** - Mean inference time per sample (ms)
-- **P95 Inference Time** - 95th percentile inference time (ms)
-
-### Detailed Breakdowns
-- **Per-dataset Results** - Accuracy by individual dataset
-- **Per-source Accuracy** - Results by media type (real/synthetic/semisynthetic)
-- **Generator Stats** - Performance against specific AI generators (gasstation only)
-
-## Troubleshooting
-
-### Common Issues
-
-**Import Errors**: Install dependencies via `pip install -e .`
-
-**ONNX Runtime**:
-- CPU: `onnxruntime>=1.22.0`
-- GPU: `onnxruntime-gpu>=1.22.0` with CUDA available
-
-**Memory Issues**: Use debug mode or ensure sufficient disk space for caching
-
-**Network Issues**: Datasets download from HuggingFace Hub - ensure connectivity
-
-**Model Format**: Verify input shapes and uint8 data type (0-255)
-
-### Performance Tips
-
-1. **Use GPU** - Install `onnxruntime-gpu` for faster inference
-2. **Cache Datasets** - Let datasets cache locally to avoid re-downloads
-3. **Debug Mode** - Use during development for faster iteration
-4. **Gasstation Only** - Focus on primary datasets for quicker evaluation
-
-## License
-
-This code is part of the larger benchmark evaluation system. Please refer to the main project license for usage terms.

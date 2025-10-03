@@ -23,6 +23,7 @@ class DatasetIterator:
         dataset_config: BenchmarkDatasetConfig,
         max_samples: int = None,
         cache_dir: str = "/.cache/gasbench",
+        download: bool = True,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or min(
@@ -31,6 +32,9 @@ class DatasetIterator:
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.dataset_dir = f"{cache_dir}/datasets/{dataset_config.name}"
+
+        if download:
+            self.ensure_cached()
 
     def __iter__(self):
         return self
@@ -49,16 +53,25 @@ class DatasetIterator:
         except StopIteration:
             raise StopIteration
 
+    def ensure_cached(self):
+        """Ensure dataset is fully cached (download if needed or incomplete).
+        """
+        if self._is_cache_complete():
+            logger.info(f"✅ Cache already complete for {self.config.name} with {self._get_cached_count()} samples")
+            return
+
+        self._download_and_cache()
+
     def get_samples(self):
-        """Generator that yields samples from cached data or downloads if needed."""
+        """Generator that yields samples from cached data.
+        """
         try:
-            if self._has_cached_dataset():
-                logger.info(f"📂 Using cached dataset: {self.config.name}")
-                yield from self._load_from_cache()
-            else:
-                # Download and cache, then yield from cache
-                self._download_and_cache()
-                yield from self._load_from_cache()
+            if not self._has_cached_dataset():
+                logger.warning(f"⚠️  No cached data found for {self.config.name}. Call ensure_cached() first.")
+                return
+
+            logger.info(f"📂 Using cached dataset: {self.config.name}")
+            yield from self._load_from_cache()
 
         except Exception as e:
             logger.error(f"❌ Failed to get samples from {self.config.name}: {e}")
@@ -140,7 +153,7 @@ class DatasetIterator:
             logger.warning(f"⚠️  No samples were downloaded for {self.config.name}")
 
     def _has_cached_dataset(self) -> bool:
-        """Check if dataset is cached locally."""
+        """Check if dataset has any cached data (even if incomplete)."""
         try:
             dataset_info_file = os.path.join(self.dataset_dir, "dataset_info.json")
             samples_dir = os.path.join(self.dataset_dir, "samples")
@@ -154,6 +167,35 @@ class DatasetIterator:
             )
         except Exception:
             return False
+
+    def _is_cache_complete(self) -> bool:
+        """Check if cached dataset has enough samples for max_samples."""
+        try:
+            if not self._has_cached_dataset():
+                return False
+
+            metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
+            with open(metadata_file, "r") as f:
+                metadata = json.load(f)
+
+            cached_count = len(metadata)
+            return cached_count >= self.max_samples
+
+        except Exception:
+            return False
+
+    def _get_cached_count(self) -> int:
+        """Get the number of samples currently cached."""
+        try:
+            metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
+            if not os.path.exists(metadata_file):
+                return 0
+
+            with open(metadata_file, "r") as f:
+                metadata = json.load(f)
+            return len(metadata)
+        except Exception:
+            return 0
 
     def _load_from_cache(self):
         """Load samples from cached dataset locally."""

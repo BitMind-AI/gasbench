@@ -128,11 +128,21 @@ class DatasetIterator:
                 sample, self.config, samples_dir, sample_count
             )
             if filename:
-                sample_metadata[filename] = {
+                metadata = {
                     "source_file": sample.get("source_file", ""),
                     "model_name": sample.get("model_name", ""),
                     "media_type": sample.get("media_type", ""),
                 }
+
+                # gasstation-specific fields
+                if "iso_week" in sample:
+                    metadata["iso_week"] = sample.get("iso_week")
+                if "generator_hotkey" in sample:
+                    metadata["generator_hotkey"] = sample.get("generator_hotkey")
+                if "generator_uid" in sample:
+                    metadata["generator_uid"] = sample.get("generator_uid")
+
+                sample_metadata[filename] = metadata
                 sample_count += 1
 
                 # Save metadata incrementally every 50 samples

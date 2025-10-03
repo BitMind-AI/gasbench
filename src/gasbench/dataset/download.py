@@ -1,6 +1,5 @@
-import asyncio
 import base64
-import hashlib
+import re
 import json
 import random
 import os
@@ -160,6 +159,7 @@ def download_and_extract(
 
             processed_files = 0
             for url in to_download:
+                iso_week = _extract_iso_week_from_path(url)
                 downloaded_file = download_single_file(url, temp_dir_root, 8192)
                 if not downloaded_file:
                     continue
@@ -176,7 +176,7 @@ def download_and_extract(
                 )
                 try:
                     for sample in yield_media_from_source(
-                        downloaded_file, dataset, num_items
+                        downloaded_file, dataset, num_items, iso_week
                     ):
                         yield sample
                 finally:
@@ -204,6 +204,7 @@ def yield_media_from_source(
     source_path: Path,
     dataset,  # BenchmarkDatasetConfig
     num_items: int,
+    iso_week: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Unified media extractor for parquet, zip, and tar sources.
@@ -215,18 +216,18 @@ def yield_media_from_source(
         filename = str(source_path.name).lower()
 
         if _is_parquet_file(filename):
-            yield from _process_parquet(source_path, dataset, num_items)
+            yield from _process_parquet(source_path, dataset, num_items, iso_week)
             return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
-            yield from _process_zip_or_tar(source_path, dataset, num_items)
+            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week)
             return
 
         if any(
             filename.endswith(ext)
             for ext in (IMAGE_FILE_EXTENSIONS | VIDEO_FILE_EXTENSIONS)
         ):
-            yield from _process_raw(source_path, dataset)
+            yield from _process_raw(source_path, dataset, iso_week)
             return
 
         logger.warning(f"Unsupported source format for {source_path}")
@@ -234,6 +235,25 @@ def yield_media_from_source(
     except Exception as e:
         logger.warning(f"Error in yield_media_from_source for {source_path}: {e}")
         return
+
+
+def _extract_iso_week_from_path(file_path: str) -> Optional[str]:
+    """Extract ISO week string from file path (e.g., '2025W40' from 'data_2025W40/file.parquet').
+
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W40/
+    - archives/2025W39/
+
+    Returns:
+        ISO week string like '2025W40', or None if not found
+    """
+    # Pattern to match ISO week format: YYYYWWW (e.g., 2025W40)
+    pattern = r'(\d{4}W\d{2})'
+    match = re.search(pattern, file_path)
+    if match:
+        return match.group(1)
+    return None
 
 
 def _select_files_to_download(urls: List[str], count: int) -> List[str]:
@@ -428,7 +448,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
 
 
 def _create_sample(
-    dataset, media_obj, source_path: Path
+    dataset, media_obj, source_path: Path, iso_week: Optional[str] = None
 ) -> Dict[str, Any]:  # BenchmarkDatasetConfig
     """Create a complete sample in the format expected by processing functions."""
     base_sample = {
@@ -437,6 +457,10 @@ def _create_sample(
         "dataset_path": dataset.path,
         "source_file": source_path.name,
     }
+    
+    # Add ISO week if available (for gasstation datasets)
+    if iso_week:
+        base_sample["iso_week"] = iso_week
 
     if dataset.modality == "image":
         base_sample["image"] = media_obj  # PIL Image
@@ -526,7 +550,7 @@ def _extract_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
 
 
 def _process_parquet(
-    source_path: Path, dataset, num_items: int
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None
 ):  # BenchmarkDatasetConfig
     table = pq.read_table(source_path)
     df = table.to_pandas()
@@ -574,11 +598,11 @@ def _process_parquet(
                 except Exception:
                     media_data = base64.b64decode(media_data)
                     img = Image.open(BytesIO(media_data))
-                sample = _create_sample(dataset, img, source_path)
+                sample = _create_sample(dataset, img, source_path, iso_week)
             else:
                 if not isinstance(media_data, (bytes, bytearray)):
                     media_data = base64.b64decode(media_data)
-                sample = _create_sample(dataset, bytes(media_data), source_path)
+                sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
 
             # Merge parquet row metadata without overwriting base fields
             row_metadata = _extract_row_metadata(row, media_col)
@@ -593,7 +617,7 @@ def _process_parquet(
 
 
 def _process_zip_or_tar(
-    source_path: Path, dataset, num_items: int
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None
 ):  # BenchmarkDatasetConfig
     filename = str(source_path.name).lower()
     is_zip = _is_zip_file(filename)
@@ -661,7 +685,7 @@ def _process_zip_or_tar(
                     else:
                         media_obj = data_bytes
 
-                    sample = _create_sample(dataset, media_obj, source_path)
+                    sample = _create_sample(dataset, media_obj, source_path, iso_week)
                     # Attach archive filename and row metadata if found
                     sample["archive_filename"] = source_path.name
                     try:
@@ -685,7 +709,7 @@ def _process_zip_or_tar(
         return
 
 
-def _process_raw(source_path: Path, dataset):
+def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
     filename = str(source_path.name).lower()
     try:
         data_bytes = source_path.read_bytes()
@@ -703,7 +727,7 @@ def _process_raw(source_path: Path, dataset):
             )
             return
 
-        yield _create_sample(dataset, media_obj, source_path)
+        yield _create_sample(dataset, media_obj, source_path, iso_week)
     except Exception as e:
         logger.warning(f"Error reading direct file {source_path}: {e}")
         return

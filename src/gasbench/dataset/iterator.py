@@ -24,6 +24,7 @@ class DatasetIterator:
         max_samples: int = None,
         cache_dir: str = "/.cache/gasbench",
         download: bool = True,
+        num_weeks: int = None,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or min(
@@ -32,6 +33,7 @@ class DatasetIterator:
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.dataset_dir = f"{cache_dir}/datasets/{dataset_config.name}"
+        self.num_weeks = num_weeks
 
         if download:
             self.ensure_cached()
@@ -117,6 +119,7 @@ class DatasetIterator:
             temp_dir=f"{self.cache_dir}/temp_downloads",
             force_download=False,
             cache_dir=self.cache_dir,
+            num_weeks=self.num_weeks,
         ):
             if sample_count >= self.max_samples:
                 break

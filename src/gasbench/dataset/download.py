@@ -37,6 +37,7 @@ def download_and_extract(
     temp_dir: Optional[str] = None,
     force_download: bool = False,
     current_week_only: bool = False,
+    num_weeks: int = None,
     cache_dir: str = "/.cache/gasbench",
 ) -> Generator[Dict[str, Any], None, None]:
     """
@@ -92,7 +93,7 @@ def download_and_extract(
             temp_dir_root = Path(tempfile.mkdtemp())
 
         try:
-            filenames = _list_remote_dataset_files(dataset.path, dataset.source_format, current_week_only)
+            filenames = _list_remote_dataset_files(dataset.path, dataset.source_format, current_week_only, num_weeks)
             if not filenames:
                 logger.warning(
                     f"No files found for {dataset.path} with format {dataset.source_format}"
@@ -248,12 +249,13 @@ def _select_files_to_download(urls: List[str], count: int) -> List[str]:
 
 
 def _list_remote_dataset_files(
-    dataset_path: str, source_format: str = ".parquet", current_week_only: bool = False
+    dataset_path: str, source_format: str = ".parquet", current_week_only: bool = False, num_weeks: int = None
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format.
 
     Supports single extensions (e.g., .parquet, .zip) and tar variants (.tar, .tar.gz, .tgz).
     For gasstation datasets with current_week_only=True, filters to only current ISO week's data.
+    For gasstation datasets with num_weeks set, filters to only the N most recent weeks.
     """
     if not source_format.startswith("."):
         source_format = "." + source_format
@@ -264,10 +266,13 @@ def _list_remote_dataset_files(
     else:
         files = list_hf_files(repo_id=dataset_path, extension=source_format)
 
-    # Apply current week filtering for gasstation datasets
-    if current_week_only and "gasstation" in dataset_path.lower():
-        files = _filter_files_by_current_week(files)
-        logger.info(f"🗓️ Filtered to current week files for {dataset_path}: {len(files)} files")
+    if "gasstation" in dataset_path.lower():
+        if num_weeks:
+            files = _filter_files_by_recent_weeks(files, num_weeks)
+            logger.info(f"Filtered to last {num_weeks} weeks for {dataset_path}: {len(files)} files")
+        elif current_week_only:
+            files = _filter_files_by_current_week(files)
+            logger.info(f"Filtered to current week files for {dataset_path}: {len(files)} files")
 
     return files
 
@@ -286,14 +291,11 @@ def _filter_files_by_current_week(files: List[str]) -> List[str]:
     """
     from datetime import datetime
     
-    # Get current ISO week
     now = datetime.now()
     current_year, current_week, _ = now.isocalendar()
     current_week_str = f"{current_year}W{current_week:02d}"
-    
     logger.info(f"🗓️ Current ISO week: {current_week_str}")
     
-    # Filter files that contain the current week pattern
     current_week_files = []
     for file_path in files:
         # Check for patterns like data_2025W40/ or archives/2025W40/ or 2025W40 anywhere in path
@@ -302,6 +304,49 @@ def _filter_files_by_current_week(files: List[str]) -> List[str]:
     
     logger.info(f"🗓️ Found {len(current_week_files)} files for current week {current_week_str}")
     return current_week_files
+
+
+def _filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]:
+    """Filter files to only include the N most recent ISO weeks for gasstation datasets.
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W39/
+    - data_2025W40/
+    - archives/2025W38/
+    - archives/2025W39/
+    
+    This function filters to only include files from the N most recent ISO weeks.
+    
+    Args:
+        files: List of file paths
+        num_weeks: Number of most recent weeks to include (e.g., 2 means last 2 weeks)
+    
+    Returns:
+        Filtered list of files
+    """
+    from datetime import datetime, timedelta
+    
+    now = datetime.now()
+    
+    recent_weeks = []
+    for i in range(num_weeks):
+        date_offset = now - timedelta(weeks=i)
+        year, week, _ = date_offset.isocalendar()
+        week_str = f"{year}W{week:02d}"
+        recent_weeks.append(week_str)
+    
+    logger.info(f"Filtering to last {num_weeks} weeks: {', '.join(recent_weeks)}")
+    
+    recent_week_files = []
+    for file_path in files:
+        for week_str in recent_weeks:
+            if week_str in file_path:
+                recent_week_files.append(file_path)
+                break  # Only add file once even if it matches multiple weeks
+    
+    logger.info(f"Found {len(recent_week_files)} files for last {num_weeks} weeks")
+    return recent_week_files
 
 
 def _get_download_urls(dataset_path: str, filenames: List[str]) -> List[str]:

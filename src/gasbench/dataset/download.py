@@ -114,7 +114,7 @@ def download_and_extract(
                             f"Trying fallback format {fallback_format} for {dataset.path}"
                         )
                         filenames = _list_remote_dataset_files(
-                            dataset.path, fallback_format, current_week_only
+                            dataset.path, fallback_format, current_week_only, num_weeks
                         )
                         if filenames:
                             logger.info(

@@ -4,8 +4,9 @@ A benchmark evaluation package for discriminative models on [Bittensor Subnet 34
 
 ## STATUS 
 - Initial standalone benchmark tool version complete
-- Next: Integrate with `bitmind-subnet` **(This code is not yet used by the subnet!)**
-  - ETA on this integration is 10/3 8am UTC
+- Next
+  - Integrate with `bitmind-subnet` **(This code is not yet used by the subnet!)** ETA 10/4 8am UTC
+  - Batching when uniform native resolutions available
 
 ## Overview
 

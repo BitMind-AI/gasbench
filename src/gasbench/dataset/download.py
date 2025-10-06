@@ -38,6 +38,8 @@ def download_and_extract(
     current_week_only: bool = False,
     num_weeks: int = None,
     cache_dir: str = "/.cache/gasbench",
+    downloaded_archives: Optional[set] = None,
+    target_week: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Download datasets and yield extracted media as a generator.
@@ -92,7 +94,7 @@ def download_and_extract(
             temp_dir_root = Path(tempfile.mkdtemp())
 
         try:
-            filenames = _list_remote_dataset_files(dataset.path, dataset.source_format, current_week_only, num_weeks)
+            filenames = _list_remote_dataset_files(dataset.path, dataset.source_format, current_week_only, num_weeks, target_week)
             if not filenames:
                 logger.warning(
                     f"No files found for {dataset.path} with format {dataset.source_format}"
@@ -114,7 +116,7 @@ def download_and_extract(
                             f"Trying fallback format {fallback_format} for {dataset.path}"
                         )
                         filenames = _list_remote_dataset_files(
-                            dataset.path, fallback_format, current_week_only, num_weeks
+                            dataset.path, fallback_format, current_week_only, num_weeks, target_week
                         )
                         if filenames:
                             logger.info(
@@ -152,6 +154,19 @@ def download_and_extract(
                     n_files = -1 if zips_per_dataset == -1 else zips_per_dataset
 
             to_download = _select_files_to_download(remote_paths, n_files)
+            
+            # Filter out already-downloaded archives for gasstation datasets
+            if downloaded_archives is not None and "gasstation" in dataset.name.lower():
+                original_count = len(to_download)
+                to_download = [
+                    url for url in to_download 
+                    if os.path.basename(url) not in downloaded_archives
+                ]
+                filtered_count = original_count - len(to_download)
+                if filtered_count > 0:
+                    logger.info(
+                        f"⏭️  Skipping {filtered_count} already-downloaded archives, downloading {len(to_download)} new archives"
+                    )
 
             logger.info(
                 f"📥 DOWNLOADING: {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
@@ -269,7 +284,7 @@ def _select_files_to_download(urls: List[str], count: int) -> List[str]:
 
 
 def _list_remote_dataset_files(
-    dataset_path: str, source_format: str = ".parquet", current_week_only: bool = False, num_weeks: int = None
+    dataset_path: str, source_format: str = ".parquet", current_week_only: bool = False, num_weeks: int = None, target_week: str = None
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format.
 
@@ -287,7 +302,11 @@ def _list_remote_dataset_files(
         files = list_hf_files(repo_id=dataset_path, extension=source_format)
 
     if "gasstation" in dataset_path.lower():
-        if num_weeks:
+        if target_week:
+            # Filter to specific week
+            files = [f for f in files if target_week in f]
+            logger.info(f"Filtered to week {target_week} for {dataset_path}: {len(files)} files")
+        elif num_weeks:
             files = _filter_files_by_recent_weeks(files, num_weeks)
             logger.info(f"Filtered to last {num_weeks} weeks for {dataset_path}: {len(files)} files")
         elif current_week_only:

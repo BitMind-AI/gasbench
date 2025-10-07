@@ -153,7 +153,9 @@ def download_and_extract(
                     # Archive sources (zip/tar). -1 zips_per_dataset means download all archives
                     n_files = -1 if zips_per_dataset == -1 else zips_per_dataset
 
-            to_download = _select_files_to_download(remote_paths, n_files)
+            # For gasstation datasets, prioritize newest archives
+            is_gasstation = "gasstation" in dataset.name.lower()
+            to_download = _select_files_to_download(remote_paths, n_files, prioritize_recent=is_gasstation)
             
             # Filter out already-downloaded archives for gasstation datasets
             if downloaded_archives is not None and "gasstation" in dataset.name.lower():
@@ -271,15 +273,29 @@ def _extract_iso_week_from_path(file_path: str) -> Optional[str]:
     return None
 
 
-def _select_files_to_download(urls: List[str], count: int) -> List[str]:
+def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bool = False) -> List[str]:
     """Select files to download.
 
-    If count == -1, return all files. Otherwise, randomly sample up to count files.
+    Args:
+        urls: List of file URLs to select from
+        count: Number of files to select (-1 = all files)
+        prioritize_recent: If True, sort by filename (descending) to get newest first.
+                          Useful for gasstation datasets to get freshest data.
+
+    Returns:
+        List of selected URLs
     """
     if count == -1:
         return urls
     if count <= 0:
         return []
+    
+    # For gasstation datasets, prioritize newest files by sorting descending
+    if prioritize_recent:
+        sorted_urls = sorted(urls, reverse=True)  # Newest filenames last in alphabet
+        return sorted_urls[:min(count, len(urls))]
+    
+    # For other datasets, random sampling is fine
     return random.sample(urls, min(count, len(urls)))
 
 
@@ -561,7 +577,15 @@ def _extract_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
             if str(col) == str(media_col):
                 continue
             cleaned = _clean_to_json_serializable(val)
-            metadata[str(col)] = cleaned
+            col_str = str(col)
+            metadata[col_str] = cleaned
+            
+            # Map common variations to standard field names for gasstation datasets
+            col_lower = col_str.lower()
+            if "hotkey" in col_lower and "generator" not in metadata:
+                metadata["generator_hotkey"] = cleaned
+            if "uid" in col_lower and "generator_uid" not in metadata:
+                metadata["generator_uid"] = cleaned
     except Exception:
         # Best-effort extraction
         pass
@@ -592,6 +616,12 @@ def _process_parquet(
             f"No media column found in {source_path} for modality {dataset.modality}"
         )
         return
+    
+    if "gasstation" in dataset.name.lower():
+        cols = list(sample_df.columns)
+        has_generator = any("hotkey" in str(c).lower() or "generator" in str(c).lower() for c in cols)
+        if not has_generator:
+            logger.warning(f"⚠️  Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
 
     for _, row in sample_df.iterrows():
         try:
@@ -628,6 +658,13 @@ def _process_parquet(
             for k, v in row_metadata.items():
                 if k not in sample:
                     sample[k] = v
+            
+            # Debug: Log extracted generator metadata for first few samples
+            if "gasstation" in dataset.name.lower():
+                gen_hotkey = sample.get("generator_hotkey")
+                gen_uid = sample.get("generator_uid")
+                if gen_hotkey and gen_hotkey != "unknown":
+                    logger.debug(f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}")
 
             yield sample
         except Exception as e:

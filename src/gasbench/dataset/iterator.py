@@ -162,6 +162,12 @@ class DatasetIterator:
             if field in sample:
                 metadata[field] = sample.get(field)
         
+        # Debug: Log if we're missing generator info for gasstation datasets
+        if "gasstation" in self.config.name.lower():
+            has_generator = "generator_hotkey" in metadata or "generator_hotkey" in sample
+            if not has_generator:
+                logger.debug(f"⚠️  No generator_hotkey found in sample. Available keys: {list(sample.keys())[:10]}")
+        
         return metadata
     
     def _find_oldest_sample(self, sample_metadata: Dict, samples_dir: str) -> Optional[str]:
@@ -207,6 +213,7 @@ class DatasetIterator:
         
         sample_metadata = {}
         sample_count = 0
+        next_index = 0  # Track the next index to use for new files
         
         # Load existing cache
         if os.path.exists(metadata_file):
@@ -214,11 +221,21 @@ class DatasetIterator:
                 with open(metadata_file, "r") as f:
                     sample_metadata = json.load(f)
                 sample_count = len(sample_metadata)
-                logger.info(f"📂 Found {sample_count} existing samples for week {week_str}")
+                
+                # Find the highest index used so far to continue from there
+                max_index = -1
+                for filename in sample_metadata.keys():
+                    match = re.search(r'_(\d+)', filename)
+                    if match:
+                        max_index = max(max_index, int(match.group(1)))
+                next_index = max_index + 1
+                
+                logger.info(f"📂 Found {sample_count} existing samples for week {week_str}, next index: {next_index}")
             except Exception as e:
                 logger.warning(f"Failed to load partial metadata for week {week_str}: {e}")
                 sample_metadata = {}
                 sample_count = 0
+                next_index = 0
         
         # If we're at max_samples and there are new archives, we'll do sample replacement
         # Keep the most recent samples by evicting oldest ones
@@ -266,12 +283,14 @@ class DatasetIterator:
                     except Exception as e:
                         logger.warning(f"Failed to evict old sample {oldest_sample}: {e}")
             
+            # Use next_index for the filename to avoid overwriting existing files
             filename = save_sample_to_cache(
-                sample, self.config, samples_dir, sample_count
+                sample, self.config, samples_dir, next_index
             )
             if filename:
                 sample_metadata[filename] = self._extract_sample_metadata(sample)
                 sample_count += 1
+                next_index += 1  # Always increment to use new indices
                 
                 # Save incrementally every 50 samples
                 if sample_count % 50 == 0:
@@ -308,6 +327,7 @@ class DatasetIterator:
 
         sample_metadata = {}
         sample_count = 0
+        next_index = 0  # Track the next index to use for new files
 
         # Load existing cache
         if os.path.exists(metadata_file):
@@ -315,13 +335,23 @@ class DatasetIterator:
                 with open(metadata_file, "r") as f:
                     sample_metadata = json.load(f)
                 sample_count = len(sample_metadata)
+                
+                # Find the highest index used so far to continue from there
+                max_index = -1
+                for filename in sample_metadata.keys():
+                    match = re.search(r'_(\d+)', filename)
+                    if match:
+                        max_index = max(max_index, int(match.group(1)))
+                next_index = max_index + 1
+                
                 logger.info(
-                    f"📂 Found partial cache with {sample_count} samples, resuming download..."
+                    f"📂 Found partial cache with {sample_count} samples, next index: {next_index}, resuming download..."
                 )
             except Exception as e:
                 logger.warning(f"Failed to load partial metadata, starting fresh: {e}")
                 sample_metadata = {}
                 sample_count = 0
+                next_index = 0
         else:
             logger.info(
                 f"No cached datasets found.\nDownloading {self.config.name} (max {self.max_samples} samples)"
@@ -349,11 +379,12 @@ class DatasetIterator:
                 break
 
             filename = save_sample_to_cache(
-                sample, self.config, samples_dir, sample_count
+                sample, self.config, samples_dir, next_index
             )
             if filename:
                 sample_metadata[filename] = self._extract_sample_metadata(sample)
                 sample_count += 1
+                next_index += 1  # Always increment to use new indices
 
                 # Save metadata incrementally every 50 samples
                 if sample_count % 50 == 0:
@@ -429,6 +460,23 @@ class DatasetIterator:
             return len(metadata)
         except Exception:
             return 0
+    
+    def get_total_cached_count(self) -> int:
+        """Get total number of samples cached across all directories.
+        
+        For gasstation datasets, counts across all week directories.
+        For non-gasstation datasets, counts from the single dataset directory.
+        
+        This reads metadata files directly without loading actual samples.
+        """
+        try:
+            if self.is_gasstation:
+                return gasstation_utils.get_total_cached_samples(self.week_dirs)
+            else:
+                return self._get_cached_count()
+        except Exception as e:
+            logger.warning(f"Failed to get cached count for {self.config.name}: {e}")
+            return 0
 
     def _load_from_cache_dir(self, cache_dir: str):
         """Load samples from a specific cache directory.
@@ -451,6 +499,15 @@ class DatasetIterator:
                 for f in os.listdir(samples_dir)
                 if os.path.isfile(os.path.join(samples_dir, f))
             ]
+            
+            # Sort by numeric index in reverse order (newest first)
+            # Files are named like img_000000.jpg, img_000001.jpg, etc.
+            # Higher indices = newer files
+            def extract_index(filename):
+                match = re.search(r'_(\d+)', filename)
+                return int(match.group(1)) if match else -1
+            
+            sample_files.sort(key=extract_index, reverse=True)
 
             for filename in sample_files:
                 if self.samples_yielded >= self.max_samples:

@@ -2,12 +2,6 @@
 
 A benchmark evaluation package for discriminative models on [Bittensor Subnet 34 (GAS - Generative Adversarial Subnet)](https://github.com/BitMind-AI/bitmind-subnet). This tool evaluates AI-generated content detection models on diverse image and video datasets.
 
-## STATUS 
-- Initial standalone benchmark tool version complete
-- Next
-  - Integrate with `bitmind-subnet` **(This code is not yet used by the subnet!)** ETA 10/4 8am UTC
-  - Batching when uniform native resolutions available
-
 ## Overview
 
 This package provides a self-contained benchmark evaluation system for testing models on diverse datasets:

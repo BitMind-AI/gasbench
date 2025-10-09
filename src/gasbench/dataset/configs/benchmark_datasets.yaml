@@ -132,6 +132,15 @@ image:
     images_per_parquet: 200
     parquet_per_dataset: 5
 
+  - name: qwen-self-generated
+    path: DiffSynth-Studio/Qwen-Image-Self-Generated-Dataset
+    source: modelscope
+    modality: image
+    media_type: synthetic
+    source_format: tar
+    images_per_parquet: 200
+    parquet_per_dataset: 3
+
 video:
   - name: gasstation-generated-videos
     path: gasstation/generated-videos
@@ -249,4 +258,77 @@ video:
     videos_per_zip: 100
     zips_per_dataset: 10
     include_paths: ["stylechange/"]
+ 
+  # DeepAction v1 dataset - split by subdirectory and media type.
+  # 2600 total videos, so just take all from each subdir
+  - name: deepaction-pexels
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: real
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
+    include_paths: ["Pexels/"]
+ 
+  - name: deepaction-bdanimate
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
+    include_paths: ["BDAnimateDiffLightning/"]
+ 
+  - name: deepaction-cogvideox5b
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
+    include_paths: ["CogVideoX5B/"]
+ 
+  - name: deepaction-runwayml
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
+    include_paths: ["RunwayML/"]
+ 
+  - name: deepaction-stablediffusion
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
+    include_paths: ["StableDiffusion/"]
+ 
+  - name: deepaction-veo
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
+    include_paths: ["Veo/"]
+ 
+  - name: deepaction-videopoet
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
+    include_paths: ["VideoPoet/"]
+
+  - name: moviegen-bench
+    path: saiyan-world/Goku-MovieGenBench
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: -1
+    zips_per_dataset: -1
 

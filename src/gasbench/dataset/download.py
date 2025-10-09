@@ -1,23 +1,25 @@
 import base64
-import re
 import json
-import random
 import os
-import traceback
-import tempfile
+import random
+import re
 import shutil
+import tarfile
+import tempfile
+import traceback
+from contextlib import closing
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Generator, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 from zipfile import ZipFile
-import tarfile
-from contextlib import closing
 
 import numpy as np
 import pyarrow.parquet as pq
-from PIL import Image
 import requests
+from PIL import Image
+from modelscope.hub.api import HubApi as MSHubApi
+
 from ..logger import get_logger
 
 logger = get_logger(__name__)
@@ -94,10 +96,11 @@ def download_and_extract(
         try:
             include_paths = getattr(dataset, "include_paths", None)
             exclude_paths = getattr(dataset, "exclude_paths", None)
+            source = getattr(dataset, "source", "huggingface")
 
             filenames = _list_remote_dataset_files(
                 dataset.path, dataset.source_format, current_week_only, num_weeks, target_week,
-                include_paths, exclude_paths
+                include_paths, exclude_paths, source
             )
             if not filenames:
                 logger.warning(
@@ -121,7 +124,7 @@ def download_and_extract(
                         )
                         filenames = _list_remote_dataset_files(
                             dataset.path, fallback_format, current_week_only, num_weeks, target_week,
-                            include_paths, exclude_paths
+                            include_paths, exclude_paths, source
                         )
                         if filenames:
                             logger.info(
@@ -133,7 +136,7 @@ def download_and_extract(
                     logger.warning(f"No files found for {dataset.path} with any format")
                     return
 
-            remote_paths = _get_download_urls(dataset.path, filenames)
+            remote_paths = _get_download_urls(dataset.path, filenames, source)
 
             src_fmt = str(getattr(dataset, "source_format", "")).lower().lstrip(".")
             if dataset.modality == "image":
@@ -311,7 +314,8 @@ def _list_remote_dataset_files(
     num_weeks: int = None,
     target_week: str = None,
     include_paths: Optional[List[str]] = None,
-    exclude_paths: Optional[List[str]] = None
+    exclude_paths: Optional[List[str]] = None,
+    source: str = "huggingface"
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format and path patterns.
 
@@ -320,21 +324,24 @@ def _list_remote_dataset_files(
     For gasstation datasets with num_weeks set, filters to only the N most recent weeks.
     
     Args:
-        dataset_path: HuggingFace dataset path
+        dataset_path: Dataset repository path (org/dataset-name)
         source_format: File extension to filter by
         current_week_only: For gasstation datasets, only get current week
         num_weeks: For gasstation datasets, get N most recent weeks
         target_week: For gasstation datasets, get specific week
         include_paths: Only include files containing one of these path segments
         exclude_paths: Exclude files containing any of these path segments
+        source: Source platform ("huggingface" or "modelscope")
     """
     if not source_format.startswith("."):
         source_format = "." + source_format
 
-    if source_format == ".tar":
-        extensions = [".tar", ".tar.gz", ".tgz"]
-        files = list_hf_files(repo_id=dataset_path, extension=extensions)
-    else:
+    if source_format in [".tar", ".tar.gz", ".tgz"]:
+        source_format = [".tar", ".tar.gz", ".tgz"]
+
+    if source == "modelscope":
+        files = list_modelscope_files(repo_id=dataset_path, extension=source_format)
+    else:  # hf
         files = list_hf_files(repo_id=dataset_path, extension=source_format)
 
     if include_paths:
@@ -431,10 +438,37 @@ def _filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]
     return recent_week_files
 
 
-def _get_download_urls(dataset_path: str, filenames: List[str]) -> List[str]:
-    """Get Hugging Face download URLs for data files"""
+def _get_download_urls(
+    dataset_path: str, 
+    filenames: List[str], 
+    source: str = "huggingface"
+) -> List[str]:
+    """Get download URLs for data files from the specified source.
+
+    Args:
+        dataset_path: Repository path (org/dataset-name)
+        filenames: List of files to download
+        source: Source platform ("huggingface" or "modelscope")
+
+    Returns:
+        List of download URLs
+    """
+    if source == "modelscope":
+        return _get_modelscope_urls(dataset_path, filenames)
+    else:
+        return _get_huggingface_urls(dataset_path, filenames)
+
+
+def _get_huggingface_urls(dataset_path: str, filenames: List[str]) -> List[str]:
     return [
         f"https://huggingface.co/datasets/{dataset_path}/resolve/main/{f}"
+        for f in filenames
+    ]
+
+
+def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
+    return [
+        f"https://www.modelscope.cn/api/v1/datasets/{dataset_path}/repo?Revision=master&FilePath={f}"
         for f in filenames
     ]
 
@@ -457,7 +491,13 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
 
         alt_stem = archive_stem.replace("_", "-")
 
-        parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet")
+        source = getattr(dataset, "source", "huggingface")
+
+        if source == "modelscope":
+            parquet_files = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
+        else:
+            parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet")
+
         matching = [
             p for p in parquet_files if alt_stem in p and "archive" in p and p.endswith(".parquet")
         ]
@@ -468,7 +508,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
         temp_dir = Path(tempfile.mkdtemp())
         metadata_map: Dict[str, Dict[str, Any]] = {}
         try:
-            urls = _get_download_urls(dataset.path, matching)
+            urls = _get_download_urls(dataset.path, matching, source)
             for url in urls:
                 pq_path = download_single_file(url, temp_dir, 8192)
                 if not pq_path:
@@ -841,6 +881,41 @@ def list_hf_files(repo_id, repo_type="dataset", extension=None):
                 files = [f for f in files if f.endswith(extension)]
     except Exception as e:
         logger.error(f"Failed to list files of type {extension} in {repo_id}: {e}")
+    return files
+
+
+def list_modelscope_files(repo_id, extension=None):
+    """List files from a ModelScope dataset repository.
+
+    Args:
+        repo_id: Repository ID (format: org/dataset-name)
+        extension: Filter files by extension(s)
+
+    Returns:
+        List of files in the repository
+    """
+    files = []
+    try:
+        api = MSHubApi()
+        file_info = api.get_dataset_files(repo_id, revision='master', recursive=True)
+        
+        # Extract file paths
+        if isinstance(file_info, list):
+            files = [f['Path'] if isinstance(f, dict) and 'Path' in f else str(f) for f in file_info]
+        elif isinstance(file_info, dict):
+            files = [f for f in file_info.keys()] if file_info else []
+
+        if extension and files:
+            if isinstance(extension, (list, tuple, set)):
+                exts = tuple(extension)
+                files = [f for f in files if f.endswith(exts)]
+            else:
+                files = [f for f in files if f.endswith(extension)]
+
+    except Exception as e:
+        logger.error(f"Failed to list files of type {extension} in ModelScope repo {repo_id}: {e}")
+        logger.error(f"Make sure 'modelscope' package is installed: pip install modelscope")
+    
     return files
 
 

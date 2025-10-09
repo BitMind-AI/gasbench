@@ -62,6 +62,7 @@ class BenchmarkDatasetConfig:
     parquet_per_dataset: int = 5
     zips_per_dataset: int = 2
     source_format: str = ""  # Auto-detected if empty
+    source: str = "huggingface"  # "huggingface" or "modelscope"
 
     include_paths: Optional[List[str]] = None 
     exclude_paths: Optional[List[str]] = None
@@ -281,6 +282,7 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                     parquet_per_dataset=dataset_dict.get("parquet_per_dataset", 5),
                     zips_per_dataset=dataset_dict.get("zips_per_dataset", 2),
                     source_format=dataset_dict.get("source_format", ""),
+                    source=dataset_dict.get("source", "huggingface"),
                     include_paths=dataset_dict.get("include_paths"),
                     exclude_paths=dataset_dict.get("exclude_paths"),
                 )
@@ -365,6 +367,7 @@ def load_benchmark_datasets_from_yaml(
                         parquet_per_dataset=dataset_dict.get("parquet_per_dataset", 5),
                         zips_per_dataset=dataset_dict.get("zips_per_dataset", 2),
                         source_format=dataset_dict.get("source_format", ""),
+                        source=dataset_dict.get("source", "huggingface"),
                     )
                     result[modality].append(config)
 

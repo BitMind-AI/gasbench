@@ -104,7 +104,6 @@ async def run_image_benchmark(
                                 "keys": list(sample.keys()),
                                 "image_type": str(type(sample.get('image')))
                             }
-                            logger.info(f"First sample: {json.dumps(first_sample_info)}")
 
                         image_array, true_label_multiclass = process_image_sample(sample)
 

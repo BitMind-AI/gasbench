@@ -170,6 +170,9 @@ def download_and_extract(
                         f"Skipping {filtered_count} already-downloaded archives, downloading {len(to_download)} new archives"
                     )
 
+            if len(to_download) == 0:
+                return
+
             logger.info(
                 f"Downloading {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
             )
@@ -181,9 +184,6 @@ def download_and_extract(
                 if not downloaded_file:
                     continue
                 processed_files += 1
-                logger.info(
-                    f"Processing {downloaded_file.name} for {dataset.name}"
-                )
 
                 # num_items of -1 means extract all items from each file
                 num_items = (

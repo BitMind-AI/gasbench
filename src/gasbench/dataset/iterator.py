@@ -255,6 +255,8 @@ class DatasetIterator:
         
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
         
+        initial_sample_count = sample_count
+
         # Download with week filter (num_weeks=None to download just this week via week filtering in download_and_extract)
         for sample in download_and_extract(
             self.config,
@@ -265,18 +267,16 @@ class DatasetIterator:
             temp_dir=f"{self.cache_dir}/temp_downloads",
             force_download=False,
             cache_dir=self.cache_dir,
-            num_weeks=None,  # We filter by specific week below
+            num_weeks=None,
             downloaded_archives=downloaded_archives,
-            target_week=week_str,  # New parameter to filter to specific week
+            target_week=week_str
         ):
-            # Track archives
             archive_name = sample.get("archive_filename") or sample.get("source_file", "")
             if archive_name:
                 downloaded_archives.add(archive_name)
             
             # If we're replacing samples, find and remove the oldest sample
             if replacing_samples and sample_count >= self.max_samples:
-                # Find oldest sample to evict
                 oldest_sample = self._find_oldest_sample(sample_metadata, samples_dir)
                 if oldest_sample:
                     # Remove the oldest sample
@@ -297,18 +297,18 @@ class DatasetIterator:
             if filename:
                 sample_metadata[filename] = self._extract_sample_metadata(sample)
                 sample_count += 1
-                next_index += 1  # Always increment to use new indices
-                
-                # Save incrementally every 50 samples
+                next_index += 1
+
                 if sample_count % 50 == 0:
                     save_dataset_cache_files(
                         self.config, week_dir, sample_metadata, sample_count
                     )
                     gasstation_utils.save_downloaded_archives(week_dir, downloaded_archives)
                     logger.info(f"Downloaded {sample_count} samples for week {week_str}")
-        
-        # Save final metadata and archive tracking
-        if sample_count > 0:
+
+        new_samples = sample_count - initial_sample_count
+
+        if new_samples > 0:
             save_dataset_cache_files(
                 self.config, week_dir, sample_metadata, sample_count
             )
@@ -316,13 +316,16 @@ class DatasetIterator:
             
             if replacing_samples:
                 logger.info(
-                    f"Week {week_str}: Replaced old samples with fresh data. "
-                    f"Total: {sample_count} samples, tracked {len(downloaded_archives)} archives"
+                    f"Week {week_str}: Downloaded {new_samples} new samples (replaced old samples). "
+                    f"Total: {sample_count} samples, {len(downloaded_archives)} archives"
                 )
             else:
-                logger.info(f"Week {week_str}: Saved {sample_count} samples, tracked {len(downloaded_archives)} archives")
-        else:
-            logger.warning(f"No samples downloaded for week {week_str}")
+                logger.info(
+                    f"Week {week_str}: Downloaded {new_samples} new samples. "
+                    f"Total: {sample_count} samples, {len(downloaded_archives)} archives"
+                )
+        elif sample_count < 0:
+            logger.warning(f"No samples cached for week {week_str}")
     
     def _download_and_cache(self):
         """Download samples and save them to cache with incremental checkpointing.

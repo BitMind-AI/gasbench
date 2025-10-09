@@ -1,5 +1,4 @@
-"""Video benchmark execution functionality."""
-
+import json
 import time
 import numpy as np
 from typing import Dict
@@ -9,11 +8,9 @@ from ..processing.archive import video_archive_manager
 from ..processing.media import process_video_bytes_sample, configure_huggingface_cache
 from ..processing.transforms import apply_random_augmentations, compress_video_frames_jpeg_torchvision
 from ..dataset.config import (
-    VIDEO_BENCHMARK_SIZE,
+    get_benchmark_size,
     discover_benchmark_video_datasets,
-    check_dataset_availability,
     calculate_dataset_sampling,
-    filter_available_datasets,
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
@@ -32,7 +29,7 @@ async def run_video_benchmark(
     session,
     input_specs,
     benchmark_results: Dict,
-    debug_mode: bool = False,
+    mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
 ) -> float:
@@ -40,25 +37,18 @@ async def run_video_benchmark(
 
     try:
         if gasstation_only:
-            logger.info("📥 Loading gasstation video datasets only...")
+            logger.info("Loading gasstation video datasets only")
         else:
-            logger.info("📥 Loading benchmark video datasets...")
+            logger.info("Loading benchmark video datasets")
         
-        available_datasets = discover_benchmark_video_datasets(debug_mode, gasstation_only)
+        available_datasets = discover_benchmark_video_datasets(mode, gasstation_only)
 
         if not available_datasets:
             logger.error("No benchmark video datasets configured")
             benchmark_results["video_results"] = {"error": "No datasets available"}
             return 0.0
 
-        valid_datasets = filter_available_datasets(available_datasets, check_dataset_availability)
-
-        if not valid_datasets:
-            logger.error("No valid video datasets available")
-            benchmark_results["video_results"] = {"error": "No valid datasets available"}
-            return 0.0
-
-        logger.info(f"🎯 Using {len(valid_datasets)} video datasets for benchmarking")
+        logger.info(f"Using {len(available_datasets)} video datasets for benchmarking")
 
         with video_archive_manager(cache_dir=cache_dir) as video_cache:
             correct = 0
@@ -68,27 +58,32 @@ async def run_video_benchmark(
             confusion_matrix = ConfusionMatrix()
             skipped_samples = 0
 
-            per_dataset_cap, min_samples_per_dataset = calculate_dataset_sampling(
-                len(valid_datasets), VIDEO_BENCHMARK_SIZE
-            )
-            
-            logger.info(f"📊 Target: {VIDEO_BENCHMARK_SIZE} total samples across {len(valid_datasets)} datasets")
-            logger.info(f"📊 Per-dataset cap: {per_dataset_cap} samples (minimum {min_samples_per_dataset} per dataset)")
-            
-            dataset_info = build_dataset_info(valid_datasets, per_dataset_cap)
+            target_size = get_benchmark_size("video", mode)
 
-            logger.info(
-                f"📋 Dataset labeling: "
-                f"{len([d for d in valid_datasets if d.media_type == 'real'])} real, "
-                f"{len([d for d in valid_datasets if d.media_type == 'synthetic'])} synthetic, "
-                f"{len([d for d in valid_datasets if d.media_type == 'semisynthetic'])} semisynthetic"
+            per_dataset_cap, min_samples_per_dataset = calculate_dataset_sampling(
+                len(available_datasets), target_size
             )
+            
+            sampling_info = {
+                "target_samples": target_size,
+                "num_datasets": len(available_datasets),
+                "per_dataset_cap": per_dataset_cap,
+                "min_per_dataset": min_samples_per_dataset,
+                "dataset_breakdown": {
+                    "real": len([d for d in available_datasets if d.media_type == 'real']),
+                    "synthetic": len([d for d in available_datasets if d.media_type == 'synthetic']),
+                    "semisynthetic": len([d for d in available_datasets if d.media_type == 'semisynthetic'])
+                }
+            }
+            logger.info(f"Sampling configuration: {json.dumps(sampling_info)}")
+            
+            dataset_info = build_dataset_info(available_datasets, per_dataset_cap)
 
             generator_stats = benchmark_results.get("video_generator_stats", {})
 
-            for dataset_idx, dataset_config in enumerate(valid_datasets):
+            for dataset_idx, dataset_config in enumerate(available_datasets):
                 logger.info(
-                    f"📊 Processing dataset {dataset_idx + 1}/{len(valid_datasets)}: "
+                    f"Processing dataset {dataset_idx + 1}/{len(available_datasets)}: "
                     f"{dataset_config.name} ({per_dataset_cap} samples)"
                 )
 
@@ -119,7 +114,7 @@ async def run_video_benchmark(
                                 skipped_samples += 1
                                 if dataset_skipped % 10 == 0:
                                     logger.debug(
-                                        f"🔍 Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far. "
+                                        f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far. "
                                         f"Latest: {sample.get('archive_filename', 'unknown')}"
                                     )
                                 continue
@@ -149,17 +144,17 @@ async def run_video_benchmark(
 
                             if total % 500 == 0:
                                 logger.info(
-                                    f"📊 Video Benchmark progress: {total}/{VIDEO_BENCHMARK_SIZE}, "
+                                    f"Progress: {total}/{target_size} samples, "
                                     f"Accuracy: {correct / total:.2%}"
                                 )
 
                             if total % 100 == 0:
-                                result_symbol = "✅" if is_correct else "❌"
                                 frames_count = video_array.shape[1] if video_array is not None else 0
                                 logger.debug(
-                                    f"{result_symbol} Sample {total}: "
+                                    f"Sample {total}: "
                                     f"True={true_label_multiclass}→{true_label_binary}, "
                                     f"Pred={predicted_multiclass}→{predicted_binary}, "
+                                    f"Correct={is_correct}, "
                                     f"Generator={sample.get('model_name', 'unknown')}, "
                                     f"Dataset={dataset_config.name}, "
                                     f"Frames={frames_count}"
@@ -181,17 +176,17 @@ async def run_video_benchmark(
                         benchmark_results["video_generator_stats"] = generator_stats
 
                     logger.info(
-                        f"✅ Dataset {dataset_config.name}: {dataset_accuracy:.2%} accuracy "
+                        f"Dataset {dataset_config.name}: {dataset_accuracy:.2%} accuracy "
                         f"({dataset_correct}/{dataset_total}), skipped: {dataset_skipped}"
                     )
 
                 except Exception as e:
-                    logger.error(f"❌ Failed to process dataset {dataset_config.name}: {e}")
+                    logger.error(f"Failed to process dataset {dataset_config.name}: {e}")
                     benchmark_results["errors"].append(f"Dataset error for {dataset_config.name}: {str(e)[:100]}")
 
             accuracy = correct / total if total > 0 else 0.0
             if skipped_samples > 0:
-                logger.info(f"ℹ️ Video benchmark: {total} samples processed, {skipped_samples} skipped")
+                logger.info(f"Video benchmark: {total} samples processed, {skipped_samples} skipped")
 
             avg_inference_time = sum(inference_times) / len(inference_times) if inference_times else 0.0
             p95_inference_time = float(np.percentile(inference_times, 95)) if inference_times else 0.0
@@ -199,7 +194,7 @@ async def run_video_benchmark(
             binary_mcc = confusion_matrix.calculate_binary_mcc() if total > 0 else 0.0
             multiclass_mcc = confusion_matrix.calculate_multiclass_mcc()
 
-            per_source_accuracy = calculate_per_source_accuracy(valid_datasets, per_dataset_results)
+            per_source_accuracy = calculate_per_source_accuracy(available_datasets, per_dataset_results)
 
             cache_info = video_cache.get_cache_info()
 
@@ -220,14 +215,14 @@ async def run_video_benchmark(
             if benchmark_results.get("video_generator_stats"):
                 benchmark_results["video_results"]["generator_stats"] = benchmark_results["video_generator_stats"]
 
-            logger.info(f"📊 Benchmark video score: {accuracy:.2%} ({correct}/{total} correct AI detections)")
-            logger.info(f"📁 Archive cache: {cache_info['unpacked_archives']} archives cached locally")
+            logger.info(f"✅ Benchmark complete: {accuracy:.2%} ({correct}/{total} correct)")
+            logger.info(f"Archive cache: {cache_info['unpacked_archives']} archives cached locally")
             if skipped_samples > 0:
-                logger.warning(f"⚠️ Skipped {skipped_samples} samples due to missing/inaccessible archives or processing errors")
+                logger.warning(f"Skipped {skipped_samples} samples due to missing/inaccessible archives or processing errors")
             
             return accuracy
 
     except Exception as e:
-        logger.error(f"❌ Benchmark video testing failed: {e}")
+        logger.error(f"Benchmark video testing failed: {e}")
         benchmark_results["video_results"] = {"error": str(e)}
         raise e

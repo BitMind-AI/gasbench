@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -36,11 +37,31 @@ Examples:
         choices=["image", "video"], 
         help="Model modality to benchmark"
     )
-    parser.add_argument(
+    
+    # Mode selection (mutually exclusive)
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
         "--debug", 
-        action="store_true", 
-        help="Use debug mode with smaller datasets for faster testing"
+        action="store_const",
+        const="debug",
+        dest="mode",
+        help="Debug mode: only use first image and video datasets for quick testing"
     )
+    mode_group.add_argument(
+        "--small", 
+        action="store_const",
+        const="small",
+        dest="mode",
+        help="Small mode: download only 1 archive per dataset, extract 100 items from each"
+    )
+    mode_group.add_argument(
+        "--full", 
+        action="store_const",
+        const="full",
+        dest="mode",
+        help="Full mode: use complete configurations from yaml file (default)"
+    )
+    
     parser.add_argument(
         "--gasstation-only", 
         action="store_true", 
@@ -62,23 +83,31 @@ Examples:
     
     args = parser.parse_args()
     
+    # Default mode is 'full' if no mode flag is provided
+    mode = args.mode if args.mode else "full"
+    
     # Validate model path
     model_path = Path(args.model_path)
     if not model_path.exists():
-        print(f"❌ Error: Model file not found: {model_path}")
+        print(f"Error: Model file not found: {model_path}")
         return 1
     
     if not model_path.suffix.lower() == '.onnx':
-        print(f"❌ Error: Model file must be an ONNX file (.onnx), got: {model_path.suffix}")
+        print(f"Error: Model file must be an ONNX file (.onnx), got: {model_path.suffix}")
         return 1
     
-    print("⛽ Starting gasbench evaluation ⛽")
-    print(f"  Model: {model_path}")
-    print(f"  Modality: {args.modality.upper()}")
-    print(f"  Debug Mode: {args.debug}")
-    print(f"  Gasstation Only: {args.gasstation_only}")
+    # Print configuration as JSON for clarity
+    config = {
+        "model": str(model_path),
+        "modality": args.modality.upper(),
+        "mode": mode.upper(),
+        "gasstation_only": args.gasstation_only,
+    }
     if args.cache_dir:
-        print(f"  Cache Directory: {args.cache_dir}")
+        config["cache_directory"] = args.cache_dir
+    
+    print("\n🎯 Starting gasbench evaluation")
+    print(json.dumps(config, indent=2))
     print("-" * 60)
     
     try:
@@ -86,7 +115,7 @@ Examples:
             run_benchmark(
                 model_path=str(model_path),
                 modality=args.modality,
-                debug_mode=args.debug,
+                mode=mode,
                 gasstation_only=args.gasstation_only,
                 cache_dir=args.cache_dir
             )
@@ -96,20 +125,20 @@ Examples:
         
         # Save results to JSON file
         output_path = save_results_to_json(results, output_dir=args.output_dir)
-        print(f"\n💾 Results saved to: {output_path}")
+        print(f"\nResults saved to: {output_path}")
         
         if results.get("benchmark_completed"):
-            print("\n✅ Benchmark completed successfully!")
+            print("\n✅ Benchmark completed successfully")
             return 0
         else:
-            print("\n❌ Benchmark failed!")
+            print("\nBenchmark failed")
             return 1
             
     except KeyboardInterrupt:
-        print("\n⚠️  Benchmark interrupted by user")
+        print("\nBenchmark interrupted by user")
         return 130
     except Exception as e:
-        print(f"\n💥 Benchmark failed with error: {e}")
+        print(f"\nBenchmark failed with error: {e}")
         return 1
 
 

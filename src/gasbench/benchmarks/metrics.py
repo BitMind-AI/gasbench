@@ -80,8 +80,12 @@ def update_generator_stats(
     pred_binary: int
 ) -> None:
     """Update per-generator fooling statistics for gasstation datasets."""
+    from ..logger import get_logger
+    logger = get_logger(__name__)
+    
     generator_hotkey = sample.get("generator_hotkey")
-    if generator_hotkey is None or true_binary != 1:
+    # Skip if no generator info or not synthetic sample or "unknown" generator
+    if generator_hotkey is None or true_binary != 1 or str(generator_hotkey).lower() == "unknown":
         return
     
     stats = generator_stats.get(generator_hotkey) or {
@@ -93,7 +97,10 @@ def update_generator_stats(
     if generator_uid is not None and stats.get("uid") is None:
         try:
             stats["uid"] = int(generator_uid)
-        except:
+            # Log first time we see this generator
+            logger.debug(f"📝 Tracking generator: {generator_hotkey[:16]}... (UID: {stats['uid']})")
+        except Exception as e:
+            logger.warning(f"Failed to parse generator_uid: {generator_uid} - {e}")
             pass
     
     if pred_binary == 0:

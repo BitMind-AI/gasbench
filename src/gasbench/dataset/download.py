@@ -1,6 +1,5 @@
-import asyncio
 import base64
-import hashlib
+import re
 import json
 import random
 import os
@@ -37,7 +36,10 @@ def download_and_extract(
     temp_dir: Optional[str] = None,
     force_download: bool = False,
     current_week_only: bool = False,
+    num_weeks: int = None,
     cache_dir: str = "/.cache/gasbench",
+    downloaded_archives: Optional[set] = None,
+    target_week: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Download datasets and yield extracted media as a generator.
@@ -63,7 +65,7 @@ def download_and_extract(
         # try to load from cache first to avoid unnecessary downloads
         if not force_download and _is_dataset_cached(dataset, cache_dir):
             logger.info(
-                f"⚡ SKIP DOWNLOAD: Dataset {dataset.name} found in cache, loading from volume..."
+                f"Dataset {dataset.name} found in cache, loading from volume"
             )
             try:
                 cached_samples_count = 0
@@ -71,13 +73,13 @@ def download_and_extract(
                     cached_samples_count += 1
                     yield sample
                 logger.info(
-                    f"✅ Successfully loaded {cached_samples_count} samples from cache for {dataset.name}"
+                    f"Successfully loaded {cached_samples_count} samples from cache for {dataset.name}"
                 )
                 return
             except Exception as e:
-                logger.warning(f"⚠️ Failed to load {dataset.name} from cache: {e}")
+                logger.warning(f"Failed to load {dataset.name} from cache: {e}")
                 logger.info(
-                    f"📥 FALLBACK TO DOWNLOAD: {dataset.name} will be downloaded fresh"
+                    f"Fallback to download: {dataset.name} will be downloaded fresh"
                 )
                 # Fall through to download logic
         # temp dir for zip/parquet
@@ -92,7 +94,7 @@ def download_and_extract(
             temp_dir_root = Path(tempfile.mkdtemp())
 
         try:
-            filenames = _list_remote_dataset_files(dataset.path, dataset.source_format, current_week_only)
+            filenames = _list_remote_dataset_files(dataset.path, dataset.source_format, current_week_only, num_weeks, target_week)
             if not filenames:
                 logger.warning(
                     f"No files found for {dataset.path} with format {dataset.source_format}"
@@ -114,7 +116,7 @@ def download_and_extract(
                             f"Trying fallback format {fallback_format} for {dataset.path}"
                         )
                         filenames = _list_remote_dataset_files(
-                            dataset.path, fallback_format, current_week_only
+                            dataset.path, fallback_format, current_week_only, num_weeks, target_week
                         )
                         if filenames:
                             logger.info(
@@ -151,21 +153,37 @@ def download_and_extract(
                     # Archive sources (zip/tar). -1 zips_per_dataset means download all archives
                     n_files = -1 if zips_per_dataset == -1 else zips_per_dataset
 
-            to_download = _select_files_to_download(remote_paths, n_files)
+            # For gasstation datasets, prioritize newest archives
+            is_gasstation = "gasstation" in dataset.name.lower()
+            to_download = _select_files_to_download(remote_paths, n_files, prioritize_recent=is_gasstation)
+            
+            # Filter out already-downloaded archives for gasstation datasets
+            if downloaded_archives is not None and "gasstation" in dataset.name.lower():
+                original_count = len(to_download)
+                to_download = [
+                    url for url in to_download 
+                    if os.path.basename(url) not in downloaded_archives
+                ]
+                filtered_count = original_count - len(to_download)
+                if filtered_count > 0:
+                    logger.info(
+                        f"Skipping {filtered_count} already-downloaded archives, downloading {len(to_download)} new archives"
+                    )
+
+            if len(to_download) == 0:
+                return
 
             logger.info(
-                f"📥 DOWNLOADING: {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
+                f"Downloading {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
             )
 
             processed_files = 0
             for url in to_download:
+                iso_week = _extract_iso_week_from_path(url)
                 downloaded_file = download_single_file(url, temp_dir_root, 8192)
                 if not downloaded_file:
                     continue
                 processed_files += 1
-                logger.info(
-                    f"📦 Processing {downloaded_file.name} for {dataset.name}"
-                )
 
                 # num_items of -1 means extract all items from each file
                 num_items = (
@@ -175,7 +193,7 @@ def download_and_extract(
                 )
                 try:
                     for sample in yield_media_from_source(
-                        downloaded_file, dataset, num_items
+                        downloaded_file, dataset, num_items, iso_week
                     ):
                         yield sample
                 finally:
@@ -187,7 +205,7 @@ def download_and_extract(
                         pass
 
             logger.info(
-                f"✅ Downloaded and processed {processed_files}/{len(to_download)} files for {dataset.name}"
+                f"Downloaded and processed {processed_files}/{len(to_download)} files for {dataset.name}"
             )
 
         finally:
@@ -203,6 +221,7 @@ def yield_media_from_source(
     source_path: Path,
     dataset,  # BenchmarkDatasetConfig
     num_items: int,
+    iso_week: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Unified media extractor for parquet, zip, and tar sources.
@@ -214,18 +233,18 @@ def yield_media_from_source(
         filename = str(source_path.name).lower()
 
         if _is_parquet_file(filename):
-            yield from _process_parquet(source_path, dataset, num_items)
+            yield from _process_parquet(source_path, dataset, num_items, iso_week)
             return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
-            yield from _process_zip_or_tar(source_path, dataset, num_items)
+            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week)
             return
 
         if any(
             filename.endswith(ext)
             for ext in (IMAGE_FILE_EXTENSIONS | VIDEO_FILE_EXTENSIONS)
         ):
-            yield from _process_raw(source_path, dataset)
+            yield from _process_raw(source_path, dataset, iso_week)
             return
 
         logger.warning(f"Unsupported source format for {source_path}")
@@ -235,25 +254,59 @@ def yield_media_from_source(
         return
 
 
-def _select_files_to_download(urls: List[str], count: int) -> List[str]:
+def _extract_iso_week_from_path(file_path: str) -> Optional[str]:
+    """Extract ISO week string from file path (e.g., '2025W40' from 'data_2025W40/file.parquet').
+
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W40/
+    - archives/2025W39/
+
+    Returns:
+        ISO week string like '2025W40', or None if not found
+    """
+    # Pattern to match ISO week format: YYYYWWW (e.g., 2025W40)
+    pattern = r'(\d{4}W\d{2})'
+    match = re.search(pattern, file_path)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bool = False) -> List[str]:
     """Select files to download.
 
-    If count == -1, return all files. Otherwise, randomly sample up to count files.
+    Args:
+        urls: List of file URLs to select from
+        count: Number of files to select (-1 = all files)
+        prioritize_recent: If True, sort by filename (descending) to get newest first.
+                          Useful for gasstation datasets to get freshest data.
+
+    Returns:
+        List of selected URLs
     """
     if count == -1:
         return urls
     if count <= 0:
         return []
+    
+    # For gasstation datasets, prioritize newest files by sorting descending
+    if prioritize_recent:
+        sorted_urls = sorted(urls, reverse=True)  # Newest filenames last in alphabet
+        return sorted_urls[:min(count, len(urls))]
+    
+    # For other datasets, random sampling is fine
     return random.sample(urls, min(count, len(urls)))
 
 
 def _list_remote_dataset_files(
-    dataset_path: str, source_format: str = ".parquet", current_week_only: bool = False
+    dataset_path: str, source_format: str = ".parquet", current_week_only: bool = False, num_weeks: int = None, target_week: str = None
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format.
 
     Supports single extensions (e.g., .parquet, .zip) and tar variants (.tar, .tar.gz, .tgz).
     For gasstation datasets with current_week_only=True, filters to only current ISO week's data.
+    For gasstation datasets with num_weeks set, filters to only the N most recent weeks.
     """
     if not source_format.startswith("."):
         source_format = "." + source_format
@@ -264,10 +317,17 @@ def _list_remote_dataset_files(
     else:
         files = list_hf_files(repo_id=dataset_path, extension=source_format)
 
-    # Apply current week filtering for gasstation datasets
-    if current_week_only and "gasstation" in dataset_path.lower():
-        files = _filter_files_by_current_week(files)
-        logger.info(f"🗓️ Filtered to current week files for {dataset_path}: {len(files)} files")
+    if "gasstation" in dataset_path.lower():
+        if target_week:
+            # Filter to specific week
+            files = [f for f in files if target_week in f]
+            logger.info(f"Filtered to week {target_week} for {dataset_path}: {len(files)} files")
+        elif num_weeks:
+            files = _filter_files_by_recent_weeks(files, num_weeks)
+            logger.info(f"Filtered to last {num_weeks} weeks for {dataset_path}: {len(files)} files")
+        elif current_week_only:
+            files = _filter_files_by_current_week(files)
+            logger.info(f"Filtered to current week files for {dataset_path}: {len(files)} files")
 
     return files
 
@@ -286,22 +346,62 @@ def _filter_files_by_current_week(files: List[str]) -> List[str]:
     """
     from datetime import datetime
     
-    # Get current ISO week
     now = datetime.now()
     current_year, current_week, _ = now.isocalendar()
     current_week_str = f"{current_year}W{current_week:02d}"
+    logger.info(f"Current ISO week: {current_week_str}")
     
-    logger.info(f"🗓️ Current ISO week: {current_week_str}")
-    
-    # Filter files that contain the current week pattern
     current_week_files = []
     for file_path in files:
         # Check for patterns like data_2025W40/ or archives/2025W40/ or 2025W40 anywhere in path
         if current_week_str in file_path:
             current_week_files.append(file_path)
     
-    logger.info(f"🗓️ Found {len(current_week_files)} files for current week {current_week_str}")
+    logger.info(f"Found {len(current_week_files)} files for current week {current_week_str}")
     return current_week_files
+
+
+def _filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]:
+    """Filter files to only include the N most recent ISO weeks for gasstation datasets.
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W39/
+    - data_2025W40/
+    - archives/2025W38/
+    - archives/2025W39/
+    
+    This function filters to only include files from the N most recent ISO weeks.
+    
+    Args:
+        files: List of file paths
+        num_weeks: Number of most recent weeks to include (e.g., 2 means last 2 weeks)
+    
+    Returns:
+        Filtered list of files
+    """
+    from datetime import datetime, timedelta
+    
+    now = datetime.now()
+    
+    recent_weeks = []
+    for i in range(num_weeks):
+        date_offset = now - timedelta(weeks=i)
+        year, week, _ = date_offset.isocalendar()
+        week_str = f"{year}W{week:02d}"
+        recent_weeks.append(week_str)
+    
+    logger.info(f"Filtering to last {num_weeks} weeks: {', '.join(recent_weeks)}")
+    
+    recent_week_files = []
+    for file_path in files:
+        for week_str in recent_weeks:
+            if week_str in file_path:
+                recent_week_files.append(file_path)
+                break  # Only add file once even if it matches multiple weeks
+    
+    logger.info(f"Found {len(recent_week_files)} files for last {num_weeks} weeks")
+    return recent_week_files
 
 
 def _get_download_urls(dataset_path: str, filenames: List[str]) -> List[str]:
@@ -383,7 +483,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
 
 
 def _create_sample(
-    dataset, media_obj, source_path: Path
+    dataset, media_obj, source_path: Path, iso_week: Optional[str] = None
 ) -> Dict[str, Any]:  # BenchmarkDatasetConfig
     """Create a complete sample in the format expected by processing functions."""
     base_sample = {
@@ -392,6 +492,10 @@ def _create_sample(
         "dataset_path": dataset.path,
         "source_file": source_path.name,
     }
+    
+    # Add ISO week if available (for gasstation datasets)
+    if iso_week:
+        base_sample["iso_week"] = iso_week
 
     if dataset.modality == "image":
         base_sample["image"] = media_obj  # PIL Image
@@ -473,7 +577,15 @@ def _extract_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
             if str(col) == str(media_col):
                 continue
             cleaned = _clean_to_json_serializable(val)
-            metadata[str(col)] = cleaned
+            col_str = str(col)
+            metadata[col_str] = cleaned
+            
+            # Map common variations to standard field names for gasstation datasets
+            col_lower = col_str.lower()
+            if "hotkey" in col_lower and "generator" not in metadata:
+                metadata["generator_hotkey"] = cleaned
+            if "uid" in col_lower and "generator_uid" not in metadata:
+                metadata["generator_uid"] = cleaned
     except Exception:
         # Best-effort extraction
         pass
@@ -481,7 +593,7 @@ def _extract_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
 
 
 def _process_parquet(
-    source_path: Path, dataset, num_items: int
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None
 ):  # BenchmarkDatasetConfig
     table = pq.read_table(source_path)
     df = table.to_pandas()
@@ -504,6 +616,12 @@ def _process_parquet(
             f"No media column found in {source_path} for modality {dataset.modality}"
         )
         return
+    
+    if "gasstation" in dataset.name.lower():
+        cols = list(sample_df.columns)
+        has_generator = any("hotkey" in str(c).lower() or "generator" in str(c).lower() for c in cols)
+        if not has_generator:
+            logger.warning(f"Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
 
     for _, row in sample_df.iterrows():
         try:
@@ -529,17 +647,24 @@ def _process_parquet(
                 except Exception:
                     media_data = base64.b64decode(media_data)
                     img = Image.open(BytesIO(media_data))
-                sample = _create_sample(dataset, img, source_path)
+                sample = _create_sample(dataset, img, source_path, iso_week)
             else:
                 if not isinstance(media_data, (bytes, bytearray)):
                     media_data = base64.b64decode(media_data)
-                sample = _create_sample(dataset, bytes(media_data), source_path)
+                sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
 
             # Merge parquet row metadata without overwriting base fields
             row_metadata = _extract_row_metadata(row, media_col)
             for k, v in row_metadata.items():
                 if k not in sample:
                     sample[k] = v
+            
+            # Debug: Log extracted generator metadata for first few samples
+            if "gasstation" in dataset.name.lower():
+                gen_hotkey = sample.get("generator_hotkey")
+                gen_uid = sample.get("generator_uid")
+                if gen_hotkey and gen_hotkey != "unknown":
+                    logger.debug(f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}")
 
             yield sample
         except Exception as e:
@@ -548,7 +673,7 @@ def _process_parquet(
 
 
 def _process_zip_or_tar(
-    source_path: Path, dataset, num_items: int
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None
 ):  # BenchmarkDatasetConfig
     filename = str(source_path.name).lower()
     is_zip = _is_zip_file(filename)
@@ -616,7 +741,7 @@ def _process_zip_or_tar(
                     else:
                         media_obj = data_bytes
 
-                    sample = _create_sample(dataset, media_obj, source_path)
+                    sample = _create_sample(dataset, media_obj, source_path, iso_week)
                     # Attach archive filename and row metadata if found
                     sample["archive_filename"] = source_path.name
                     try:
@@ -640,7 +765,7 @@ def _process_zip_or_tar(
         return
 
 
-def _process_raw(source_path: Path, dataset):
+def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
     filename = str(source_path.name).lower()
     try:
         data_bytes = source_path.read_bytes()
@@ -658,7 +783,7 @@ def _process_raw(source_path: Path, dataset):
             )
             return
 
-        yield _create_sample(dataset, media_obj, source_path)
+        yield _create_sample(dataset, media_obj, source_path, iso_week)
     except Exception as e:
         logger.warning(f"Error reading direct file {source_path}: {e}")
         return
@@ -817,7 +942,7 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
 
     sample_files = [f for f in os.listdir(samples_dir) if not f.startswith(".")]
 
-    logger.info(f"📂 Loading {len(sample_files)} cached samples for {dataset.name}")
+    logger.info(f"Loading {len(sample_files)} cached samples for {dataset.name}")
 
     for filename in sample_files:
         try:

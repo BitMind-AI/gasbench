@@ -9,11 +9,10 @@ This package contains modules for:
 
 from .config import (
     BenchmarkDatasetConfig,
-    IMAGE_BENCHMARK_SIZE,
-    VIDEO_BENCHMARK_SIZE,
+    BENCHMARK_SIZES,
+    get_benchmark_size,
     discover_benchmark_image_datasets,
     discover_benchmark_video_datasets,
-    check_dataset_availability,
 )
 from .iterator import DatasetIterator
 from .cache import check_dataset_cache, save_sample_to_cache
@@ -21,11 +20,10 @@ from .download import download_and_extract
 
 __all__ = [
     "BenchmarkDatasetConfig",
-    "IMAGE_BENCHMARK_SIZE", 
-    "VIDEO_BENCHMARK_SIZE",
+    "BENCHMARK_SIZES",
+    "get_benchmark_size",
     "discover_benchmark_image_datasets",
     "discover_benchmark_video_datasets",
-    "check_dataset_availability",
     "DatasetIterator",
     "check_dataset_cache",
     "save_sample_to_cache", 

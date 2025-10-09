@@ -25,7 +25,7 @@ def configure_huggingface_cache(volume_dir: str = "/benchmark_data"):
     os.environ["HF_DATASETS_CACHE"] = os.path.join(hf_cache_dir, "datasets")
 
     if not _hf_cache_configured:
-        logger.info(f"📁 Configured HuggingFace cache to use temp directory: {hf_cache_dir}")
+        logger.info(f"Configured HuggingFace cache: {hf_cache_dir}")
         _hf_cache_configured = True
 
     return hf_cache_dir
@@ -114,7 +114,7 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
 
         if hasattr(image_data, "convert"):
             image = image_data
-            logger.debug(f"✅ PIL Image received: {type(image)} size={getattr(image, 'size', 'unknown')}")
+            logger.debug(f"PIL Image received: {type(image)} size={getattr(image, 'size', 'unknown')}")
         else:
             logger.error(f"Image data is not a PIL Image: {type(image_data)}")
             return None, None

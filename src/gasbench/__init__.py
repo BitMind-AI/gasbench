@@ -1,8 +1,4 @@
-"""GASBench - ML model benchmark evaluation package.
-
-This package provides tools for benchmarking machine learning models
-without database dependencies. It supports both image and video modalities
-and can be used as a standalone evaluation tool.
+"""GASBench - AIGC Detection
 
 Main components:
 - benchmark_execution: Core benchmark execution logic
@@ -15,7 +11,7 @@ Example usage:
     results = await run_benchmark(
         model_path="path/to/model.onnx",
         modality="image",
-        debug_mode=True
+        mode="debug"
     )
 """
 
@@ -24,7 +20,7 @@ from .benchmarks.video_bench import run_video_benchmark
 from .benchmark import run_benchmark, print_benchmark_summary, save_results_to_json
 from .model.inference import create_inference_session
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "bmbm"
 
 __all__ = [

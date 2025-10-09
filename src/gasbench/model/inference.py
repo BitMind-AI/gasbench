@@ -30,9 +30,9 @@ def create_inference_session(model_path: str, model_type: str):
     sess_options = ort.SessionOptions()
     sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
 
-    load_message = f"📦 Loading {model_type} detector..."
+    load_message = f"Loading {model_type} detector"
     if model_type == "video":
-        load_message += " (this may take 30-60s for large models)..."
+        load_message += " (this may take 30-60s for large models)"
 
     logger.info(load_message)
     load_start = time.time()
@@ -40,7 +40,7 @@ def create_inference_session(model_path: str, model_type: str):
         model_path, sess_options=sess_options, providers=providers
     )
     load_time = time.time() - load_start
-    logger.info(f"✅ Loaded {model_type} detector in {load_time:.2f} seconds")
+    logger.info(f"Loaded {model_type} detector in {load_time:.2f} seconds")
 
     return session
 

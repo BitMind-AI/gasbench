@@ -59,7 +59,7 @@ async def run_benchmark(
 
     try:
         logger.info(
-            f"🎯 BENCHMARK START: {modality.upper()} model | Path: {model_path}"
+            f"BENCHMARK START: {modality.upper()} model - {model_path}"
         )
 
         session, input_specs = await load_model_for_benchmark(
@@ -86,11 +86,11 @@ async def run_benchmark(
         benchmark_results["metrics"]["model_path"] = model_path
         benchmark_results["benchmark_completed"] = True
 
-        logger.info(f"📊 Benchmark score: {benchmark_score:.2%}")
+        logger.info(f"Benchmark score: {benchmark_score:.2%}")
         logger.info(f"✅ Benchmark COMPLETED for {modality} modality")
 
     except Exception as e:
-        logger.error(f"❌ Benchmark failed with error: {e}")
+        logger.error(f"Benchmark failed with error: {e}")
         benchmark_results["errors"].append(f"Benchmark error: {str(e)}")
         benchmark_results["benchmark_completed"] = False
 
@@ -131,14 +131,18 @@ async def load_model_for_benchmark(
         benchmark_results["validation"]["input_type"] = str(input_specs[0].type)
         benchmark_results["validation"]["output_shape"] = str(output_specs[0].shape)
 
-        logger.info(f"✅ Model loaded successfully: {model_path}")
-        logger.info(f"📋 Input shape: {input_specs[0].shape}")
-        logger.info(f"📋 Output shape: {output_specs[0].shape}")
+        logger.info(f"✅ Model loaded successfully")
+        model_info = {
+            "path": model_path,
+            "input_shape": str(input_specs[0].shape),
+            "output_shape": str(output_specs[0].shape)
+        }
+        logger.info(f"Model info: {json.dumps(model_info)}")
 
         return session, input_specs
 
     except Exception as e:
-        logger.error(f"❌ Failed to load model for inference: {e}")
+        logger.error(f"Failed to load model for inference: {e}")
         benchmark_results["errors"].append(f"ONNX runtime error: {str(e)}")
         benchmark_results["benchmark_completed"] = False
         return None, None
@@ -255,7 +259,7 @@ def print_benchmark_summary(benchmark_results: Dict):
 
     errors = benchmark_results.get("errors", [])
     if errors:
-        print(f"\n❌ ERRORS ({len(errors)}):")
+        print(f"\nERRORS ({len(errors)}):")
         for i, error in enumerate(errors[:5], 1):
             print(f"  {i}. {error}")
         if len(errors) > 5:
@@ -359,6 +363,6 @@ def save_results_to_json(
     with open(filepath, "w") as f:
         json.dump(output_data, f, indent=2)
 
-    logger.info(f"💾 Results saved to: {filepath}")
+    logger.info(f"Results saved to: {filepath}")
 
     return str(filepath)

@@ -1,5 +1,6 @@
 """Image benchmark execution functionality."""
 
+import json
 import time
 import numpy as np
 from typing import Dict
@@ -37,9 +38,9 @@ async def run_image_benchmark(
 
     try:
         if gasstation_only:
-            logger.info("📥 Loading gasstation image datasets only...")
+            logger.info("Loading gasstation image datasets only")
         else:
-            logger.info("📥 Loading benchmark image datasets...")
+            logger.info("Loading benchmark image datasets")
         
         available_datasets = discover_benchmark_image_datasets(mode, gasstation_only)
 
@@ -48,7 +49,7 @@ async def run_image_benchmark(
             benchmark_results["image_results"] = {"error": "No datasets available"}
             return 0.0
 
-        logger.info(f"🎯 Using {len(available_datasets)} image datasets for benchmarking")
+        logger.info(f"Using {len(available_datasets)} image datasets for benchmarking")
 
         correct = 0
         total = 0
@@ -60,23 +61,26 @@ async def run_image_benchmark(
             len(available_datasets), IMAGE_BENCHMARK_SIZE
         )
         
-        logger.info(f"📊 Target: {IMAGE_BENCHMARK_SIZE} total samples across {len(available_datasets)} datasets")
-        logger.info(f"📊 Per-dataset cap: {per_dataset_cap} samples (minimum {min_samples_per_dataset} per dataset)")
+        sampling_info = {
+            "target_samples": IMAGE_BENCHMARK_SIZE,
+            "num_datasets": len(available_datasets),
+            "per_dataset_cap": per_dataset_cap,
+            "min_per_dataset": min_samples_per_dataset,
+            "dataset_breakdown": {
+                "real": len([d for d in available_datasets if d.media_type == 'real']),
+                "synthetic": len([d for d in available_datasets if d.media_type == 'synthetic']),
+                "semisynthetic": len([d for d in available_datasets if d.media_type == 'semisynthetic'])
+            }
+        }
+        logger.info(f"Sampling configuration: {json.dumps(sampling_info)}")
         
         dataset_info = build_dataset_info(available_datasets, per_dataset_cap)
-
-        logger.info(
-            f"📋 Dataset labeling: "
-            f"{len([d for d in available_datasets if d.media_type == 'real'])} real, "
-            f"{len([d for d in available_datasets if d.media_type == 'synthetic'])} synthetic, "
-            f"{len([d for d in available_datasets if d.media_type == 'semisynthetic'])} semisynthetic"
-        )
 
         generator_stats = benchmark_results.get("image_generator_stats", {})
 
         for dataset_idx, dataset_config in enumerate(available_datasets):
             logger.info(
-                f"📊 Processing dataset {dataset_idx + 1}/{len(available_datasets)}: "
+                f"Processing dataset {dataset_idx + 1}/{len(available_datasets)}: "
                 f"{dataset_config.name} ({per_dataset_cap} samples)"
             )
 
@@ -86,18 +90,21 @@ async def run_image_benchmark(
             try:
                 dataset_iterator = DatasetIterator(dataset_config, max_samples=per_dataset_cap, cache_dir=cache_dir)
 
+                expected_label = 0 if dataset_config.media_type == 'real' else 1
                 logger.info(
-                    f"📊 Processing {dataset_config.name} "
-                    f"(media_type: {dataset_config.media_type} → "
-                    f"expected label: {'0=real' if dataset_config.media_type == 'real' else '1=ai/modified'})"
+                    f"Processing {dataset_config.name} "
+                    f"(media_type={dataset_config.media_type}, expected_label={expected_label})"
                 )
 
                 for sample in dataset_iterator:
                     try:
                         if dataset_total == 0:
-                            logger.info(f"🔍 First sample debug for {dataset_config.name}:")
-                            logger.info(f"  - Keys: {list(sample.keys())}")
-                            logger.info(f"  - Image type: {type(sample.get('image'))}")
+                            first_sample_info = {
+                                "dataset": dataset_config.name,
+                                "keys": list(sample.keys()),
+                                "image_type": str(type(sample.get('image')))
+                            }
+                            logger.info(f"First sample: {json.dumps(first_sample_info)}")
 
                         image_array, true_label_multiclass = process_image_sample(sample)
 
@@ -140,16 +147,16 @@ async def run_image_benchmark(
 
                         if total % 500 == 0:
                             logger.info(
-                                f"📊 Image Benchmark progress: {total}/{IMAGE_BENCHMARK_SIZE}, "
+                                f"Progress: {total}/{IMAGE_BENCHMARK_SIZE} samples, "
                                 f"Accuracy: {correct / total:.2%}"
                             )
 
                         if total % 100 == 0:
-                            result_symbol = "✅" if is_correct else "❌"
                             logger.debug(
-                                f"{result_symbol} Sample {total}: "
+                                f"Sample {total}: "
                                 f"True={true_label_multiclass}→{true_label_binary}, "
                                 f"Pred={predicted_multiclass}→{predicted_binary}, "
+                                f"Correct={is_correct}, "
                                 f"Generator={sample.get('model_name', 'unknown')}, "
                                 f"Dataset={dataset_config.name}"
                             )
@@ -169,12 +176,12 @@ async def run_image_benchmark(
                     benchmark_results["image_generator_stats"] = generator_stats
 
                 logger.info(
-                    f"✅ Dataset {dataset_config.name}: {dataset_accuracy:.2%} accuracy "
+                    f"Dataset {dataset_config.name}: {dataset_accuracy:.2%} accuracy "
                     f"({dataset_correct}/{dataset_total})"
                 )
 
             except Exception as e:
-                logger.error(f"❌ Failed to process dataset {dataset_config.name}: {e}")
+                logger.error(f"Failed to process dataset {dataset_config.name}: {e}")
                 benchmark_results["errors"].append(f"Dataset error for {dataset_config.name}: {str(e)[:100]}")
 
         accuracy = correct / total if total > 0 else 0.0
@@ -202,10 +209,10 @@ async def run_image_benchmark(
         if benchmark_results.get("image_generator_stats"):
             benchmark_results["image_results"]["generator_stats"] = benchmark_results["image_generator_stats"]
 
-        logger.info(f"📊 Benchmark image score: {accuracy:.2%} ({correct}/{total} correct AI detections)")
+        logger.info(f"✅ Benchmark complete: {accuracy:.2%} ({correct}/{total} correct)")
         return accuracy
 
     except Exception as e:
-        logger.error(f"❌ Benchmark image testing failed: {e}")
+        logger.error(f"Benchmark image testing failed: {e}")
         benchmark_results["image_results"] = {"error": str(e)}
         raise e

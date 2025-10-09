@@ -178,7 +178,7 @@ def is_week_cache_complete(
     
     if has_new:
         logger.info(
-            f"🆕 Found {num_new} new archives for week {week_str} "
+            f"Found {num_new} new archives for week {week_str} "
             f"(already have {len(downloaded_archives)} archived)"
         )
         return False

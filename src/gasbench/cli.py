@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -88,20 +89,25 @@ Examples:
     # Validate model path
     model_path = Path(args.model_path)
     if not model_path.exists():
-        print(f"❌ Error: Model file not found: {model_path}")
+        print(f"Error: Model file not found: {model_path}")
         return 1
     
     if not model_path.suffix.lower() == '.onnx':
-        print(f"❌ Error: Model file must be an ONNX file (.onnx), got: {model_path.suffix}")
+        print(f"Error: Model file must be an ONNX file (.onnx), got: {model_path.suffix}")
         return 1
     
-    print("⛽ Starting gasbench evaluation ⛽")
-    print(f"  Model: {model_path}")
-    print(f"  Modality: {args.modality.upper()}")
-    print(f"  Mode: {mode.upper()}")
-    print(f"  Gasstation Only: {args.gasstation_only}")
+    # Print configuration as JSON for clarity
+    config = {
+        "model": str(model_path),
+        "modality": args.modality.upper(),
+        "mode": mode.upper(),
+        "gasstation_only": args.gasstation_only,
+    }
     if args.cache_dir:
-        print(f"  Cache Directory: {args.cache_dir}")
+        config["cache_directory"] = args.cache_dir
+    
+    print("\n🎯 Starting gasbench evaluation")
+    print(json.dumps(config, indent=2))
     print("-" * 60)
     
     try:
@@ -119,20 +125,20 @@ Examples:
         
         # Save results to JSON file
         output_path = save_results_to_json(results, output_dir=args.output_dir)
-        print(f"\n💾 Results saved to: {output_path}")
+        print(f"\nResults saved to: {output_path}")
         
         if results.get("benchmark_completed"):
-            print("\n✅ Benchmark completed successfully!")
+            print("\n✅ Benchmark completed successfully")
             return 0
         else:
-            print("\n❌ Benchmark failed!")
+            print("\nBenchmark failed")
             return 1
             
     except KeyboardInterrupt:
-        print("\n⚠️  Benchmark interrupted by user")
+        print("\nBenchmark interrupted by user")
         return 130
     except Exception as e:
-        print(f"\n💥 Benchmark failed with error: {e}")
+        print(f"\nBenchmark failed with error: {e}")
         return 1
 
 

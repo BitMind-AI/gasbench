@@ -84,7 +84,7 @@ class DatasetIterator:
         else:
             # Standard caching for non-gasstation datasets
             if self._is_cache_complete():
-                logger.info(f"✅ Cache already complete for {self.config.name} with {self._get_cached_count()} samples")
+                logger.info(f"Cache complete for {self.config.name} ({self._get_cached_count()} samples)")
                 return
             self._download_and_cache()
 
@@ -101,7 +101,7 @@ class DatasetIterator:
                     if not os.path.exists(week_dir):
                         continue
                     
-                    logger.info(f"📂 Loading cached data for {self.config.name} week {week_str}")
+                    logger.info(f"Loading cached data for {self.config.name} week {week_str}")
                     for sample in self._load_from_cache_dir(week_dir):
                         if total_samples >= self.max_samples:
                             return
@@ -110,15 +110,15 @@ class DatasetIterator:
             else:
                 # Non-gasstation datasets: standard loading
                 if not self._has_cached_dataset():
-                    logger.warning(f"⚠️  No cached data found for {self.config.name}. Call ensure_cached() first.")
+                    logger.warning(f"No cached data found for {self.config.name}. Call ensure_cached() first.")
                     return
 
                 cached_count = self._get_cached_count()
-                logger.info(f"📂 Loading {cached_count} cached samples for {self.config.name}")
+                logger.info(f"Loading {cached_count} cached samples for {self.config.name}")
                 yield from self._load_from_cache_dir(self.dataset_dir)
 
         except Exception as e:
-            logger.error(f"❌ Failed to get samples from {self.config.name}: {e}")
+            logger.error(f"Failed to get samples from {self.config.name}: {e}")
             return
 
     def _ensure_week_cached(self, week_str: str, week_dir: str):
@@ -136,7 +136,7 @@ class DatasetIterator:
             self.config.modality
         ):
             sample_count = gasstation_utils.get_week_sample_count(week_dir)
-            logger.info(f"✅ Cache already complete for {self.config.name} week {week_str} ({sample_count} samples)")
+            logger.info(f"Cache complete for {self.config.name} week {week_str} ({sample_count} samples)")
             return
         
         downloaded_archives = gasstation_utils.load_downloaded_archives(week_dir)
@@ -230,7 +230,7 @@ class DatasetIterator:
                         max_index = max(max_index, int(match.group(1)))
                 next_index = max_index + 1
                 
-                logger.info(f"📂 Found {sample_count} existing samples for week {week_str}, next index: {next_index}")
+                logger.info(f"Found {sample_count} existing samples for week {week_str}, next index: {next_index}")
             except Exception as e:
                 logger.warning(f"Failed to load partial metadata for week {week_str}: {e}")
                 sample_metadata = {}
@@ -242,8 +242,8 @@ class DatasetIterator:
         replacing_samples = sample_count >= self.max_samples
         if replacing_samples:
             logger.info(
-                f"📊 Week {week_str} has {sample_count} samples (at max_samples). "
-                f"Will replace oldest samples with fresh data from new archives..."
+                f"Week {week_str} has {sample_count} samples (at max_samples). "
+                f"Will replace oldest samples with fresh data from new archives"
             )
         
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
@@ -279,7 +279,7 @@ class DatasetIterator:
                             os.remove(old_file)
                         del sample_metadata[oldest_sample]
                         sample_count -= 1
-                        logger.debug(f"🗑️  Evicted oldest sample: {oldest_sample}")
+                        logger.debug(f"Evicted oldest sample: {oldest_sample}")
                     except Exception as e:
                         logger.warning(f"Failed to evict old sample {oldest_sample}: {e}")
             
@@ -298,7 +298,7 @@ class DatasetIterator:
                         self.config, week_dir, sample_metadata, sample_count
                     )
                     gasstation_utils.save_downloaded_archives(week_dir, downloaded_archives)
-                    logger.info(f"📥 Downloaded {sample_count} samples for week {week_str}...")
+                    logger.info(f"Downloaded {sample_count} samples for week {week_str}")
         
         # Save final metadata and archive tracking
         if sample_count > 0:
@@ -309,13 +309,13 @@ class DatasetIterator:
             
             if replacing_samples:
                 logger.info(
-                    f"✅ Week {week_str}: Replaced old samples with fresh data. "
+                    f"Week {week_str}: Replaced old samples with fresh data. "
                     f"Total: {sample_count} samples, tracked {len(downloaded_archives)} archives"
                 )
             else:
-                logger.info(f"✅ Week {week_str}: Saved {sample_count} samples, tracked {len(downloaded_archives)} archives")
+                logger.info(f"Week {week_str}: Saved {sample_count} samples, tracked {len(downloaded_archives)} archives")
         else:
-            logger.warning(f"⚠️  No samples downloaded for week {week_str}")
+            logger.warning(f"No samples downloaded for week {week_str}")
     
     def _download_and_cache(self):
         """Download samples and save them to cache with incremental checkpointing.
@@ -345,7 +345,7 @@ class DatasetIterator:
                 next_index = max_index + 1
                 
                 logger.info(
-                    f"📂 Found partial cache with {sample_count} samples, next index: {next_index}, resuming download..."
+                    f"Found partial cache with {sample_count} samples, next index: {next_index}, resuming download"
                 )
             except Exception as e:
                 logger.warning(f"Failed to load partial metadata, starting fresh: {e}")
@@ -358,7 +358,7 @@ class DatasetIterator:
             )
 
         if sample_count >= self.max_samples:
-            logger.info(f"✅ Cache already complete with {sample_count} samples")
+            logger.info(f"Cache complete with {sample_count} samples")
             return
 
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
@@ -392,7 +392,7 @@ class DatasetIterator:
                         self.config, self.dataset_dir, sample_metadata, sample_count
                     )
                     logger.info(
-                        f"📥 Downloaded {sample_count}/{self.max_samples} samples (checkpoint saved)..."
+                        f"Downloaded {sample_count}/{self.max_samples} samples (checkpoint saved)"
                     )
 
         # Save final metadata
@@ -401,10 +401,10 @@ class DatasetIterator:
                 self.config, self.dataset_dir, sample_metadata, sample_count
             )
             logger.info(
-                f"✅ DOWNLOAD COMPLETE: Saved {sample_count} samples to cache for {self.config.name}"
+                f"Download complete: Saved {sample_count} samples to cache for {self.config.name}"
             )
         else:
-            logger.warning(f"⚠️  No samples were downloaded for {self.config.name}")
+            logger.warning(f"No samples were downloaded for {self.config.name}")
 
     def _has_cached_dataset(self) -> bool:
         """Check if dataset has any cached data (even if incomplete)."""

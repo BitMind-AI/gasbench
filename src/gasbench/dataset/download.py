@@ -65,7 +65,7 @@ def download_and_extract(
         # try to load from cache first to avoid unnecessary downloads
         if not force_download and _is_dataset_cached(dataset, cache_dir):
             logger.info(
-                f"⚡ SKIP DOWNLOAD: Dataset {dataset.name} found in cache, loading from volume..."
+                f"Dataset {dataset.name} found in cache, loading from volume"
             )
             try:
                 cached_samples_count = 0
@@ -73,13 +73,13 @@ def download_and_extract(
                     cached_samples_count += 1
                     yield sample
                 logger.info(
-                    f"✅ Successfully loaded {cached_samples_count} samples from cache for {dataset.name}"
+                    f"Successfully loaded {cached_samples_count} samples from cache for {dataset.name}"
                 )
                 return
             except Exception as e:
-                logger.warning(f"⚠️ Failed to load {dataset.name} from cache: {e}")
+                logger.warning(f"Failed to load {dataset.name} from cache: {e}")
                 logger.info(
-                    f"📥 FALLBACK TO DOWNLOAD: {dataset.name} will be downloaded fresh"
+                    f"Fallback to download: {dataset.name} will be downloaded fresh"
                 )
                 # Fall through to download logic
         # temp dir for zip/parquet
@@ -167,11 +167,11 @@ def download_and_extract(
                 filtered_count = original_count - len(to_download)
                 if filtered_count > 0:
                     logger.info(
-                        f"⏭️  Skipping {filtered_count} already-downloaded archives, downloading {len(to_download)} new archives"
+                        f"Skipping {filtered_count} already-downloaded archives, downloading {len(to_download)} new archives"
                     )
 
             logger.info(
-                f"📥 DOWNLOADING: {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
+                f"Downloading {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
             )
 
             processed_files = 0
@@ -182,7 +182,7 @@ def download_and_extract(
                     continue
                 processed_files += 1
                 logger.info(
-                    f"📦 Processing {downloaded_file.name} for {dataset.name}"
+                    f"Processing {downloaded_file.name} for {dataset.name}"
                 )
 
                 # num_items of -1 means extract all items from each file
@@ -205,7 +205,7 @@ def download_and_extract(
                         pass
 
             logger.info(
-                f"✅ Downloaded and processed {processed_files}/{len(to_download)} files for {dataset.name}"
+                f"Downloaded and processed {processed_files}/{len(to_download)} files for {dataset.name}"
             )
 
         finally:
@@ -349,7 +349,7 @@ def _filter_files_by_current_week(files: List[str]) -> List[str]:
     now = datetime.now()
     current_year, current_week, _ = now.isocalendar()
     current_week_str = f"{current_year}W{current_week:02d}"
-    logger.info(f"🗓️ Current ISO week: {current_week_str}")
+    logger.info(f"Current ISO week: {current_week_str}")
     
     current_week_files = []
     for file_path in files:
@@ -357,7 +357,7 @@ def _filter_files_by_current_week(files: List[str]) -> List[str]:
         if current_week_str in file_path:
             current_week_files.append(file_path)
     
-    logger.info(f"🗓️ Found {len(current_week_files)} files for current week {current_week_str}")
+    logger.info(f"Found {len(current_week_files)} files for current week {current_week_str}")
     return current_week_files
 
 
@@ -621,7 +621,7 @@ def _process_parquet(
         cols = list(sample_df.columns)
         has_generator = any("hotkey" in str(c).lower() or "generator" in str(c).lower() for c in cols)
         if not has_generator:
-            logger.warning(f"⚠️  Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
+            logger.warning(f"Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
 
     for _, row in sample_df.iterrows():
         try:
@@ -942,7 +942,7 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
 
     sample_files = [f for f in os.listdir(samples_dir) if not f.startswith(".")]
 
-    logger.info(f"📂 Loading {len(sample_files)} cached samples for {dataset.name}")
+    logger.info(f"Loading {len(sample_files)} cached samples for {dataset.name}")
 
     for filename in sample_files:
         try:

@@ -13,7 +13,6 @@ from .config import (
     VIDEO_BENCHMARK_SIZE,
     discover_benchmark_image_datasets,
     discover_benchmark_video_datasets,
-    check_dataset_availability,
 )
 from .iterator import DatasetIterator
 from .cache import check_dataset_cache, save_sample_to_cache
@@ -25,7 +24,6 @@ __all__ = [
     "VIDEO_BENCHMARK_SIZE",
     "discover_benchmark_image_datasets",
     "discover_benchmark_video_datasets",
-    "check_dataset_availability",
     "DatasetIterator",
     "check_dataset_cache",
     "save_sample_to_cache", 

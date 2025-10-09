@@ -10,9 +10,7 @@ from ..processing.transforms import apply_random_augmentations, compress_image_j
 from ..dataset.config import (
     IMAGE_BENCHMARK_SIZE,
     discover_benchmark_image_datasets,
-    check_dataset_availability,
     calculate_dataset_sampling,
-    filter_available_datasets,
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
@@ -50,14 +48,7 @@ async def run_image_benchmark(
             benchmark_results["image_results"] = {"error": "No datasets available"}
             return 0.0
 
-        valid_datasets = filter_available_datasets(available_datasets, check_dataset_availability)
-
-        if not valid_datasets:
-            logger.error("No valid image datasets available")
-            benchmark_results["image_results"] = {"error": "No valid datasets available"}
-            return 0.0
-
-        logger.info(f"🎯 Using {len(valid_datasets)} image datasets for benchmarking")
+        logger.info(f"🎯 Using {len(available_datasets)} image datasets for benchmarking")
 
         correct = 0
         total = 0
@@ -66,26 +57,26 @@ async def run_image_benchmark(
         confusion_matrix = ConfusionMatrix()
 
         per_dataset_cap, min_samples_per_dataset = calculate_dataset_sampling(
-            len(valid_datasets), IMAGE_BENCHMARK_SIZE
+            len(available_datasets), IMAGE_BENCHMARK_SIZE
         )
         
-        logger.info(f"📊 Target: {IMAGE_BENCHMARK_SIZE} total samples across {len(valid_datasets)} datasets")
+        logger.info(f"📊 Target: {IMAGE_BENCHMARK_SIZE} total samples across {len(available_datasets)} datasets")
         logger.info(f"📊 Per-dataset cap: {per_dataset_cap} samples (minimum {min_samples_per_dataset} per dataset)")
         
-        dataset_info = build_dataset_info(valid_datasets, per_dataset_cap)
+        dataset_info = build_dataset_info(available_datasets, per_dataset_cap)
 
         logger.info(
             f"📋 Dataset labeling: "
-            f"{len([d for d in valid_datasets if d.media_type == 'real'])} real, "
-            f"{len([d for d in valid_datasets if d.media_type == 'synthetic'])} synthetic, "
-            f"{len([d for d in valid_datasets if d.media_type == 'semisynthetic'])} semisynthetic"
+            f"{len([d for d in available_datasets if d.media_type == 'real'])} real, "
+            f"{len([d for d in available_datasets if d.media_type == 'synthetic'])} synthetic, "
+            f"{len([d for d in available_datasets if d.media_type == 'semisynthetic'])} semisynthetic"
         )
 
         generator_stats = benchmark_results.get("image_generator_stats", {})
 
-        for dataset_idx, dataset_config in enumerate(valid_datasets):
+        for dataset_idx, dataset_config in enumerate(available_datasets):
             logger.info(
-                f"📊 Processing dataset {dataset_idx + 1}/{len(valid_datasets)}: "
+                f"📊 Processing dataset {dataset_idx + 1}/{len(available_datasets)}: "
                 f"{dataset_config.name} ({per_dataset_cap} samples)"
             )
 
@@ -193,7 +184,7 @@ async def run_image_benchmark(
         binary_mcc = confusion_matrix.calculate_binary_mcc() if total > 0 else 0.0
         multiclass_mcc = confusion_matrix.calculate_multiclass_mcc()
 
-        per_source_accuracy = calculate_per_source_accuracy(valid_datasets, per_dataset_results)
+        per_source_accuracy = calculate_per_source_accuracy(available_datasets, per_dataset_results)
 
         benchmark_results["image_results"] = {
             "benchmark_score": accuracy,

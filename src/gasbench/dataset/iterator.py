@@ -100,7 +100,7 @@ class DatasetIterator:
                 for week_str, week_dir in zip(self.target_weeks, self.week_dirs):
                     if not os.path.exists(week_dir):
                         continue
-                    
+
                     logger.info(f"Loading cached data for {self.config.name} week {week_str}")
                     for sample in self._load_from_cache_dir(week_dir):
                         if total_samples >= self.max_samples:
@@ -114,8 +114,15 @@ class DatasetIterator:
                     return
 
                 cached_count = self._get_cached_count()
-                logger.info(f"Loading {cached_count} cached samples for {self.config.name}")
-                yield from self._load_from_cache_dir(self.dataset_dir)
+                samples_to_load = min(cached_count, self.max_samples)
+                logger.info(f"Loading {samples_to_load} cached samples for {self.config.name}")
+                
+                total_samples = 0
+                for sample in self._load_from_cache_dir(self.dataset_dir):
+                    if total_samples >= self.max_samples:
+                        return
+                    yield sample
+                    total_samples += 1
 
         except Exception as e:
             logger.error(f"Failed to get samples from {self.config.name}: {e}")

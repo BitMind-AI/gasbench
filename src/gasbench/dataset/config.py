@@ -10,9 +10,44 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
-DEFAULT_IMAGE_BENCHMARK_SIZE = 10000
-DEFAULT_VIDEO_BENCHMARK_SIZE = 5000
-
+BENCHMARK_SIZES = {
+    "debug": {
+        "image": {
+            "total_samples": 100,
+            "images_per_parquet": 100,
+            "parquet_per_dataset": 1,
+        },
+        "video": {
+            "total_samples": 50,
+            "videos_per_zip": 50,
+            "zips_per_dataset": 1,
+        },
+    },
+    "small": {
+        "image": {
+            "total_samples": 1800,  # ~100 per dataset for 18 datasets
+            "images_per_parquet": 100,
+            "parquet_per_dataset": 1,
+        },
+        "video": {
+            "total_samples": 600,  # ~100 per dataset for 6 datasets
+            "videos_per_zip": 100,
+            "zips_per_dataset": 1,
+        },
+    },
+    "full": {
+        "image": {
+            "total_samples": 10000,
+            "images_per_parquet": 100,
+            "parquet_per_dataset": 5,
+        },
+        "video": {
+            "total_samples": 5000,
+            "videos_per_zip": 50,
+            "zips_per_dataset": 2,
+        },
+    },
+}
 
 @dataclass
 class BenchmarkDatasetConfig:
@@ -29,8 +64,17 @@ class BenchmarkDatasetConfig:
     source_format: str = ""  # Auto-detected if empty
 
 
-IMAGE_BENCHMARK_SIZE: int
-VIDEO_BENCHMARK_SIZE: int
+def get_benchmark_size(modality: str, mode: str = "full") -> int:
+    """Get the target benchmark size for a given modality and mode.
+    
+    Args:
+        modality: "image" or "video"
+        mode: "debug", "small", or "full"
+        
+    Returns:
+        Target number of samples for the benchmark
+    """
+    return BENCHMARK_SIZES.get(mode, BENCHMARK_SIZES["full"])[modality]["total_samples"]
 
 
 def apply_mode_to_datasets(
@@ -49,23 +93,25 @@ def apply_mode_to_datasets(
         # Debug: Only use first dataset
         return [datasets[0]] if datasets else []
     
-    elif mode == "small":
-        # Small: Use all datasets but limit archives and items
-        # 1 archive per dataset, 100 items per archive
+    elif mode in ["small", "full"]:
+        # Apply mode-specific limits from BENCHMARK_SIZES
         modified_datasets = []
         for dataset in datasets:
+            modality = dataset.modality
+            mode_config = BENCHMARK_SIZES.get(mode, BENCHMARK_SIZES["full"])[modality]
+            
             modified = replace(
                 dataset,
-                images_per_parquet=100,
-                videos_per_zip=100,
-                parquet_per_dataset=1,
-                zips_per_dataset=1
+                images_per_parquet=mode_config.get("images_per_parquet", dataset.images_per_parquet),
+                videos_per_zip=mode_config.get("videos_per_zip", dataset.videos_per_zip),
+                parquet_per_dataset=mode_config.get("parquet_per_dataset", dataset.parquet_per_dataset),
+                zips_per_dataset=mode_config.get("zips_per_dataset", dataset.zips_per_dataset),
             )
             modified_datasets.append(modified)
         return modified_datasets
     
-    else:  # mode == "full"
-        # Full: Use configurations as-is from yaml
+    else:
+        # Unknown mode: default to full
         return datasets
 
 
@@ -275,8 +321,6 @@ def load_benchmark_datasets_from_yaml(
         return {
             "image": [],
             "video": [],
-            "image_benchmark_size": DEFAULT_IMAGE_BENCHMARK_SIZE,
-            "video_benchmark_size": DEFAULT_VIDEO_BENCHMARK_SIZE,
         }
 
     try:
@@ -287,12 +331,6 @@ def load_benchmark_datasets_from_yaml(
         result = {
             "image": [],
             "video": [],
-            "image_benchmark_size": data.get(
-                "image_benchmark_size", DEFAULT_IMAGE_BENCHMARK_SIZE
-            ),
-            "video_benchmark_size": data.get(
-                "video_benchmark_size", DEFAULT_VIDEO_BENCHMARK_SIZE
-            ),
         }
 
         for modality in ["image", "video"]:
@@ -337,8 +375,6 @@ def load_benchmark_datasets_from_yaml(
         return {
             "image": [],
             "video": [],
-            "image_benchmark_size": DEFAULT_IMAGE_BENCHMARK_SIZE,
-            "video_benchmark_size": DEFAULT_VIDEO_BENCHMARK_SIZE,
         }
 
 
@@ -380,12 +416,3 @@ def get_benchmark_dataset_summary() -> Dict:
     }
 
     return summary
-
-
-_default_config = load_benchmark_datasets_from_yaml()
-IMAGE_BENCHMARK_SIZE = _default_config.get(
-    "image_benchmark_size", DEFAULT_IMAGE_BENCHMARK_SIZE
-)
-VIDEO_BENCHMARK_SIZE = _default_config.get(
-    "video_benchmark_size", DEFAULT_VIDEO_BENCHMARK_SIZE
-)

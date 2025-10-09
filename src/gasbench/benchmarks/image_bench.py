@@ -1,5 +1,3 @@
-"""Image benchmark execution functionality."""
-
 import json
 import time
 import numpy as np
@@ -9,7 +7,7 @@ from ..logger import get_logger
 from ..processing.media import process_image_sample
 from ..processing.transforms import apply_random_augmentations, compress_image_jpeg_pil
 from ..dataset.config import (
-    IMAGE_BENCHMARK_SIZE,
+    get_benchmark_size,
     discover_benchmark_image_datasets,
     calculate_dataset_sampling,
     build_dataset_info,
@@ -57,12 +55,14 @@ async def run_image_benchmark(
         per_dataset_results = {}
         confusion_matrix = ConfusionMatrix()
 
+        target_size = get_benchmark_size("image", mode)
+
         per_dataset_cap, min_samples_per_dataset = calculate_dataset_sampling(
-            len(available_datasets), IMAGE_BENCHMARK_SIZE
+            len(available_datasets), target_size
         )
         
         sampling_info = {
-            "target_samples": IMAGE_BENCHMARK_SIZE,
+            "target_samples": target_size,
             "num_datasets": len(available_datasets),
             "per_dataset_cap": per_dataset_cap,
             "min_per_dataset": min_samples_per_dataset,
@@ -147,7 +147,7 @@ async def run_image_benchmark(
 
                         if total % 500 == 0:
                             logger.info(
-                                f"Progress: {total}/{IMAGE_BENCHMARK_SIZE} samples, "
+                                f"Progress: {total}/{target_size} samples, "
                                 f"Accuracy: {correct / total:.2%}"
                             )
 

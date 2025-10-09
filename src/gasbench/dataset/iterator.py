@@ -9,12 +9,14 @@ from typing import Optional, Dict
 from PIL import Image
 
 from ..logger import get_logger
-from .config import BenchmarkDatasetConfig, IMAGE_BENCHMARK_SIZE, VIDEO_BENCHMARK_SIZE
+from .config import BenchmarkDatasetConfig
 from .download import download_and_extract
 from .cache import save_sample_to_cache, save_dataset_cache_files
 from . import gasstation_utils
 
 logger = get_logger(__name__)
+
+DEFAULT_MAX_SAMPLES = 10000
 
 
 class DatasetIterator:
@@ -29,9 +31,7 @@ class DatasetIterator:
         num_weeks: int = None,
     ):
         self.config = dataset_config
-        self.max_samples = max_samples or min(
-            IMAGE_BENCHMARK_SIZE, VIDEO_BENCHMARK_SIZE
-        )
+        self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.num_weeks = num_weeks

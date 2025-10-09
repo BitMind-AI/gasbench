@@ -132,14 +132,13 @@ image:
     images_per_parquet: 200
     parquet_per_dataset: 5
 
-  - name: qwen-self-generated
-    path: DiffSynth-Studio/Qwen-Image-Self-Generated-Dataset
-    source: modelscope
-    modality: image
+  - name: klingai-images
+    path: bitmind/klingai-images
+    modality: video
     media_type: synthetic
-    source_format: tar
-    images_per_parquet: 200
-    parquet_per_dataset: 3
+    source_format: mp4
+    images_per_parquet: 100
+    parquet_per_dataset: 10
 
 video:
   - name: gasstation-generated-videos
@@ -331,4 +330,12 @@ video:
     source_format: mp4
     videos_per_zip: -1
     zips_per_dataset: -1
+
+  - name: klingai-videos
+    path: bitmind/klingai-videos
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: 100
+    zips_per_dataset: 10
 

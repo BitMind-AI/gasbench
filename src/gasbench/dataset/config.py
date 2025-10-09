@@ -63,6 +63,9 @@ class BenchmarkDatasetConfig:
     zips_per_dataset: int = 2
     source_format: str = ""  # Auto-detected if empty
 
+    include_paths: Optional[List[str]] = None 
+    exclude_paths: Optional[List[str]] = None
+
 
 def get_benchmark_size(modality: str, mode: str = "full") -> int:
     """Get the target benchmark size for a given modality and mode.
@@ -278,6 +281,8 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                     parquet_per_dataset=dataset_dict.get("parquet_per_dataset", 5),
                     zips_per_dataset=dataset_dict.get("zips_per_dataset", 2),
                     source_format=dataset_dict.get("source_format", ""),
+                    include_paths=dataset_dict.get("include_paths"),
+                    exclude_paths=dataset_dict.get("exclude_paths"),
                 )
                 result[modality].append(config)
 

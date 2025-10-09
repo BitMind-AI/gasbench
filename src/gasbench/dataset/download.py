@@ -61,8 +61,6 @@ def download_and_extract(
         Complete sample dictionaries ready for processing functions
     """
     try:
-        # Quick check: if this specific dataset is already cached and force_download is False,
-        # try to load from cache first to avoid unnecessary downloads
         if not force_download and _is_dataset_cached(dataset, cache_dir):
             logger.info(
                 f"Dataset {dataset.name} found in cache, loading from volume"
@@ -94,7 +92,13 @@ def download_and_extract(
             temp_dir_root = Path(tempfile.mkdtemp())
 
         try:
-            filenames = _list_remote_dataset_files(dataset.path, dataset.source_format, current_week_only, num_weeks, target_week)
+            include_paths = getattr(dataset, "include_paths", None)
+            exclude_paths = getattr(dataset, "exclude_paths", None)
+
+            filenames = _list_remote_dataset_files(
+                dataset.path, dataset.source_format, current_week_only, num_weeks, target_week,
+                include_paths, exclude_paths
+            )
             if not filenames:
                 logger.warning(
                     f"No files found for {dataset.path} with format {dataset.source_format}"
@@ -116,7 +120,8 @@ def download_and_extract(
                             f"Trying fallback format {fallback_format} for {dataset.path}"
                         )
                         filenames = _list_remote_dataset_files(
-                            dataset.path, fallback_format, current_week_only, num_weeks, target_week
+                            dataset.path, fallback_format, current_week_only, num_weeks, target_week,
+                            include_paths, exclude_paths
                         )
                         if filenames:
                             logger.info(
@@ -300,13 +305,28 @@ def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bo
 
 
 def _list_remote_dataset_files(
-    dataset_path: str, source_format: str = ".parquet", current_week_only: bool = False, num_weeks: int = None, target_week: str = None
+    dataset_path: str, 
+    source_format: str = ".parquet",
+    current_week_only: bool = False,
+    num_weeks: int = None,
+    target_week: str = None,
+    include_paths: Optional[List[str]] = None,
+    exclude_paths: Optional[List[str]] = None
 ) -> List[str]:
-    """List available files in a dataset, filtered by source_format.
+    """List available files in a dataset, filtered by source_format and path patterns.
 
     Supports single extensions (e.g., .parquet, .zip) and tar variants (.tar, .tar.gz, .tgz).
     For gasstation datasets with current_week_only=True, filters to only current ISO week's data.
     For gasstation datasets with num_weeks set, filters to only the N most recent weeks.
+    
+    Args:
+        dataset_path: HuggingFace dataset path
+        source_format: File extension to filter by
+        current_week_only: For gasstation datasets, only get current week
+        num_weeks: For gasstation datasets, get N most recent weeks
+        target_week: For gasstation datasets, get specific week
+        include_paths: Only include files containing one of these path segments
+        exclude_paths: Exclude files containing any of these path segments
     """
     if not source_format.startswith("."):
         source_format = "." + source_format
@@ -317,9 +337,16 @@ def _list_remote_dataset_files(
     else:
         files = list_hf_files(repo_id=dataset_path, extension=source_format)
 
+    if include_paths:
+        files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
+        logger.info(f"After include_paths filter: {len(files)} files")
+
+    if exclude_paths:
+        files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
+        logger.info(f"After exclude_paths filter: {len(files)} files")
+
     if "gasstation" in dataset_path.lower():
         if target_week:
-            # Filter to specific week
             files = [f for f in files if target_week in f]
             logger.info(f"Filtered to week {target_week} for {dataset_path}: {len(files)} files")
         elif num_weeks:
@@ -484,7 +511,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
 
 def _create_sample(
     dataset, media_obj, source_path: Path, iso_week: Optional[str] = None
-) -> Dict[str, Any]:  # BenchmarkDatasetConfig
+) -> Dict[str, Any]:
     """Create a complete sample in the format expected by processing functions."""
     base_sample = {
         "media_type": dataset.media_type,
@@ -492,14 +519,14 @@ def _create_sample(
         "dataset_path": dataset.path,
         "source_file": source_path.name,
     }
-    
+
     # Add ISO week if available (for gasstation datasets)
     if iso_week:
         base_sample["iso_week"] = iso_week
 
     if dataset.modality == "image":
         base_sample["image"] = media_obj  # PIL Image
-    else:  # video
+    else:
         base_sample["video_bytes"] = media_obj  # Raw video bytes
 
     return base_sample
@@ -517,12 +544,10 @@ def _clean_to_json_serializable(value: Any) -> Any:
     - fallback -> str(value) if still not JSON-serializable
     """
     try:
-        # Fast path for common primitives
         if value is None or isinstance(value, (str, int, bool)):
             return value
 
         if isinstance(value, float):
-            # Handle NaN/Inf
             if np.isnan(value) or np.isinf(value):
                 return None
             return value
@@ -619,7 +644,10 @@ def _process_parquet(
     
     if "gasstation" in dataset.name.lower():
         cols = list(sample_df.columns)
-        has_generator = any("hotkey" in str(c).lower() or "generator" in str(c).lower() for c in cols)
+        has_generator = any(
+            "hotkey" in str(c).lower() or "generator" in str(c).lower()
+            for c in cols
+        )
         if not has_generator:
             logger.warning(f"Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
 
@@ -930,7 +958,6 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
 
     Yields samples in the same format as download_and_extract.
     """
-    import json
 
     dataset_dir = f"{cache_dir}/datasets/{dataset.name}"
     samples_dir = os.path.join(dataset_dir, "samples")

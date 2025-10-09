@@ -204,4 +204,49 @@ video:
     source_format: zip
     videos_per_zip: 100
     zips_per_dataset: 10
+ 
+  - name: fakeparts-t2v
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    videos_per_zip: 100
+    zips_per_dataset: 10
+    include_paths: ["t2v/"]
+ 
+  - name: fakeparts-faceswap
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    videos_per_zip: 100
+    zips_per_dataset: 10
+    include_paths: ["faceswap/"]
+ 
+  - name: fakeparts-inpainting
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    videos_per_zip: 100
+    zips_per_dataset: 10
+    include_paths: ["inpainting/"]
+ 
+  - name: fakeparts-outpainting
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    videos_per_zip: 100
+    zips_per_dataset: 10
+    include_paths: ["outpainting/"]
+ 
+  - name: fakeparts-stylechange
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    videos_per_zip: 100
+    zips_per_dataset: 10
+    include_paths: ["stylechange/"]
 

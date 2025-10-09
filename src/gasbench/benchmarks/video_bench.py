@@ -30,7 +30,7 @@ async def run_video_benchmark(
     session,
     input_specs,
     benchmark_results: Dict,
-    debug_mode: bool = False,
+    mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
 ) -> float:
@@ -42,7 +42,7 @@ async def run_video_benchmark(
         else:
             logger.info("📥 Loading benchmark video datasets...")
         
-        available_datasets = discover_benchmark_video_datasets(debug_mode, gasstation_only)
+        available_datasets = discover_benchmark_video_datasets(mode, gasstation_only)
 
         if not available_datasets:
             logger.error("No benchmark video datasets configured")

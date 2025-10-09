@@ -36,11 +36,31 @@ Examples:
         choices=["image", "video"], 
         help="Model modality to benchmark"
     )
-    parser.add_argument(
+    
+    # Mode selection (mutually exclusive)
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
         "--debug", 
-        action="store_true", 
-        help="Use debug mode with smaller datasets for faster testing"
+        action="store_const",
+        const="debug",
+        dest="mode",
+        help="Debug mode: only use first image and video datasets for quick testing"
     )
+    mode_group.add_argument(
+        "--small", 
+        action="store_const",
+        const="small",
+        dest="mode",
+        help="Small mode: download only 1 archive per dataset, extract 100 items from each"
+    )
+    mode_group.add_argument(
+        "--full", 
+        action="store_const",
+        const="full",
+        dest="mode",
+        help="Full mode: use complete configurations from yaml file (default)"
+    )
+    
     parser.add_argument(
         "--gasstation-only", 
         action="store_true", 
@@ -62,6 +82,9 @@ Examples:
     
     args = parser.parse_args()
     
+    # Default mode is 'full' if no mode flag is provided
+    mode = args.mode if args.mode else "full"
+    
     # Validate model path
     model_path = Path(args.model_path)
     if not model_path.exists():
@@ -75,7 +98,7 @@ Examples:
     print("⛽ Starting gasbench evaluation ⛽")
     print(f"  Model: {model_path}")
     print(f"  Modality: {args.modality.upper()}")
-    print(f"  Debug Mode: {args.debug}")
+    print(f"  Mode: {mode.upper()}")
     print(f"  Gasstation Only: {args.gasstation_only}")
     if args.cache_dir:
         print(f"  Cache Directory: {args.cache_dir}")
@@ -86,7 +109,7 @@ Examples:
             run_benchmark(
                 model_path=str(model_path),
                 modality=args.modality,
-                debug_mode=args.debug,
+                mode=mode,
                 gasstation_only=args.gasstation_only,
                 cache_dir=args.cache_dir
             )

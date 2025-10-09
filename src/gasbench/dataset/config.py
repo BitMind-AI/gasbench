@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Dict, List, Optional
 from pathlib import Path
 import os
@@ -33,14 +33,58 @@ IMAGE_BENCHMARK_SIZE: int
 VIDEO_BENCHMARK_SIZE: int
 
 
+def apply_mode_to_datasets(
+    datasets: List[BenchmarkDatasetConfig], mode: str
+) -> List[BenchmarkDatasetConfig]:
+    """Apply mode transformations to dataset configurations.
+    
+    Args:
+        datasets: List of dataset configurations
+        mode: One of "debug", "small", or "full"
+        
+    Returns:
+        Transformed list of datasets based on mode
+    """
+    if mode == "debug":
+        # Debug: Only use first dataset
+        return [datasets[0]] if datasets else []
+    
+    elif mode == "small":
+        # Small: Use all datasets but limit archives and items
+        # 1 archive per dataset, 100 items per archive
+        modified_datasets = []
+        for dataset in datasets:
+            modified = replace(
+                dataset,
+                images_per_parquet=100,
+                videos_per_zip=100,
+                parquet_per_dataset=1,
+                zips_per_dataset=1
+            )
+            modified_datasets.append(modified)
+        return modified_datasets
+    
+    else:  # mode == "full"
+        # Full: Use configurations as-is from yaml
+        return datasets
+
+
 def discover_benchmark_image_datasets(
-    debug_mode: bool = False,
+    mode: str = "full",
     gasstation_only: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark image datasets."""
-    dataset_source = load_benchmark_datasets_from_yaml(yaml_path, debug_mode)
+    """Return list of available benchmark image datasets.
+    
+    Args:
+        mode: Benchmark mode - "debug", "small", or "full"
+        gasstation_only: If True, only return gasstation datasets
+        yaml_path: Optional path to custom yaml config
+    """
+    dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
     datasets = dataset_source["image"]
+
+    datasets = apply_mode_to_datasets(datasets, mode)
 
     if gasstation_only:
         gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
@@ -50,13 +94,21 @@ def discover_benchmark_image_datasets(
 
 
 def discover_benchmark_video_datasets(
-    debug_mode: bool = False,
+    mode: str = "full",
     gasstation_only: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark video datasets."""
-    dataset_source = load_benchmark_datasets_from_yaml(yaml_path, debug_mode)
+    """Return list of available benchmark video datasets.
+    
+    Args:
+        mode: Benchmark mode - "debug", "small", or "full"
+        gasstation_only: If True, only return gasstation datasets
+        yaml_path: Optional path to custom yaml config
+    """
+    dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
     datasets = dataset_source["video"]
+
+    datasets = apply_mode_to_datasets(datasets, mode)
 
     if gasstation_only:
         gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
@@ -203,12 +255,14 @@ def _load_bundled_config(filename: str) -> Dict:
 
 
 def load_benchmark_datasets_from_yaml(
-    yaml_path: Optional[str] = None, debug_mode: bool = False
+    yaml_path: Optional[str] = None
 ) -> Dict[str, List[BenchmarkDatasetConfig]]:
-    """Load benchmark datasets from YAML file."""
-    filename = (
-        "debug_benchmark_datasets.yaml" if debug_mode else "benchmark_datasets.yaml"
-    )
+    """Load benchmark datasets from YAML file.
+    
+    Args:
+        yaml_path: Optional path to custom yaml config. If None, loads bundled config.
+    """
+    filename = "benchmark_datasets.yaml"
 
     try:
         if yaml_path is not None:

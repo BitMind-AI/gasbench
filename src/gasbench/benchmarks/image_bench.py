@@ -29,7 +29,7 @@ async def run_image_benchmark(
     session,
     input_specs,
     benchmark_results: Dict,
-    debug_mode: bool = False,
+    mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
 ) -> float:
@@ -41,7 +41,7 @@ async def run_image_benchmark(
         else:
             logger.info("📥 Loading benchmark image datasets...")
         
-        available_datasets = discover_benchmark_image_datasets(debug_mode, gasstation_only)
+        available_datasets = discover_benchmark_image_datasets(mode, gasstation_only)
 
         if not available_datasets:
             logger.error("No benchmark image datasets configured")

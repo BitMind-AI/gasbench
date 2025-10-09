@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 async def run_benchmark(
     model_path: str,
     modality: str,
-    debug_mode: bool = False,
+    mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: Optional[str] = None,
 ) -> Dict:
@@ -28,7 +28,7 @@ async def run_benchmark(
     Args:
         model_path: Path to ONNX model file
         modality: Type of modality to test ("image" or "video")
-        debug_mode: Use DEBUG_BENCHMARK_DATASETS for faster testing
+        mode: Benchmark mode - "debug", "small", or "full" (default: "full")
         gasstation_only: If True, only use gasstation datasets
         cache_dir: Directory for caching (defaults to /.cache/gasbench)
 
@@ -51,7 +51,7 @@ async def run_benchmark(
         "errors": [],
         "metrics": {},
         "run_id": run_id,
-        "debug_mode": debug_mode,
+        "mode": mode,
         "gasstation_only": gasstation_only,
     }
 
@@ -75,7 +75,7 @@ async def run_benchmark(
             input_specs,
             modality,
             benchmark_results,
-            debug_mode,
+            mode,
             gasstation_only,
             cache_dir,
         )
@@ -149,19 +149,19 @@ async def execute_benchmark(
     input_specs,
     modality: str,
     benchmark_results: Dict,
-    debug_mode: bool,
+    mode: str,
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (gasstation_only={gasstation_only})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only})")
     if modality == "image":
         benchmark_score = await run_image_benchmark(
             session,
             input_specs,
             benchmark_results,
-            debug_mode,
+            mode,
             gasstation_only,
             cache_dir,
         )
@@ -170,7 +170,7 @@ async def execute_benchmark(
             session,
             input_specs,
             benchmark_results,
-            debug_mode,
+            mode,
             gasstation_only,
             cache_dir,
         )
@@ -190,7 +190,7 @@ def print_benchmark_summary(benchmark_results: Dict):
     print(f"Model Path: {benchmark_results.get('model_path', 'N/A')}")
     print(f"Modality: {benchmark_results.get('modality', 'N/A').upper()}")
     print(f"Run ID: {benchmark_results.get('run_id', 'N/A')}")
-    print(f"Debug Mode: {benchmark_results.get('debug_mode', False)}")
+    print(f"Mode: {benchmark_results.get('mode', 'full').upper()}")
     print(f"Gasstation Only: {benchmark_results.get('gasstation_only', False)}")
     print(f"Completed: {benchmark_results.get('benchmark_completed', False)}")
     duration = benchmark_results.get("metrics", {}).get("benchmark_duration_seconds", 0)
@@ -300,7 +300,7 @@ def save_results_to_json(
             ).isoformat(),
             "model_path": benchmark_results.get("model_path"),
             "modality": benchmark_results.get("modality"),
-            "debug_mode": benchmark_results.get("debug_mode", False),
+            "mode": benchmark_results.get("mode", "full"),
             "gasstation_only": benchmark_results.get("gasstation_only", False),
             "benchmark_completed": benchmark_results.get("benchmark_completed", False),
             "duration_seconds": benchmark_results.get("metrics", {}).get(

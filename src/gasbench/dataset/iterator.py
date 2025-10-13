@@ -3,6 +3,7 @@
 import os
 import json
 import re
+import time
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -17,6 +18,7 @@ from . import gasstation_utils
 logger = get_logger(__name__)
 
 DEFAULT_MAX_SAMPLES = 10000
+CACHE_MAX_SAMPLES = 2000  # Fixed cache size per dataset to avoid re-downloads when dataset count changes
 
 
 class DatasetIterator:
@@ -362,10 +364,10 @@ class DatasetIterator:
                 next_index = 0
         else:
             logger.info(
-                f"No cached datasets found.\nDownloading {self.config.name} (max {self.max_samples} samples)"
+                f"No cached datasets found.\nDownloading {self.config.name} (max {CACHE_MAX_SAMPLES} samples)"
             )
 
-        if sample_count >= self.max_samples:
+        if sample_count >= CACHE_MAX_SAMPLES:
             logger.info(f"Cache complete with {sample_count} samples")
             return
 
@@ -383,7 +385,7 @@ class DatasetIterator:
             num_weeks=self.num_weeks,
             downloaded_archives=None,  # Not used for non-gasstation datasets
         ):
-            if sample_count >= self.max_samples:
+            if sample_count >= CACHE_MAX_SAMPLES:
                 break
 
             filename = save_sample_to_cache(
@@ -400,7 +402,7 @@ class DatasetIterator:
                         self.config, self.dataset_dir, sample_metadata, sample_count
                     )
                     logger.info(
-                        f"Downloaded {sample_count}/{self.max_samples} samples (checkpoint saved)"
+                        f"Downloaded {sample_count}/{CACHE_MAX_SAMPLES} samples (checkpoint saved)"
                     )
 
         # Save final metadata
@@ -411,6 +413,15 @@ class DatasetIterator:
             logger.info(
                 f"Download complete: Saved {sample_count} samples to cache for {self.config.name}"
             )
+            
+            # Create completion marker file to indicate dataset is fully downloaded
+            completion_marker = os.path.join(self.dataset_dir, ".download_complete")
+            with open(completion_marker, 'w') as f:
+                json.dump({
+                    "sample_count": sample_count,
+                    "completed_at": time.time(),
+                    "cache_max_samples": CACHE_MAX_SAMPLES
+                }, f)
         else:
             logger.warning(f"No samples were downloaded for {self.config.name}")
 
@@ -446,12 +457,17 @@ class DatasetIterator:
                 if not self._has_cached_dataset():
                     return False
 
+                # Check for completion marker file (dataset fully downloaded, even if < CACHE_MAX_SAMPLES)
+                completion_marker = os.path.join(self.dataset_dir, ".download_complete")
+                if os.path.exists(completion_marker):
+                    return True
+
                 metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
                 with open(metadata_file, "r") as f:
                     metadata = json.load(f)
 
                 cached_count = len(metadata)
-                return cached_count >= self.max_samples
+                return cached_count >= CACHE_MAX_SAMPLES
 
         except Exception:
             return False

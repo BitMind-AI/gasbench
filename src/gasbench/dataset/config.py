@@ -10,41 +10,34 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
-BENCHMARK_SIZES = {
+# Total sample targets for each benchmark mode (used for runtime evaluation sampling)
+BENCHMARK_TOTAL_SAMPLES = {
+    "debug": {"image": 100, "video": 50},
+    "small": {"image": 1800, "video": 600},
+    "full": {"image": 10000, "video": 5000},
+}
+
+# Per-dataset download limits (only applied in debug/small modes for faster testing)
+# In "full" mode, YAML configs are respected
+DOWNLOAD_SIZE_OVERRIDES = {
     "debug": {
         "image": {
-            "total_samples": 100,
             "images_per_parquet": 100,
             "parquet_per_dataset": 1,
         },
         "video": {
-            "total_samples": 50,
             "videos_per_zip": 50,
             "zips_per_dataset": 1,
         },
     },
     "small": {
         "image": {
-            "total_samples": 1800,  # ~100 per dataset for 18 datasets
             "images_per_parquet": 100,
             "parquet_per_dataset": 1,
         },
         "video": {
-            "total_samples": 600,  # ~100 per dataset for 6 datasets
             "videos_per_zip": 100,
             "zips_per_dataset": 1,
-        },
-    },
-    "full": {
-        "image": {
-            "total_samples": 10000,
-            "images_per_parquet": 100,
-            "parquet_per_dataset": 5,
-        },
-        "video": {
-            "total_samples": 5000,
-            "videos_per_zip": 50,
-            "zips_per_dataset": 2,
         },
     },
 }
@@ -78,7 +71,7 @@ def get_benchmark_size(modality: str, mode: str = "full") -> int:
     Returns:
         Target number of samples for the benchmark
     """
-    return BENCHMARK_SIZES.get(mode, BENCHMARK_SIZES["full"])[modality]["total_samples"]
+    return BENCHMARK_TOTAL_SAMPLES.get(mode, BENCHMARK_TOTAL_SAMPLES["full"])[modality]
 
 
 def apply_mode_to_datasets(
@@ -94,16 +87,23 @@ def apply_mode_to_datasets(
         Transformed list of datasets based on mode
     """
     if mode == "debug":
-        # Debug: Only use first dataset
-        return [datasets[0]] if datasets else []
+        if not datasets:
+            return []
+        dataset = datasets[0]
+        mode_config = DOWNLOAD_SIZE_OVERRIDES["debug"][dataset.modality]
+        modified = replace(
+            dataset,
+            images_per_parquet=mode_config.get("images_per_parquet", dataset.images_per_parquet),
+            videos_per_zip=mode_config.get("videos_per_zip", dataset.videos_per_zip),
+            parquet_per_dataset=mode_config.get("parquet_per_dataset", dataset.parquet_per_dataset),
+            zips_per_dataset=mode_config.get("zips_per_dataset", dataset.zips_per_dataset),
+        )
+        return [modified]
     
-    elif mode in ["small", "full"]:
-        # Apply mode-specific limits from BENCHMARK_SIZES
+    elif mode == "small":
         modified_datasets = []
         for dataset in datasets:
-            modality = dataset.modality
-            mode_config = BENCHMARK_SIZES.get(mode, BENCHMARK_SIZES["full"])[modality]
-            
+            mode_config = DOWNLOAD_SIZE_OVERRIDES["small"][dataset.modality]
             modified = replace(
                 dataset,
                 images_per_parquet=mode_config.get("images_per_parquet", dataset.images_per_parquet),
@@ -115,8 +115,7 @@ def apply_mode_to_datasets(
         return modified_datasets
     
     else:
-        # Unknown mode: default to full
-        return datasets
+        return datasets  # Full mode (or unknown): Use YAML configs as-is
 
 
 def discover_benchmark_image_datasets(

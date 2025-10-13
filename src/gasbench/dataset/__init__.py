@@ -9,7 +9,8 @@ This package contains modules for:
 
 from .config import (
     BenchmarkDatasetConfig,
-    BENCHMARK_SIZES,
+    BENCHMARK_TOTAL_SAMPLES,
+    DOWNLOAD_SIZE_OVERRIDES,
     get_benchmark_size,
     discover_benchmark_image_datasets,
     discover_benchmark_video_datasets,
@@ -20,7 +21,8 @@ from .download import download_and_extract
 
 __all__ = [
     "BenchmarkDatasetConfig",
-    "BENCHMARK_SIZES",
+    "BENCHMARK_TOTAL_SAMPLES",
+    "DOWNLOAD_SIZE_OVERRIDES",
     "get_benchmark_size",
     "discover_benchmark_image_datasets",
     "discover_benchmark_video_datasets",

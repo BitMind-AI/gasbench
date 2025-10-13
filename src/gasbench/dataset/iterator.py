@@ -18,11 +18,12 @@ from . import gasstation_utils
 logger = get_logger(__name__)
 
 DEFAULT_MAX_SAMPLES = 10000
-CACHE_MAX_SAMPLES = 2000  # Fixed cache size per dataset to avoid re-downloads when dataset count changes
+CACHE_MAX_SAMPLES = 2000
+GASSTATION_CACHE_MAX_SAMPLES = 5000
 
 
 class DatasetIterator:
-    """Unified iterator for benchmark datasets with caching support."""
+    """Unified iterator for image and video benchmark datasets"""
 
     def __init__(
         self,
@@ -170,13 +171,7 @@ class DatasetIterator:
         for field in ["iso_week", "generator_hotkey", "generator_uid"]:
             if field in sample:
                 metadata[field] = sample.get(field)
-        
-        # Debug: Log if we're missing generator info for gasstation datasets
-        if "gasstation" in self.config.name.lower():
-            has_generator = "generator_hotkey" in metadata or "generator_hotkey" in sample
-            if not has_generator:
-                logger.debug(f"⚠️  No generator_hotkey found in sample. Available keys: {list(sample.keys())[:10]}")
-        
+
         return metadata
     
     def _find_oldest_sample(self, sample_metadata: Dict, samples_dir: str) -> Optional[str]:
@@ -248,10 +243,10 @@ class DatasetIterator:
         
         # If we're at max_samples and there are new archives, we'll do sample replacement
         # Keep the most recent samples by evicting oldest ones
-        replacing_samples = sample_count >= self.max_samples
+        replacing_samples = sample_count >= GASSTATION_CACHE_MAX_SAMPLES
         if replacing_samples:
             logger.info(
-                f"Week {week_str} has {sample_count} samples (at max_samples). "
+                f"Week {week_str} has {sample_count} samples (at gasstation limit {GASSTATION_CACHE_MAX_SAMPLES}). "
                 f"Will replace oldest samples with fresh data from new archives"
             )
         
@@ -278,7 +273,7 @@ class DatasetIterator:
                 downloaded_archives.add(archive_name)
             
             # If we're replacing samples, find and remove the oldest sample
-            if replacing_samples and sample_count >= self.max_samples:
+            if replacing_samples and sample_count >= GASSTATION_CACHE_MAX_SAMPLES:
                 oldest_sample = self._find_oldest_sample(sample_metadata, samples_dir)
                 if oldest_sample:
                     old_file = os.path.join(samples_dir, oldest_sample)

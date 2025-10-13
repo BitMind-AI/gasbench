@@ -10,6 +10,14 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
+# Dataset sampling configuration
+REGULAR_DATASET_MIN_SAMPLES = 100
+REGULAR_DATASET_MAX_SAMPLES = 2000
+GASSTATION_DATASET_MIN_SAMPLES = 500
+GASSTATION_DATASET_MAX_SAMPLES = 10000
+GASSTATION_WEIGHT_MULTIPLIER = 5.0  # Gasstation datasets get 5x more samples
+UNIFORM_SAMPLING_MULTIPLIER = 3  # Allow up to 3x the base allocation per dataset
+
 # Total sample overrides for debug/small modes (for faster testing)
 # In "full" mode, values are loaded from YAML (image_benchmark_size, video_benchmark_size)
 BENCHMARK_TOTAL_OVERRIDES = {
@@ -87,7 +95,6 @@ def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[st
         if size_key in data:
             return data[size_key]
 
-        # Fallback if not in YAML
         logger.warning(f"'{size_key}' not found in YAML, using default")
         return 10000 if modality == "image" else 5000
 
@@ -188,28 +195,72 @@ def discover_benchmark_video_datasets(
     return datasets
 
 
-def calculate_dataset_sampling(
-    num_datasets: int, target_total_samples: int
-) -> tuple[int, int]:
+def calculate_weighted_dataset_sampling(
+    datasets: List[BenchmarkDatasetConfig], 
+    target_total_samples: int, 
+    gasstation_weight: float = None
+) -> Dict[str, int]:
     """
-    Calculate per-dataset sampling parameters.
-
+    Calculate per-dataset sampling with higher weight for gasstation datasets.
+    
+    Args:
+        datasets: List of dataset configurations
+        target_total_samples: Total samples to aim for across all datasets
+        gasstation_weight: Weight multiplier for gasstation datasets (default: GASSTATION_WEIGHT_MULTIPLIER)
+    
     Returns:
-        Tuple of (per_dataset_cap, min_samples_per_dataset)
+        Dict mapping dataset names to their max_samples cap
     """
-    min_samples_per_dataset = target_total_samples // num_datasets
-    per_dataset_cap = min(2000, min_samples_per_dataset * 3)
-    return per_dataset_cap, min_samples_per_dataset
+    if gasstation_weight is None:
+        gasstation_weight = GASSTATION_WEIGHT_MULTIPLIER
+
+    gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
+    regular_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+    num_gasstation = len(gasstation_datasets)
+    num_regular = len(regular_datasets)
+    
+    if num_gasstation == 0:
+        per_dataset_cap = target_total_samples // len(datasets) if datasets else 0
+        return {
+            d.name: min(REGULAR_DATASET_MAX_SAMPLES, per_dataset_cap * UNIFORM_SAMPLING_MULTIPLIER) 
+            for d in datasets
+        }
+    
+    # Currently each regular dataset gets weight=1, each gasstation gets weight=gasstation_weight
+    total_weight = num_regular + (num_gasstation * gasstation_weight)
+    samples_per_weight_unit = target_total_samples / total_weight
+
+    regular_cap = int(samples_per_weight_unit)
+    gasstation_cap = int(samples_per_weight_unit * gasstation_weight)
+
+    regular_cap = min(REGULAR_DATASET_MAX_SAMPLES, max(REGULAR_DATASET_MIN_SAMPLES, regular_cap))
+    gasstation_cap = min(GASSTATION_DATASET_MAX_SAMPLES, max(GASSTATION_DATASET_MIN_SAMPLES, gasstation_cap))
+
+    sampling_dict = {}
+    for dataset in datasets:
+        if "gasstation" in dataset.name.lower():
+            sampling_dict[dataset.name] = gasstation_cap
+        else:
+            sampling_dict[dataset.name] = regular_cap    
+    return sampling_dict
 
 
-def build_dataset_info(valid_datasets: List, samples_per_dataset: int) -> Dict:
-    """Build dataset info dictionary for results."""
-    return {
+def build_dataset_info(valid_datasets: List, dataset_sampling: Dict[str, int] = None) -> Dict:
+    """Build dataset info dictionary for results.
+
+    Args:
+        valid_datasets: List of dataset configurations
+        dataset_sampling: Optional dict mapping dataset names to their sample caps
+    """
+    info = {
         "datasets_used": [d.name for d in valid_datasets],
         "evaluation_type": "ai_generated_detection",
-        "samples_per_dataset": samples_per_dataset,
         "dataset_media_types": {d.name: d.media_type for d in valid_datasets},
     }
+    if dataset_sampling:
+        info["samples_per_dataset"] = dataset_sampling
+
+    return info
 
 
 def validate_dataset_config(

@@ -10,7 +10,7 @@ from ..processing.pipeline import PreprocessingPipeline, preprocess_image_sample
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_image_datasets,
-    calculate_dataset_sampling,
+    calculate_weighted_dataset_sampling,
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
@@ -57,16 +57,25 @@ async def run_image_benchmark(
         confusion_matrix = ConfusionMatrix()
 
         target_size = get_benchmark_size("image", mode)
-
-        per_dataset_cap, min_samples_per_dataset = calculate_dataset_sampling(
-            len(available_datasets), target_size
+        dataset_sampling = calculate_weighted_dataset_sampling(available_datasets, target_size)
+        
+        # Calculate summary stats for logging
+        gasstation_count = len([d for d in available_datasets if "gasstation" in d.name.lower()])
+        regular_count = len(available_datasets) - gasstation_count
+        gasstation_cap = dataset_sampling.get(
+            next((d.name for d in available_datasets if "gasstation" in d.name.lower()), ""), 0
+        )
+        regular_cap = dataset_sampling.get(
+            next((d.name for d in available_datasets if "gasstation" not in d.name.lower()), ""), 0
         )
         
         sampling_info = {
             "target_samples": target_size,
             "num_datasets": len(available_datasets),
-            "per_dataset_cap": per_dataset_cap,
-            "min_per_dataset": min_samples_per_dataset,
+            "gasstation_datasets": gasstation_count,
+            "regular_datasets": regular_count,
+            "gasstation_samples_per_dataset": gasstation_cap,
+            "regular_samples_per_dataset": regular_cap,
             "dataset_breakdown": {
                 "real": len([d for d in available_datasets if d.media_type == 'real']),
                 "synthetic": len([d for d in available_datasets if d.media_type == 'synthetic']),
@@ -78,18 +87,19 @@ async def run_image_benchmark(
         num_workers = get_optimal_worker_count()
         generator_stats = benchmark_results.get("image_generator_stats", {})
 
-        dataset_info = build_dataset_info(available_datasets, per_dataset_cap)
+        dataset_info = build_dataset_info(available_datasets, dataset_sampling)
         for dataset_idx, dataset_config in enumerate(available_datasets):
+            dataset_cap = dataset_sampling[dataset_config.name]
             logger.info(
                 f"Processing dataset {dataset_idx + 1}/{len(available_datasets)}: "
-                f"{dataset_config.name} ({per_dataset_cap} samples)"
+                f"{dataset_config.name} ({dataset_cap} samples)"
             )
 
             dataset_correct = 0
             dataset_total = 0
 
             try:
-                dataset_iterator = DatasetIterator(dataset_config, max_samples=per_dataset_cap, cache_dir=cache_dir)
+                dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
                 with PreprocessingPipeline(
                     preprocess_fn=preprocess_image_sample_worker,
                     num_workers=num_workers,

@@ -5,11 +5,8 @@ from typing import Dict
 
 from ..logger import get_logger
 from ..processing.archive import video_archive_manager
-from ..processing.pipeline import (
-    PreprocessingPipeline,
-    preprocess_video_sample_worker,
-    get_optimal_worker_count
-)
+from ..processing.media import process_video_bytes_sample
+from ..processing.transforms import apply_random_augmentations, compress_video_frames_jpeg_torchvision
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_video_datasets,
@@ -93,8 +90,6 @@ async def run_video_benchmark(
 
             generator_stats = benchmark_results.get("video_generator_stats", {})
 
-            num_workers = get_optimal_worker_count()
-
             for dataset_idx, dataset_config in enumerate(available_datasets):
                 dataset_cap = dataset_sampling[dataset_config.name]
                 logger.info(
@@ -108,83 +103,78 @@ async def run_video_benchmark(
 
                 try:
                     dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
-                    with PreprocessingPipeline(
-                        preprocess_fn=preprocess_video_sample_worker,
-                        num_workers=num_workers,
-                        queue_size=32,
-                    ) as pipeline:
+                    for sample in dataset_iterator:
+                        try:
+                            # Decode video bytes and extract frames
+                            video_array, true_label_multiclass = process_video_bytes_sample(sample)
 
-                        for sample_idx, preprocessed, error_msg in pipeline.process_iterator(dataset_iterator):
+                            if video_array is None or true_label_multiclass is None:
+                                dataset_skipped += 1
+                                skipped_samples += 1
+                                if dataset_skipped % 10 == 0:
+                                    logger.debug(
+                                        f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far"
+                                    )
+                                continue
+
+                            # Apply augmentations
                             try:
-                                if error_msg:
-                                    logger.warning(f"Preprocessing error: {error_msg}")
-                                    benchmark_results["errors"].append(f"Preprocessing error: {error_msg[:100]}")
-                                    dataset_skipped += 1
-                                    skipped_samples += 1
-                                    continue
+                                tchw = video_array[0]
+                                thwc = np.transpose(tchw, (0, 2, 3, 1))
+                                aug_thwc, _, _, _ = apply_random_augmentations(thwc)
+                                aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
+                                aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
+                                video_array = np.expand_dims(aug_tchw, 0)
+                            except Exception:
+                                # If augmentation fails, continue with unaugmented video
+                                pass
 
-                                if preprocessed is None:
-                                    dataset_skipped += 1
-                                    skipped_samples += 1
-                                    if dataset_skipped % 10 == 0:
-                                        logger.debug(
-                                            f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far"
-                                        )
-                                    continue
+                            true_label_binary = multiclass_to_binary(true_label_multiclass)
 
-                                video_array = preprocessed['video_array']
-                                true_label_multiclass = preprocessed['true_label_multiclass']
-                                original_sample = preprocessed['sample_metadata']
+                            start = time.time()
+                            outputs = session.run(None, {input_specs[0].name: video_array})
+                            inference_times.append((time.time() - start) * 1000)
 
-                                if video_array is None or true_label_multiclass is None:
-                                    dataset_skipped += 1
-                                    skipped_samples += 1
-                                    continue
+                            predicted_binary, predicted_multiclass = process_model_output(outputs[0])
 
-                                true_label_binary = multiclass_to_binary(true_label_multiclass)
+                            confusion_matrix.update(
+                                true_label_binary, predicted_binary,
+                                true_label_multiclass, predicted_multiclass
+                            )
 
-                                start = time.time()
-                                outputs = session.run(None, {input_specs[0].name: video_array})
-                                inference_times.append((time.time() - start) * 1000)
+                            is_correct = predicted_binary == true_label_binary
+                            if is_correct:
+                                correct += 1
+                                dataset_correct += 1
 
-                                predicted_binary, predicted_multiclass = process_model_output(outputs[0])
+                            total += 1
+                            dataset_total += 1
 
-                                confusion_matrix.update(
-                                    true_label_binary, predicted_binary,
-                                    true_label_multiclass, predicted_multiclass
+                            update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
+
+                            if total % 500 == 0:
+                                logger.info(
+                                    f"Progress: {total}/{target_size} samples, "
+                                    f"Accuracy: {correct / total:.2%}"
                                 )
 
-                                is_correct = predicted_binary == true_label_binary
-                                if is_correct:
-                                    correct += 1
-                                    dataset_correct += 1
+                            if total % 100 == 0:
+                                frames_count = video_array.shape[1] if video_array is not None else 0
+                                logger.debug(
+                                    f"Sample {total}: "
+                                    f"True={true_label_multiclass}→{true_label_binary}, "
+                                    f"Pred={predicted_multiclass}→{predicted_binary}, "
+                                    f"Correct={is_correct}, "
+                                    f"Generator={sample.get('model_name', 'unknown')}, "
+                                    f"Dataset={dataset_config.name}, "
+                                    f"Frames={frames_count}"
+                                )
 
-                                total += 1
-                                dataset_total += 1
-
-                                update_generator_stats(generator_stats, original_sample, true_label_binary, predicted_binary)
-
-                                if total % 500 == 0:
-                                    logger.info(
-                                        f"Progress: {total}/{target_size} samples, "
-                                        f"Accuracy: {correct / total:.2%}"
-                                    )
-
-                                if total % 100 == 0:
-                                    frames_count = video_array.shape[1] if video_array is not None else 0
-                                    logger.debug(
-                                        f"Sample {total}: "
-                                        f"True={true_label_multiclass}→{true_label_binary}, "
-                                        f"Pred={predicted_multiclass}→{predicted_binary}, "
-                                        f"Correct={is_correct}, "
-                                        f"Generator={original_sample.get('model_name', 'unknown')}, "
-                                        f"Dataset={dataset_config.name}, "
-                                        f"Frames={frames_count}"
-                                    )
-
-                            except Exception as e:
-                                logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
-                                benchmark_results["errors"].append(f"Video inference error: {str(e)[:100]}")
+                        except Exception as e:
+                            logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
+                            benchmark_results["errors"].append(f"Video processing error: {str(e)[:100]}")
+                            dataset_skipped += 1
+                            skipped_samples += 1
 
                     dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
                     per_dataset_results[dataset_config.name] = {

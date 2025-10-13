@@ -62,6 +62,7 @@ class DatasetIterator:
         return self
 
     def __next__(self):
+        # Single source of truth: only check the limit here, not in get_samples()
         if self.samples_yielded >= self.max_samples:
             raise StopIteration
 
@@ -95,21 +96,20 @@ class DatasetIterator:
         """Generator that yields samples from cached data.
         
         For gasstation datasets, loads from all target week directories.
+
+        Note: This generator yields ALL available cached samples. The __next__() method
+        is responsible for enforcing max_samples limit. This avoids double-counting issues.
         """
         try:
             if self.is_gasstation:
                 # Load from all week directories
-                total_samples = 0
                 for week_str, week_dir in zip(self.target_weeks, self.week_dirs):
                     if not os.path.exists(week_dir):
                         continue
 
                     logger.info(f"Loading cached data for {self.config.name} week {week_str}")
                     for sample in self._load_from_cache_dir(week_dir):
-                        if total_samples >= self.max_samples:
-                            return
                         yield sample
-                        total_samples += 1
             else:
                 # Non-gasstation datasets: standard loading
                 if not self._has_cached_dataset():
@@ -119,16 +119,14 @@ class DatasetIterator:
                 cached_count = self._get_cached_count()
                 samples_to_load = min(cached_count, self.max_samples)
                 logger.info(f"Loading {samples_to_load} cached samples for {self.config.name}")
-                
-                total_samples = 0
+
                 for sample in self._load_from_cache_dir(self.dataset_dir):
-                    if total_samples >= self.max_samples:
-                        return
                     yield sample
-                    total_samples += 1
 
         except Exception as e:
             logger.error(f"Failed to get samples from {self.config.name}: {e}")
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
             return
 
     def _ensure_week_cached(self, week_str: str, week_dir: str):
@@ -502,6 +500,10 @@ class DatasetIterator:
         
         Args:
             cache_dir: Path to the cache directory to load from
+        
+        Note: This is a generator that yields samples. The caller (get_samples) is responsible
+        for tracking counts and enforcing limits. This method should NOT check or increment
+        self.samples_yielded as that creates double-counting issues.
         """
         try:
             samples_dir = os.path.join(cache_dir, "samples")
@@ -529,9 +531,6 @@ class DatasetIterator:
             sample_files.sort(key=extract_index, reverse=True)
 
             for filename in sample_files:
-                if self.samples_yielded >= self.max_samples:
-                    break
-
                 file_path = os.path.join(samples_dir, filename)
                 metadata = metadata_map.get(filename, {})
 
@@ -545,7 +544,6 @@ class DatasetIterator:
                             **metadata,
                         }
                         yield sample
-                        self.samples_yielded += 1
                     except Exception as e:
                         logger.warning(f"Failed to load cached image {filename}: {e}")
                         continue
@@ -561,7 +559,6 @@ class DatasetIterator:
                             **metadata,
                         }
                         yield sample
-                        self.samples_yielded += 1
                     except Exception as e:
                         logger.warning(f"Failed to load cached video {filename}: {e}")
                         continue

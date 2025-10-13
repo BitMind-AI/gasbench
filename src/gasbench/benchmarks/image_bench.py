@@ -6,7 +6,6 @@ from typing import Dict
 from ..logger import get_logger
 from ..processing.media import process_image_sample
 from ..processing.transforms import apply_random_augmentations, compress_image_jpeg_pil
-from ..processing.pipeline import PreprocessingPipeline, preprocess_image_sample_worker, get_optimal_worker_count
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_image_datasets,
@@ -84,7 +83,6 @@ async def run_image_benchmark(
         }
         logger.info(f"Sampling configuration: {json.dumps(sampling_info)}")
 
-        num_workers = get_optimal_worker_count()
         generator_stats = benchmark_results.get("image_generator_stats", {})
 
         dataset_info = build_dataset_info(available_datasets, dataset_sampling)
@@ -100,70 +98,69 @@ async def run_image_benchmark(
 
             try:
                 dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
-                with PreprocessingPipeline(
-                    preprocess_fn=preprocess_image_sample_worker,
-                    num_workers=num_workers,
-                    queue_size=32,
-                ) as pipeline:
 
-                    for sample_idx, preprocessed, error_msg in pipeline.process_iterator(dataset_iterator):
+                for sample in dataset_iterator:
+                    try:
+                        # Process image sample (load, convert to numpy)
+                        image_array, true_label_multiclass = process_image_sample(sample)
+
+                        if image_array is None or true_label_multiclass is None:
+                            continue
+
+                        # Apply augmentations
                         try:
-                            if error_msg:
-                                logger.warning(f"Preprocessing error: {error_msg}")
-                                benchmark_results["errors"].append(f"Preprocessing error: {error_msg[:100]}")
-                                continue
+                            chw = image_array[0]
+                            hwc = np.transpose(chw, (1, 2, 0))
+                            aug_hwc, _, _, _ = apply_random_augmentations(hwc)
+                            aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
+                            aug_chw = np.transpose(aug_hwc, (2, 0, 1))
+                            image_array = np.expand_dims(aug_chw, 0)
+                        except Exception:
+                            # If augmentation fails, continue with unaugmented image
+                            pass
 
-                            if preprocessed is None:
-                                continue
+                        # Run inference
+                        start = time.time()
+                        outputs = session.run(None, {input_specs[0].name: image_array})
+                        inference_times.append((time.time() - start) * 1000)
 
-                            image_array = preprocessed['image_array']
-                            true_label_multiclass = preprocessed['true_label_multiclass']
-                            original_sample = preprocessed['sample_metadata']
+                        predicted_binary, predicted_multiclass = process_model_output(outputs[0])
 
-                            if image_array is None or true_label_multiclass is None:
-                                continue
+                        true_label_binary = multiclass_to_binary(true_label_multiclass)
+                        confusion_matrix.update(
+                            true_label_binary, predicted_binary,
+                            true_label_multiclass, predicted_multiclass
+                        )
 
-                            start = time.time()
-                            outputs = session.run(None, {input_specs[0].name: image_array})
-                            inference_times.append((time.time() - start) * 1000)
+                        is_correct = predicted_binary == true_label_binary
+                        if is_correct:
+                            correct += 1
+                            dataset_correct += 1
 
-                            predicted_binary, predicted_multiclass = process_model_output(outputs[0])
+                        total += 1
+                        dataset_total += 1
 
-                            true_label_binary = multiclass_to_binary(true_label_multiclass)
-                            confusion_matrix.update(
-                                true_label_binary, predicted_binary,
-                                true_label_multiclass, predicted_multiclass
+                        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
+
+                        if total % 500 == 0:
+                            logger.info(
+                                f"Progress: {total}/{target_size} samples, "
+                                f"Accuracy: {correct / total:.2%}"
                             )
 
-                            is_correct = predicted_binary == true_label_binary
-                            if is_correct:
-                                correct += 1
-                                dataset_correct += 1
+                        if total % 100 == 0:
+                            logger.debug(
+                                f"Sample {total}: "
+                                f"True={true_label_multiclass}→{true_label_binary}, "
+                                f"Pred={predicted_multiclass}→{predicted_binary}, "
+                                f"Correct={is_correct}, "
+                                f"Generator={sample.get('model_name', 'unknown')}, "
+                                f"Dataset={dataset_config.name}"
+                            )
 
-                            total += 1
-                            dataset_total += 1
-
-                            update_generator_stats(generator_stats, original_sample, true_label_binary, predicted_binary)
-
-                            if total % 500 == 0:
-                                logger.info(
-                                    f"Progress: {total}/{target_size} samples, "
-                                    f"Accuracy: {correct / total:.2%}"
-                                )
-
-                            if total % 100 == 0:
-                                logger.debug(
-                                    f"Sample {total}: "
-                                    f"True={true_label_multiclass}→{true_label_binary}, "
-                                    f"Pred={predicted_multiclass}→{predicted_binary}, "
-                                    f"Correct={is_correct}, "
-                                    f"Generator={original_sample.get('model_name', 'unknown')}, "
-                                    f"Dataset={dataset_config.name}"
-                                )
-
-                        except Exception as e:
-                            logger.warning(f"Failed to process image sample from {dataset_config.name}: {e}")
-                            benchmark_results["errors"].append(f"Image inference error: {str(e)[:100]}")
+                    except Exception as e:
+                        logger.warning(f"Failed to process image sample from {dataset_config.name}: {e}")
+                        benchmark_results["errors"].append(f"Image processing error: {str(e)[:100]}")
 
                 dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
                 per_dataset_results[dataset_config.name] = {

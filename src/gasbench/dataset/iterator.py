@@ -279,7 +279,6 @@ class DatasetIterator:
             if replacing_samples and sample_count >= self.max_samples:
                 oldest_sample = self._find_oldest_sample(sample_metadata, samples_dir)
                 if oldest_sample:
-                    # Remove the oldest sample
                     old_file = os.path.join(samples_dir, oldest_sample)
                     try:
                         if os.path.exists(old_file):
@@ -346,7 +345,6 @@ class DatasetIterator:
                     sample_metadata = json.load(f)
                 sample_count = len(sample_metadata)
                 
-                # Find the highest index used so far to continue from there
                 max_index = -1
                 for filename in sample_metadata.keys():
                     match = re.search(r'_(\d+)', filename)

@@ -10,11 +10,11 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
-# Total sample targets for each benchmark mode (used for runtime evaluation sampling)
-BENCHMARK_TOTAL_SAMPLES = {
+# Total sample overrides for debug/small modes (for faster testing)
+# In "full" mode, values are loaded from YAML (image_benchmark_size, video_benchmark_size)
+BENCHMARK_TOTAL_OVERRIDES = {
     "debug": {"image": 100, "video": 50},
     "small": {"image": 1800, "video": 600},
-    "full": {"image": 10000, "video": 5000},
 }
 
 # Per-dataset download limits (only applied in debug/small modes for faster testing)
@@ -61,17 +61,39 @@ class BenchmarkDatasetConfig:
     exclude_paths: Optional[List[str]] = None
 
 
-def get_benchmark_size(modality: str, mode: str = "full") -> int:
+def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[str] = None) -> int:
     """Get the target benchmark size for a given modality and mode.
     
     Args:
         modality: "image" or "video"
         mode: "debug", "small", or "full"
+        yaml_path: Optional path to custom yaml config (for full mode)
         
     Returns:
         Target number of samples for the benchmark
     """
-    return BENCHMARK_TOTAL_SAMPLES.get(mode, BENCHMARK_TOTAL_SAMPLES["full"])[modality]
+    if mode in BENCHMARK_TOTAL_OVERRIDES:
+        return BENCHMARK_TOTAL_OVERRIDES[mode][modality]
+
+    # Full mode: load from YAML
+    try:
+        if yaml_path is not None:
+            with open(yaml_path, "r") as f:
+                data = yaml.safe_load(f)
+        else:
+            data = _load_bundled_config("benchmark_datasets.yaml")
+
+        size_key = f"{modality}_benchmark_size"
+        if size_key in data:
+            return data[size_key]
+
+        # Fallback if not in YAML
+        logger.warning(f"'{size_key}' not found in YAML, using default")
+        return 10000 if modality == "image" else 5000
+
+    except Exception as e:
+        logger.warning(f"Failed to load benchmark size from YAML: {e}, using default")
+        return 10000 if modality == "image" else 5000
 
 
 def apply_mode_to_datasets(

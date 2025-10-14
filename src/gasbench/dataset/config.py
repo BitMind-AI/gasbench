@@ -10,41 +10,42 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
-BENCHMARK_SIZES = {
+# Dataset sampling configuration
+REGULAR_DATASET_MIN_SAMPLES = 100
+REGULAR_DATASET_MAX_SAMPLES = 2000
+GASSTATION_DATASET_MIN_SAMPLES = 500
+GASSTATION_DATASET_MAX_SAMPLES = 10000
+GASSTATION_WEIGHT_MULTIPLIER = 5.0  # Gasstation datasets get 5x more samples
+UNIFORM_SAMPLING_MULTIPLIER = 3  # Allow up to 3x the base allocation per dataset
+
+# Total sample overrides for debug/small modes (for faster testing)
+# In "full" mode, values are loaded from YAML (image_benchmark_size, video_benchmark_size)
+BENCHMARK_TOTAL_OVERRIDES = {
+    "debug": {"image": 100, "video": 50},
+    "small": {"image": 1800, "video": 600},
+}
+
+# Per-dataset download limits (only applied in debug/small modes for faster testing)
+# In "full" mode, YAML configs are respected
+DOWNLOAD_SIZE_OVERRIDES = {
     "debug": {
         "image": {
-            "total_samples": 100,
             "images_per_parquet": 100,
             "parquet_per_dataset": 1,
         },
         "video": {
-            "total_samples": 50,
             "videos_per_zip": 50,
             "zips_per_dataset": 1,
         },
     },
     "small": {
         "image": {
-            "total_samples": 1800,  # ~100 per dataset for 18 datasets
             "images_per_parquet": 100,
             "parquet_per_dataset": 1,
         },
         "video": {
-            "total_samples": 600,  # ~100 per dataset for 6 datasets
             "videos_per_zip": 100,
             "zips_per_dataset": 1,
-        },
-    },
-    "full": {
-        "image": {
-            "total_samples": 10000,
-            "images_per_parquet": 100,
-            "parquet_per_dataset": 5,
-        },
-        "video": {
-            "total_samples": 5000,
-            "videos_per_zip": 50,
-            "zips_per_dataset": 2,
         },
     },
 }
@@ -68,17 +69,38 @@ class BenchmarkDatasetConfig:
     exclude_paths: Optional[List[str]] = None
 
 
-def get_benchmark_size(modality: str, mode: str = "full") -> int:
+def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[str] = None) -> int:
     """Get the target benchmark size for a given modality and mode.
     
     Args:
         modality: "image" or "video"
         mode: "debug", "small", or "full"
+        yaml_path: Optional path to custom yaml config (for full mode)
         
     Returns:
         Target number of samples for the benchmark
     """
-    return BENCHMARK_SIZES.get(mode, BENCHMARK_SIZES["full"])[modality]["total_samples"]
+    if mode in BENCHMARK_TOTAL_OVERRIDES:
+        return BENCHMARK_TOTAL_OVERRIDES[mode][modality]
+
+    # Full mode: load from YAML
+    try:
+        if yaml_path is not None:
+            with open(yaml_path, "r") as f:
+                data = yaml.safe_load(f)
+        else:
+            data = _load_bundled_config("benchmark_datasets.yaml")
+
+        size_key = f"{modality}_benchmark_size"
+        if size_key in data:
+            return data[size_key]
+
+        logger.warning(f"'{size_key}' not found in YAML, using default")
+        return 10000 if modality == "image" else 5000
+
+    except Exception as e:
+        logger.warning(f"Failed to load benchmark size from YAML: {e}, using default")
+        return 10000 if modality == "image" else 5000
 
 
 def apply_mode_to_datasets(
@@ -94,16 +116,23 @@ def apply_mode_to_datasets(
         Transformed list of datasets based on mode
     """
     if mode == "debug":
-        # Debug: Only use first dataset
-        return [datasets[0]] if datasets else []
+        if not datasets:
+            return []
+        dataset = datasets[0]
+        mode_config = DOWNLOAD_SIZE_OVERRIDES["debug"][dataset.modality]
+        modified = replace(
+            dataset,
+            images_per_parquet=mode_config.get("images_per_parquet", dataset.images_per_parquet),
+            videos_per_zip=mode_config.get("videos_per_zip", dataset.videos_per_zip),
+            parquet_per_dataset=mode_config.get("parquet_per_dataset", dataset.parquet_per_dataset),
+            zips_per_dataset=mode_config.get("zips_per_dataset", dataset.zips_per_dataset),
+        )
+        return [modified]
     
-    elif mode in ["small", "full"]:
-        # Apply mode-specific limits from BENCHMARK_SIZES
+    elif mode == "small":
         modified_datasets = []
         for dataset in datasets:
-            modality = dataset.modality
-            mode_config = BENCHMARK_SIZES.get(mode, BENCHMARK_SIZES["full"])[modality]
-            
+            mode_config = DOWNLOAD_SIZE_OVERRIDES["small"][dataset.modality]
             modified = replace(
                 dataset,
                 images_per_parquet=mode_config.get("images_per_parquet", dataset.images_per_parquet),
@@ -115,8 +144,7 @@ def apply_mode_to_datasets(
         return modified_datasets
     
     else:
-        # Unknown mode: default to full
-        return datasets
+        return datasets  # Full mode (or unknown): Use YAML configs as-is
 
 
 def discover_benchmark_image_datasets(
@@ -167,28 +195,72 @@ def discover_benchmark_video_datasets(
     return datasets
 
 
-def calculate_dataset_sampling(
-    num_datasets: int, target_total_samples: int
-) -> tuple[int, int]:
+def calculate_weighted_dataset_sampling(
+    datasets: List[BenchmarkDatasetConfig], 
+    target_total_samples: int, 
+    gasstation_weight: float = None
+) -> Dict[str, int]:
     """
-    Calculate per-dataset sampling parameters.
-
+    Calculate per-dataset sampling with higher weight for gasstation datasets.
+    
+    Args:
+        datasets: List of dataset configurations
+        target_total_samples: Total samples to aim for across all datasets
+        gasstation_weight: Weight multiplier for gasstation datasets (default: GASSTATION_WEIGHT_MULTIPLIER)
+    
     Returns:
-        Tuple of (per_dataset_cap, min_samples_per_dataset)
+        Dict mapping dataset names to their max_samples cap
     """
-    min_samples_per_dataset = target_total_samples // num_datasets
-    per_dataset_cap = min(2000, min_samples_per_dataset * 3)
-    return per_dataset_cap, min_samples_per_dataset
+    if gasstation_weight is None:
+        gasstation_weight = GASSTATION_WEIGHT_MULTIPLIER
+
+    gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
+    regular_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+    num_gasstation = len(gasstation_datasets)
+    num_regular = len(regular_datasets)
+    
+    if num_gasstation == 0:
+        per_dataset_cap = target_total_samples // len(datasets) if datasets else 0
+        return {
+            d.name: min(REGULAR_DATASET_MAX_SAMPLES, per_dataset_cap * UNIFORM_SAMPLING_MULTIPLIER) 
+            for d in datasets
+        }
+    
+    # Currently each regular dataset gets weight=1, each gasstation gets weight=gasstation_weight
+    total_weight = num_regular + (num_gasstation * gasstation_weight)
+    samples_per_weight_unit = target_total_samples / total_weight
+
+    regular_cap = int(samples_per_weight_unit)
+    gasstation_cap = int(samples_per_weight_unit * gasstation_weight)
+
+    regular_cap = min(REGULAR_DATASET_MAX_SAMPLES, max(REGULAR_DATASET_MIN_SAMPLES, regular_cap))
+    gasstation_cap = min(GASSTATION_DATASET_MAX_SAMPLES, max(GASSTATION_DATASET_MIN_SAMPLES, gasstation_cap))
+
+    sampling_dict = {}
+    for dataset in datasets:
+        if "gasstation" in dataset.name.lower():
+            sampling_dict[dataset.name] = gasstation_cap
+        else:
+            sampling_dict[dataset.name] = regular_cap    
+    return sampling_dict
 
 
-def build_dataset_info(valid_datasets: List, samples_per_dataset: int) -> Dict:
-    """Build dataset info dictionary for results."""
-    return {
+def build_dataset_info(valid_datasets: List, dataset_sampling: Dict[str, int] = None) -> Dict:
+    """Build dataset info dictionary for results.
+
+    Args:
+        valid_datasets: List of dataset configurations
+        dataset_sampling: Optional dict mapping dataset names to their sample caps
+    """
+    info = {
         "datasets_used": [d.name for d in valid_datasets],
         "evaluation_type": "ai_generated_detection",
-        "samples_per_dataset": samples_per_dataset,
         "dataset_media_types": {d.name: d.media_type for d in valid_datasets},
     }
+    if dataset_sampling:
+        info["samples_per_dataset"] = dataset_sampling
+
+    return info
 
 
 def validate_dataset_config(

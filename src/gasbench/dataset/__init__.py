@@ -9,22 +9,36 @@ This package contains modules for:
 
 from .config import (
     BenchmarkDatasetConfig,
-    BENCHMARK_SIZES,
+    BENCHMARK_TOTAL_OVERRIDES,
+    DOWNLOAD_SIZE_OVERRIDES,
+    REGULAR_DATASET_MIN_SAMPLES,
+    REGULAR_DATASET_MAX_SAMPLES,
+    GASSTATION_DATASET_MIN_SAMPLES,
+    GASSTATION_DATASET_MAX_SAMPLES,
+    GASSTATION_WEIGHT_MULTIPLIER,
     get_benchmark_size,
     discover_benchmark_image_datasets,
     discover_benchmark_video_datasets,
 )
-from .iterator import DatasetIterator
+from .iterator import DatasetIterator, CACHE_MAX_SAMPLES, GASSTATION_CACHE_MAX_SAMPLES
 from .cache import check_dataset_cache, save_sample_to_cache
 from .download import download_and_extract
 
 __all__ = [
     "BenchmarkDatasetConfig",
-    "BENCHMARK_SIZES",
+    "BENCHMARK_TOTAL_OVERRIDES",
+    "DOWNLOAD_SIZE_OVERRIDES",
+    "REGULAR_DATASET_MIN_SAMPLES",
+    "REGULAR_DATASET_MAX_SAMPLES",
+    "GASSTATION_DATASET_MIN_SAMPLES",
+    "GASSTATION_DATASET_MAX_SAMPLES",
+    "GASSTATION_WEIGHT_MULTIPLIER",
     "get_benchmark_size",
     "discover_benchmark_image_datasets",
     "discover_benchmark_video_datasets",
     "DatasetIterator",
+    "CACHE_MAX_SAMPLES",
+    "GASSTATION_CACHE_MAX_SAMPLES",
     "check_dataset_cache",
     "save_sample_to_cache", 
     "download_and_extract",

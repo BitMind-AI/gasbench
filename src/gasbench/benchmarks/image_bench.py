@@ -9,7 +9,7 @@ from ..processing.transforms import apply_random_augmentations, compress_image_j
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_image_datasets,
-    calculate_dataset_sampling,
+    calculate_weighted_dataset_sampling,
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
@@ -56,16 +56,25 @@ async def run_image_benchmark(
         confusion_matrix = ConfusionMatrix()
 
         target_size = get_benchmark_size("image", mode)
-
-        per_dataset_cap, min_samples_per_dataset = calculate_dataset_sampling(
-            len(available_datasets), target_size
+        dataset_sampling = calculate_weighted_dataset_sampling(available_datasets, target_size)
+        
+        # Calculate summary stats for logging
+        gasstation_count = len([d for d in available_datasets if "gasstation" in d.name.lower()])
+        regular_count = len(available_datasets) - gasstation_count
+        gasstation_cap = dataset_sampling.get(
+            next((d.name for d in available_datasets if "gasstation" in d.name.lower()), ""), 0
+        )
+        regular_cap = dataset_sampling.get(
+            next((d.name for d in available_datasets if "gasstation" not in d.name.lower()), ""), 0
         )
         
         sampling_info = {
             "target_samples": target_size,
             "num_datasets": len(available_datasets),
-            "per_dataset_cap": per_dataset_cap,
-            "min_per_dataset": min_samples_per_dataset,
+            "gasstation_datasets": gasstation_count,
+            "regular_datasets": regular_count,
+            "gasstation_samples_per_dataset": gasstation_cap,
+            "regular_samples_per_dataset": regular_cap,
             "dataset_breakdown": {
                 "real": len([d for d in available_datasets if d.media_type == 'real']),
                 "synthetic": len([d for d in available_datasets if d.media_type == 'synthetic']),
@@ -73,62 +82,51 @@ async def run_image_benchmark(
             }
         }
         logger.info(f"Sampling configuration: {json.dumps(sampling_info)}")
-        
-        dataset_info = build_dataset_info(available_datasets, per_dataset_cap)
 
         generator_stats = benchmark_results.get("image_generator_stats", {})
 
+        dataset_info = build_dataset_info(available_datasets, dataset_sampling)
         for dataset_idx, dataset_config in enumerate(available_datasets):
+            dataset_cap = dataset_sampling[dataset_config.name]
             logger.info(
                 f"Processing dataset {dataset_idx + 1}/{len(available_datasets)}: "
-                f"{dataset_config.name} ({per_dataset_cap} samples)"
+                f"{dataset_config.name} ({dataset_cap} samples)"
             )
 
             dataset_correct = 0
             dataset_total = 0
 
             try:
-                dataset_iterator = DatasetIterator(dataset_config, max_samples=per_dataset_cap, cache_dir=cache_dir)
-
-                expected_label = 0 if dataset_config.media_type == 'real' else 1
-                logger.info(
-                    f"Processing {dataset_config.name} "
-                    f"(media_type={dataset_config.media_type}, expected_label={expected_label})"
-                )
+                dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
 
                 for sample in dataset_iterator:
                     try:
-                        if dataset_total == 0:
-                            first_sample_info = {
-                                "dataset": dataset_config.name,
-                                "keys": list(sample.keys()),
-                                "image_type": str(type(sample.get('image')))
-                            }
-
+                        # Process image sample (load, convert to numpy)
                         image_array, true_label_multiclass = process_image_sample(sample)
-
-                        if image_array is not None:
-                            try:
-                                chw = image_array[0]
-                                hwc = np.transpose(chw, (1, 2, 0))
-                                aug_hwc, _, _, _ = apply_random_augmentations(hwc)
-                                aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
-                                aug_chw = np.transpose(aug_hwc, (2, 0, 1))
-                                image_array = np.expand_dims(aug_chw, 0)
-                            except Exception as aug_e:
-                                logger.debug(f"Image augmentation skipped: {aug_e}")
 
                         if image_array is None or true_label_multiclass is None:
                             continue
 
-                        true_label_binary = multiclass_to_binary(true_label_multiclass)
+                        # Apply augmentations
+                        try:
+                            chw = image_array[0]
+                            hwc = np.transpose(chw, (1, 2, 0))
+                            aug_hwc, _, _, _ = apply_random_augmentations(hwc)
+                            aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
+                            aug_chw = np.transpose(aug_hwc, (2, 0, 1))
+                            image_array = np.expand_dims(aug_chw, 0)
+                        except Exception:
+                            # If augmentation fails, continue with unaugmented image
+                            pass
 
+                        # Run inference
                         start = time.time()
                         outputs = session.run(None, {input_specs[0].name: image_array})
                         inference_times.append((time.time() - start) * 1000)
 
                         predicted_binary, predicted_multiclass = process_model_output(outputs[0])
 
+                        true_label_binary = multiclass_to_binary(true_label_multiclass)
                         confusion_matrix.update(
                             true_label_binary, predicted_binary,
                             true_label_multiclass, predicted_multiclass
@@ -162,7 +160,7 @@ async def run_image_benchmark(
 
                     except Exception as e:
                         logger.warning(f"Failed to process image sample from {dataset_config.name}: {e}")
-                        benchmark_results["errors"].append(f"Image inference error: {str(e)[:100]}")
+                        benchmark_results["errors"].append(f"Image processing error: {str(e)[:100]}")
 
                 dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
                 per_dataset_results[dataset_config.name] = {

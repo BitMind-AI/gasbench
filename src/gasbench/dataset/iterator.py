@@ -3,6 +3,7 @@
 import os
 import json
 import re
+import time
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -17,10 +18,12 @@ from . import gasstation_utils
 logger = get_logger(__name__)
 
 DEFAULT_MAX_SAMPLES = 10000
+CACHE_MAX_SAMPLES = 2000
+GASSTATION_CACHE_MAX_SAMPLES = 5000
 
 
 class DatasetIterator:
-    """Unified iterator for benchmark datasets with caching support."""
+    """Unified iterator for image and video benchmark datasets"""
 
     def __init__(
         self,
@@ -59,6 +62,7 @@ class DatasetIterator:
         return self
 
     def __next__(self):
+        # Single source of truth: only check the limit here, not in get_samples()
         if self.samples_yielded >= self.max_samples:
             raise StopIteration
 
@@ -92,21 +96,20 @@ class DatasetIterator:
         """Generator that yields samples from cached data.
         
         For gasstation datasets, loads from all target week directories.
+
+        Note: This generator yields ALL available cached samples. The __next__() method
+        is responsible for enforcing max_samples limit. This avoids double-counting issues.
         """
         try:
             if self.is_gasstation:
                 # Load from all week directories
-                total_samples = 0
                 for week_str, week_dir in zip(self.target_weeks, self.week_dirs):
                     if not os.path.exists(week_dir):
                         continue
 
                     logger.info(f"Loading cached data for {self.config.name} week {week_str}")
                     for sample in self._load_from_cache_dir(week_dir):
-                        if total_samples >= self.max_samples:
-                            return
                         yield sample
-                        total_samples += 1
             else:
                 # Non-gasstation datasets: standard loading
                 if not self._has_cached_dataset():
@@ -116,16 +119,14 @@ class DatasetIterator:
                 cached_count = self._get_cached_count()
                 samples_to_load = min(cached_count, self.max_samples)
                 logger.info(f"Loading {samples_to_load} cached samples for {self.config.name}")
-                
-                total_samples = 0
+
                 for sample in self._load_from_cache_dir(self.dataset_dir):
-                    if total_samples >= self.max_samples:
-                        return
                     yield sample
-                    total_samples += 1
 
         except Exception as e:
             logger.error(f"Failed to get samples from {self.config.name}: {e}")
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
             return
 
     def _ensure_week_cached(self, week_str: str, week_dir: str):
@@ -168,13 +169,7 @@ class DatasetIterator:
         for field in ["iso_week", "generator_hotkey", "generator_uid"]:
             if field in sample:
                 metadata[field] = sample.get(field)
-        
-        # Debug: Log if we're missing generator info for gasstation datasets
-        if "gasstation" in self.config.name.lower():
-            has_generator = "generator_hotkey" in metadata or "generator_hotkey" in sample
-            if not has_generator:
-                logger.debug(f"⚠️  No generator_hotkey found in sample. Available keys: {list(sample.keys())[:10]}")
-        
+
         return metadata
     
     def _find_oldest_sample(self, sample_metadata: Dict, samples_dir: str) -> Optional[str]:
@@ -246,10 +241,10 @@ class DatasetIterator:
         
         # If we're at max_samples and there are new archives, we'll do sample replacement
         # Keep the most recent samples by evicting oldest ones
-        replacing_samples = sample_count >= self.max_samples
+        replacing_samples = sample_count >= GASSTATION_CACHE_MAX_SAMPLES
         if replacing_samples:
             logger.info(
-                f"Week {week_str} has {sample_count} samples (at max_samples). "
+                f"Week {week_str} has {sample_count} samples (at gasstation limit {GASSTATION_CACHE_MAX_SAMPLES}). "
                 f"Will replace oldest samples with fresh data from new archives"
             )
         
@@ -276,7 +271,7 @@ class DatasetIterator:
                 downloaded_archives.add(archive_name)
             
             # If we're replacing samples, find and remove the oldest sample
-            if replacing_samples and sample_count >= self.max_samples:
+            if replacing_samples and sample_count >= GASSTATION_CACHE_MAX_SAMPLES:
                 oldest_sample = self._find_oldest_sample(sample_metadata, samples_dir)
                 if oldest_sample:
                     old_file = os.path.join(samples_dir, oldest_sample)
@@ -362,10 +357,10 @@ class DatasetIterator:
                 next_index = 0
         else:
             logger.info(
-                f"No cached datasets found.\nDownloading {self.config.name} (max {self.max_samples} samples)"
+                f"No cached datasets found.\nDownloading {self.config.name} (max {CACHE_MAX_SAMPLES} samples)"
             )
 
-        if sample_count >= self.max_samples:
+        if sample_count >= CACHE_MAX_SAMPLES:
             logger.info(f"Cache complete with {sample_count} samples")
             return
 
@@ -383,7 +378,7 @@ class DatasetIterator:
             num_weeks=self.num_weeks,
             downloaded_archives=None,  # Not used for non-gasstation datasets
         ):
-            if sample_count >= self.max_samples:
+            if sample_count >= CACHE_MAX_SAMPLES:
                 break
 
             filename = save_sample_to_cache(
@@ -400,7 +395,7 @@ class DatasetIterator:
                         self.config, self.dataset_dir, sample_metadata, sample_count
                     )
                     logger.info(
-                        f"Downloaded {sample_count}/{self.max_samples} samples (checkpoint saved)"
+                        f"Downloaded {sample_count}/{CACHE_MAX_SAMPLES} samples (checkpoint saved)"
                     )
 
         # Save final metadata
@@ -411,6 +406,15 @@ class DatasetIterator:
             logger.info(
                 f"Download complete: Saved {sample_count} samples to cache for {self.config.name}"
             )
+            
+            # Create completion marker file to indicate dataset is fully downloaded
+            completion_marker = os.path.join(self.dataset_dir, ".download_complete")
+            with open(completion_marker, 'w') as f:
+                json.dump({
+                    "sample_count": sample_count,
+                    "completed_at": time.time(),
+                    "cache_max_samples": CACHE_MAX_SAMPLES
+                }, f)
         else:
             logger.warning(f"No samples were downloaded for {self.config.name}")
 
@@ -446,12 +450,17 @@ class DatasetIterator:
                 if not self._has_cached_dataset():
                     return False
 
+                # Check for completion marker file (dataset fully downloaded, even if < CACHE_MAX_SAMPLES)
+                completion_marker = os.path.join(self.dataset_dir, ".download_complete")
+                if os.path.exists(completion_marker):
+                    return True
+
                 metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
                 with open(metadata_file, "r") as f:
                     metadata = json.load(f)
 
                 cached_count = len(metadata)
-                return cached_count >= self.max_samples
+                return cached_count >= CACHE_MAX_SAMPLES
 
         except Exception:
             return False
@@ -491,6 +500,10 @@ class DatasetIterator:
         
         Args:
             cache_dir: Path to the cache directory to load from
+        
+        Note: This is a generator that yields samples. The caller (get_samples) is responsible
+        for tracking counts and enforcing limits. This method should NOT check or increment
+        self.samples_yielded as that creates double-counting issues.
         """
         try:
             samples_dir = os.path.join(cache_dir, "samples")
@@ -518,9 +531,6 @@ class DatasetIterator:
             sample_files.sort(key=extract_index, reverse=True)
 
             for filename in sample_files:
-                if self.samples_yielded >= self.max_samples:
-                    break
-
                 file_path = os.path.join(samples_dir, filename)
                 metadata = metadata_map.get(filename, {})
 
@@ -534,7 +544,6 @@ class DatasetIterator:
                             **metadata,
                         }
                         yield sample
-                        self.samples_yielded += 1
                     except Exception as e:
                         logger.warning(f"Failed to load cached image {filename}: {e}")
                         continue
@@ -550,7 +559,6 @@ class DatasetIterator:
                             **metadata,
                         }
                         yield sample
-                        self.samples_yielded += 1
                     except Exception as e:
                         logger.warning(f"Failed to load cached video {filename}: {e}")
                         continue

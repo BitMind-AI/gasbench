@@ -11,13 +11,28 @@ image:
     images_per_parquet: -1
     parquet_per_dataset: -1
 
+  - name: leonardo-stablecog
+    path: bitmind/Deepfake-leonardo-stablecog
+    modality: image
+    media_type: synthetic
+    images_per_parquet: 250
+    parquet_per_dataset: 4
+    
+  - name: fashionpedia
+    path: detection-datasets/fashionpedia
+    modality: image
+    media_type: real
+    source_format: parquet
+    images_per_parquet: 1000
+    parquet_per_dataset: 1
+
   - name: megalith-10m
     path: drawthingsai/megalith-10m
     modality: image
     media_type: real
     source_format: tar
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    images_per_parquet: 500
+    parquet_per_dataset: 2
 
   - name: eidon-image
     path: bitmind/bm-eidon-image
@@ -139,6 +154,88 @@ image:
     source_format: mp4
     images_per_parquet: 100
     parquet_per_dataset: 10
+
+  # FakeClue dataset - reorganized with label/category hierarchy
+  - name: fakeclue-fake-chameleon
+    path: bitmind/FakeClue
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/fake/chameleon/"]
+
+  - name: fakeclue-fake-doc
+    path: bitmind/FakeClue
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/fake/doc/"]
+
+  - name: fakeclue-fake-ffpp
+    path: bitmind/FakeClue
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/fake/ff++/"]
+
+  - name: fakeclue-fake-genimage
+    path: bitmind/FakeClue
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/fake/genimage/"]
+
+  - name: fakeclue-fake-satellite
+    path: bitmind/FakeClue
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/fake/satellite/"]
+
+  - name: fakeclue-real-doc
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/real/doc/"]
+
+  - name: fakeclue-real-ffpp
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/real/ff++/"]
+
+  - name: fakeclue-real-genimage
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/real/genimage/"]
+
+  - name: fakeclue-real-satellite
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    images_per_parquet: 500
+    parquet_per_dataset: 2
+    include_paths: ["data/real/satellite/"]
 
 video:
   - name: gasstation-generated-videos

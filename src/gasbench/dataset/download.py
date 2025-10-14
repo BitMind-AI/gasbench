@@ -668,12 +668,19 @@ def _process_parquet(
         sample_df = df.sample(n=min(num_items, len(df)))
 
     if dataset.modality == "image":
-        media_col = next((c for c in sample_df.columns if "image" in c.lower()), None)
+        # First try exact match, then exclude _id columns, then any column with "image"
+        media_col = (
+            next((c for c in sample_df.columns if c.lower() == "image"), None)
+            or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
+            or next((c for c in sample_df.columns if "image" in c.lower()), None)
+        )
     else:
         candidates = ["video", "bytes", "content", "data"]
-        media_col = next(
-            (c for c in sample_df.columns if any(k in c.lower() for k in candidates)),
-            None,
+        # First try exact matches, then exclude _id columns, then fallback
+        media_col = (
+            next((c for c in sample_df.columns if c.lower() in candidates), None)
+            or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)
+            or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates)), None)
         )
 
     if not media_col:
@@ -708,17 +715,27 @@ def _process_parquet(
                 )
                 media_data = media_data[key]
 
-            # Build base sample
             if dataset.modality == "image":
+                # Skip invalid media_data
+                if media_data is None or isinstance(media_data, (int, float)):
+                    continue
+
                 try:
                     img = Image.open(BytesIO(media_data))
                 except Exception:
-                    media_data = base64.b64decode(media_data)
+                    if isinstance(media_data, str):
+                        media_data = base64.b64decode(media_data)
                     img = Image.open(BytesIO(media_data))
                 sample = _create_sample(dataset, img, source_path, iso_week)
             else:
+                if media_data is None or isinstance(media_data, (int, float)):
+                    continue
+
                 if not isinstance(media_data, (bytes, bytearray)):
-                    media_data = base64.b64decode(media_data)
+                    if isinstance(media_data, str):
+                        media_data = base64.b64decode(media_data)
+                    else:
+                        continue
                 sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
 
             # Merge parquet row metadata without overwriting base fields

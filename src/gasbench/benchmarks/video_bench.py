@@ -1,7 +1,8 @@
 import json
 import time
+import asyncio
 import numpy as np
-from typing import Dict
+from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.archive import video_archive_manager
@@ -23,6 +24,55 @@ from .metrics import (
 from ..model.inference import process_model_output
 
 logger = get_logger(__name__)
+
+
+async def video_prefetcher(
+    dataset_iterator,
+    dataset_config,
+    queue: asyncio.Queue,
+    max_queue_size: int = 2
+):
+    """
+    Prefetch and preprocess videos from the dataset iterator.
+    
+    Args:
+        dataset_iterator: Iterator over dataset samples
+        dataset_config: Configuration for the dataset
+        queue: Async queue to put processed videos into
+        max_queue_size: Maximum size of prefetch queue
+    """
+    try:
+        for sample in dataset_iterator:
+            try:
+                video_array, true_label_multiclass = process_video_bytes_sample(sample)
+
+                if video_array is None or true_label_multiclass is None:
+                    # Put a skip marker in the queue
+                    await queue.put(("skip", None, None, None, None))
+                    continue
+
+                try:
+                    tchw = video_array[0]
+                    thwc = np.transpose(tchw, (0, 2, 3, 1))
+                    aug_thwc, _, _, _ = apply_random_augmentations(thwc)
+                    aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
+                    aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
+                    video_array = np.expand_dims(aug_tchw, 0)
+                except Exception:
+                    pass
+
+                true_label_binary = multiclass_to_binary(true_label_multiclass)
+                await queue.put(("data", video_array, true_label_binary, true_label_multiclass, sample))
+                
+            except Exception as e:
+                logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
+                await queue.put(("error", None, None, None, None))
+                
+    except Exception as e:
+        logger.error(f"Prefetcher error for dataset {dataset_config.name}: {e}")
+    finally:
+        # Signal end of dataset
+        await queue.put(("done", None, None, None, None))
 
 
 async def run_video_benchmark(
@@ -103,78 +153,84 @@ async def run_video_benchmark(
 
                 try:
                     dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
-                    for sample in dataset_iterator:
-                        try:
-                            # Decode video bytes and extract frames
-                            video_array, true_label_multiclass = process_video_bytes_sample(sample)
 
-                            if video_array is None or true_label_multiclass is None:
-                                dataset_skipped += 1
-                                skipped_samples += 1
-                                if dataset_skipped % 10 == 0:
-                                    logger.debug(
-                                        f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far"
-                                    )
-                                continue
+                    # Create prefetch queue (size 2 means we can have 1 video being processed + 1 ready)
+                    prefetch_queue = asyncio.Queue(maxsize=2)
 
-                            # Apply augmentations
-                            try:
-                                tchw = video_array[0]
-                                thwc = np.transpose(tchw, (0, 2, 3, 1))
-                                aug_thwc, _, _, _ = apply_random_augmentations(thwc)
-                                aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
-                                aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
-                                video_array = np.expand_dims(aug_tchw, 0)
-                            except Exception:
-                                # If augmentation fails, continue with unaugmented video
-                                pass
+                    # Start the prefetcher task
+                    prefetch_task = asyncio.create_task(
+                        video_prefetcher(dataset_iterator, dataset_config, prefetch_queue)
+                    )
 
-                            true_label_binary = multiclass_to_binary(true_label_multiclass)
+                    # Process videos from the queue
+                    while True:
+                        # Get next preprocessed video from queue
+                        item = await prefetch_queue.get()
+                        item_type = item[0]
 
-                            start = time.time()
-                            outputs = session.run(None, {input_specs[0].name: video_array})
-                            inference_times.append((time.time() - start) * 1000)
-
-                            predicted_binary, predicted_multiclass = process_model_output(outputs[0])
-
-                            confusion_matrix.update(
-                                true_label_binary, predicted_binary,
-                                true_label_multiclass, predicted_multiclass
-                            )
-
-                            is_correct = predicted_binary == true_label_binary
-                            if is_correct:
-                                correct += 1
-                                dataset_correct += 1
-
-                            total += 1
-                            dataset_total += 1
-
-                            update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
-
-                            if total % 500 == 0:
-                                logger.info(
-                                    f"Progress: {total}/{target_size} samples, "
-                                    f"Accuracy: {correct / total:.2%}"
-                                )
-
-                            if total % 100 == 0:
-                                frames_count = video_array.shape[1] if video_array is not None else 0
-                                logger.debug(
-                                    f"Sample {total}: "
-                                    f"True={true_label_multiclass}→{true_label_binary}, "
-                                    f"Pred={predicted_multiclass}→{predicted_binary}, "
-                                    f"Correct={is_correct}, "
-                                    f"Generator={sample.get('model_name', 'unknown')}, "
-                                    f"Dataset={dataset_config.name}, "
-                                    f"Frames={frames_count}"
-                                )
-
-                        except Exception as e:
-                            logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
-                            benchmark_results["errors"].append(f"Video processing error: {str(e)[:100]}")
+                        if item_type == "done":
+                            # End of dataset
+                            break
+                        elif item_type == "skip":
+                            # Skipped sample
                             dataset_skipped += 1
                             skipped_samples += 1
+                            if dataset_skipped % 10 == 0:
+                                logger.debug(
+                                    f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far"
+                                )
+                            continue
+                        elif item_type == "error":
+                            # Error during preprocessing
+                            benchmark_results["errors"].append(f"Video processing error during prefetch")
+                            dataset_skipped += 1
+                            skipped_samples += 1
+                            continue
+
+                        # Extract video data
+                        video_array, true_label_binary, true_label_multiclass, sample = item[1], item[2], item[3], item[4]
+
+                        start = time.time()
+                        outputs = session.run(None, {input_specs[0].name: video_array})
+                        inference_times.append((time.time() - start) * 1000)
+
+                        predicted_binary, predicted_multiclass = process_model_output(outputs[0])
+
+                        confusion_matrix.update(
+                            true_label_binary, predicted_binary,
+                            true_label_multiclass, predicted_multiclass
+                        )
+
+                        is_correct = predicted_binary == true_label_binary
+                        if is_correct:
+                            correct += 1
+                            dataset_correct += 1
+
+                        total += 1
+                        dataset_total += 1
+
+                        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
+
+                        if total % 500 == 0:
+                            logger.info(
+                                f"Progress: {total}/{target_size} samples, "
+                                f"Accuracy: {correct / total:.2%}"
+                            )
+
+                        if total % 100 == 0:
+                            frames_count = video_array.shape[1] if video_array is not None else 0
+                            logger.debug(
+                                f"Sample {total}: "
+                                f"True={true_label_multiclass}→{true_label_binary}, "
+                                f"Pred={predicted_multiclass}→{predicted_binary}, "
+                                f"Correct={is_correct}, "
+                                f"Generator={sample.get('model_name', 'unknown')}, "
+                                f"Dataset={dataset_config.name}, "
+                                f"Frames={frames_count}"
+                            )
+                    
+                    # Wait for prefetcher to finish
+                    await prefetch_task
 
                     dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
                     per_dataset_results[dataset_config.name] = {

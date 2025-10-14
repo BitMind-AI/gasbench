@@ -346,11 +346,9 @@ def _list_remote_dataset_files(
 
     if include_paths:
         files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
-        logger.info(f"After include_paths filter: {len(files)} files")
 
     if exclude_paths:
         files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
-        logger.info(f"After exclude_paths filter: {len(files)} files")
 
     if "gasstation" in dataset_path.lower():
         if target_week:

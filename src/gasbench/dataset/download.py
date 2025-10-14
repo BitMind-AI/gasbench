@@ -97,6 +97,8 @@ def download_and_extract(
             include_paths = getattr(dataset, "include_paths", None)
             exclude_paths = getattr(dataset, "exclude_paths", None)
             source = getattr(dataset, "source", "huggingface")
+            
+            logger.info(f"Processing dataset '{dataset.name}' with include_paths={include_paths}, exclude_paths={exclude_paths}")
 
             filenames = _list_remote_dataset_files(
                 dataset.path, dataset.source_format, current_week_only, num_weeks, target_week,
@@ -164,6 +166,10 @@ def download_and_extract(
             # For gasstation datasets, prioritize newest archives
             is_gasstation = "gasstation" in dataset.name.lower()
             to_download = _select_files_to_download(remote_paths, n_files, prioritize_recent=is_gasstation)
+            
+            logger.info(f"Selected {len(to_download)} files to download from {len(remote_paths)} available")
+            if to_download:
+                logger.info(f"Sample download URLs: {[os.path.basename(u) for u in to_download[:5]]}")
             
             # Filter out already-downloaded archives for gasstation datasets
             if downloaded_archives is not None and "gasstation" in dataset.name.lower():
@@ -344,9 +350,13 @@ def _list_remote_dataset_files(
     else:  # hf
         files = list_hf_files(repo_id=dataset_path, extension=source_format)
 
+    logger.info(f"Before filter: {len(files)} files for {dataset_path}")
     if include_paths:
+        original_count = len(files)
         files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
-        logger.info(f"After include_paths filter: {len(files)} files")
+        logger.info(f"After include_paths filter ({include_paths}): {len(files)} files (filtered out {original_count - len(files)})")
+        if files:
+            logger.info(f"Sample filtered files: {files[:5]}")
 
     if exclude_paths:
         files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]

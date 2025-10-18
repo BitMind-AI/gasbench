@@ -31,6 +31,7 @@ async def run_image_benchmark(
     mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
+    download_latest_gasstation_data: bool = False,
 ) -> float:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -97,7 +98,12 @@ async def run_image_benchmark(
             dataset_total = 0
 
             try:
-                dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
+                dataset_iterator = DatasetIterator(
+                    dataset_config, 
+                    max_samples=dataset_cap, 
+                    cache_dir=cache_dir,
+                    download=download_latest_gasstation_data
+                )
 
                 for sample in dataset_iterator:
                     try:

@@ -82,6 +82,7 @@ async def run_video_benchmark(
     mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
+    download_latest_gasstation_data: bool = False,
 ) -> float:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -152,7 +153,12 @@ async def run_video_benchmark(
                 dataset_skipped = 0
 
                 try:
-                    dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
+                    dataset_iterator = DatasetIterator(
+                        dataset_config, 
+                        max_samples=dataset_cap, 
+                        cache_dir=cache_dir,
+                        download=download_latest_gasstation_data
+                    )
 
                     # Create prefetch queue (size 2 means we can have 1 video being processed + 1 ready)
                     prefetch_queue = asyncio.Queue(maxsize=2)

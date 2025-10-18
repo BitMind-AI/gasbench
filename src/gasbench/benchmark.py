@@ -23,6 +23,7 @@ async def run_benchmark(
     mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: Optional[str] = None,
+    download_latest_gasstation_data: bool = False,
 ) -> Dict:
     """
     Args:
@@ -31,6 +32,7 @@ async def run_benchmark(
         mode: Benchmark mode - "debug", "small", or "full" (default: "full")
         gasstation_only: If True, only use gasstation datasets
         cache_dir: Directory for caching (defaults to /.cache/gasbench)
+        download_latest_gasstation_data: If True, download latest gasstation data before benchmarking (default: False)
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -78,12 +80,14 @@ async def run_benchmark(
             mode,
             gasstation_only,
             cache_dir,
+            download_latest_gasstation_data,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
 
         benchmark_results["metrics"]["modality"] = modality
         benchmark_results["metrics"]["model_path"] = model_path
+        benchmark_results["metrics"]["download_latest_gasstation_data"] = download_latest_gasstation_data
         benchmark_results["benchmark_completed"] = True
 
         logger.info(f"Benchmark score: {benchmark_score:.2%}")
@@ -156,10 +160,11 @@ async def execute_benchmark(
     mode: str,
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
+    download_latest_gasstation_data: bool = False,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data})")
     if modality == "image":
         benchmark_score = await run_image_benchmark(
             session,
@@ -168,6 +173,7 @@ async def execute_benchmark(
             mode,
             gasstation_only,
             cache_dir,
+            download_latest_gasstation_data,
         )
     elif modality == "video":
         benchmark_score = await run_video_benchmark(
@@ -177,6 +183,7 @@ async def execute_benchmark(
             mode,
             gasstation_only,
             cache_dir,
+            download_latest_gasstation_data,
         )
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")

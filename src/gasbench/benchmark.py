@@ -245,6 +245,25 @@ def print_benchmark_summary(benchmark_results: Dict):
                     correct = dataset_results.get("correct", 0)
                     print(f"  {dataset_name}: {accuracy:.2%} ({correct}/{total})")
 
+            misclass_stats = results.get("misclassification_stats", {})
+            if misclass_stats and misclass_stats.get("total_misclassified", 0) > 0:
+                print(f"\n❌ MISCLASSIFIED GASSTATION SAMPLES:")
+                print(f"  Total Misclassified: {misclass_stats['total_misclassified']}")
+
+                by_generator = misclass_stats.get("by_generator", {})
+                if by_generator:
+                    print(f"  By Generator (Top 5):")
+                    sorted_gens = sorted(by_generator.items(), key=lambda x: x[1], reverse=True)[:5]
+                    for hotkey, count in sorted_gens:
+                        hotkey_short = hotkey[:12] + "..." if len(hotkey) > 12 else hotkey
+                        print(f"    {hotkey_short}: {count}")
+
+                by_week = misclass_stats.get("by_week", {})
+                if by_week:
+                    print(f"  By Week:")
+                    for week, count in sorted(by_week.items()):
+                        print(f"    {week}: {count}")
+
             per_source = results.get("per_source_accuracy", {})
             if per_source:
                 print(f"\n🎭 PER-SOURCE ACCURACY:")
@@ -365,6 +384,13 @@ def save_results_to_json(
             dataset_info = results.get("dataset_info", {})
             if dataset_info:
                 output_data["dataset_info"] = dataset_info
+            
+            # Misclassification data
+            misclassified_samples = results.get("misclassified_samples", [])
+            misclassification_stats = results.get("misclassification_stats", {})
+            if misclassified_samples:
+                output_data["misclassified_samples"] = misclassified_samples
+                output_data["misclassification_stats"] = misclassification_stats
 
     # Write to JSON file
     with open(filepath, "w") as f:

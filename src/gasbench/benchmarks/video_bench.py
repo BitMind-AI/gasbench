@@ -15,11 +15,14 @@ from ..dataset.config import (
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
-from .metrics import (
+from .utils import (
     ConfusionMatrix,
     multiclass_to_binary,
     update_generator_stats,
     calculate_per_source_accuracy,
+    should_track_sample,
+    create_misclassification_record,
+    aggregate_misclassification_stats,
 )
 from ..model.inference import process_model_output
 
@@ -108,6 +111,7 @@ async def run_video_benchmark(
             per_dataset_results = {}
             confusion_matrix = ConfusionMatrix()
             skipped_samples = 0
+            incorrect_samples = []  # Track misclassified gasstation samples
 
             target_size = get_benchmark_size("video", mode)
             dataset_sampling = calculate_weighted_dataset_sampling(available_datasets, target_size)
@@ -168,6 +172,7 @@ async def run_video_benchmark(
                         video_prefetcher(dataset_iterator, dataset_config, prefetch_queue)
                     )
 
+                    sample_index = 0  # Track sample index for unique IDs
                     # Process videos from the queue
                     while True:
                         # Get next preprocessed video from queue
@@ -196,6 +201,8 @@ async def run_video_benchmark(
                         # Extract video data
                         video_array, true_label_binary, true_label_multiclass, sample = item[1], item[2], item[3], item[4]
 
+                        sample_index += 1
+                        
                         start = time.time()
                         outputs = session.run(None, {input_specs[0].name: video_array})
                         inference_times.append((time.time() - start) * 1000)
@@ -211,6 +218,17 @@ async def run_video_benchmark(
                         if is_correct:
                             correct += 1
                             dataset_correct += 1
+                        else:
+                            if should_track_sample(sample, dataset_config.name):
+                                misclassification = create_misclassification_record(
+                                    sample,
+                                    sample_index,
+                                    true_label_binary,
+                                    predicted_binary,
+                                    true_label_multiclass,
+                                    predicted_multiclass,
+                                )
+                                incorrect_samples.append(misclassification)
 
                         total += 1
                         dataset_total += 1
@@ -272,6 +290,8 @@ async def run_video_benchmark(
 
             cache_info = video_cache.get_cache_info()
 
+            misclassification_stats = aggregate_misclassification_stats(incorrect_samples)
+
             benchmark_results["video_results"] = {
                 "benchmark_score": accuracy,
                 "total_samples": total,
@@ -284,6 +304,8 @@ async def run_video_benchmark(
                 "per_dataset_results": per_dataset_results,
                 "dataset_info": dataset_info,
                 "cache_info": cache_info,
+                "misclassified_samples": incorrect_samples,
+                "misclassification_stats": misclassification_stats,
             }
 
             if benchmark_results.get("video_generator_stats"):

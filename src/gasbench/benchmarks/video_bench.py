@@ -86,6 +86,7 @@ async def run_video_benchmark(
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
     download_latest_gasstation_data: bool = False,
+    cache_policy: Optional[str] = None,
 ) -> float:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -161,7 +162,8 @@ async def run_video_benchmark(
                         dataset_config, 
                         max_samples=dataset_cap, 
                         cache_dir=cache_dir,
-                        download=download_latest_gasstation_data
+                        download=download_latest_gasstation_data,
+                        cache_policy=cache_policy,
                     )
 
                     # Create prefetch queue (size 2 means we can have 1 video being processed + 1 ready)

@@ -24,6 +24,7 @@ async def run_benchmark(
     gasstation_only: bool = False,
     cache_dir: Optional[str] = None,
     download_latest_gasstation_data: bool = False,
+    cache_policy: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -33,6 +34,7 @@ async def run_benchmark(
         gasstation_only: If True, only use gasstation datasets
         cache_dir: Directory for caching (defaults to /.cache/gasbench)
         download_latest_gasstation_data: If True, download latest gasstation data before benchmarking (default: False)
+        cache_policy: Optional path to cache policy JSON file with generator priorities
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -81,6 +83,7 @@ async def run_benchmark(
             gasstation_only,
             cache_dir,
             download_latest_gasstation_data,
+            cache_policy,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -161,6 +164,7 @@ async def execute_benchmark(
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
     download_latest_gasstation_data: bool = False,
+    cache_policy: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -174,6 +178,7 @@ async def execute_benchmark(
             gasstation_only,
             cache_dir,
             download_latest_gasstation_data,
+            cache_policy,
         )
     elif modality == "video":
         benchmark_score = await run_video_benchmark(
@@ -184,6 +189,7 @@ async def execute_benchmark(
             gasstation_only,
             cache_dir,
             download_latest_gasstation_data,
+            cache_policy,
         )
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")

@@ -1,7 +1,7 @@
 import json
 import time
 import numpy as np
-from typing import Dict
+from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.media import process_image_sample
@@ -35,6 +35,7 @@ async def run_image_benchmark(
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
     download_latest_gasstation_data: bool = False,
+    cache_policy: Optional[str] = None,
 ) -> float:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -106,7 +107,8 @@ async def run_image_benchmark(
                     dataset_config, 
                     max_samples=dataset_cap, 
                     cache_dir=cache_dir,
-                    download=download_latest_gasstation_data
+                    download=download_latest_gasstation_data,
+                    cache_policy=cache_policy,
                 )
 
                 sample_index = 0  # Track sample index for unique IDs

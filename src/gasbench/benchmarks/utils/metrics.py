@@ -1,9 +1,7 @@
-"""Metrics and statistics utilities for benchmark evaluation."""
-
 import numpy as np
 from typing import Dict, List
 
-from ..logger import get_logger
+from ...logger import get_logger
 
 logger = get_logger(__name__)
 

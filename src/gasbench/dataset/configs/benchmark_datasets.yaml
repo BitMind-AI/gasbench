@@ -149,9 +149,9 @@ image:
 
   - name: klingai-images
     path: bitmind/klingai-images
-    modality: video
+    modality: image
     media_type: synthetic
-    source_format: mp4
+    source_format: png
     images_per_parquet: 100
     parquet_per_dataset: 10
 

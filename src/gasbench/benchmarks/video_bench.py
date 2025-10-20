@@ -223,8 +223,6 @@ async def run_video_benchmark(
                                 misclassification = create_misclassification_record(
                                     sample,
                                     sample_index,
-                                    true_label_binary,
-                                    predicted_binary,
                                     true_label_multiclass,
                                     predicted_multiclass,
                                 )

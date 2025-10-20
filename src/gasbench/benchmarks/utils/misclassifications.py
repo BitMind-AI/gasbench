@@ -78,20 +78,16 @@ def should_track_sample(sample: Dict, dataset_name: str) -> bool:
 def create_misclassification_record(
     sample: Dict,
     sample_index: int,
-    true_label_binary: int,
-    predicted_binary: int,
-    true_label_multiclass: int,
-    predicted_multiclass: int,
+    true_label: int,
+    predicted_label: int,
 ) -> Dict:
     """Create a misclassification record for an incorrectly classified sample.
     
     Args:
         sample: Sample dictionary with metadata
         sample_index: Index of the sample in the current iteration
-        true_label_binary: True binary label (0=real, 1=synthetic)
-        predicted_binary: Predicted binary label
-        true_label_multiclass: True multiclass label
-        predicted_multiclass: Predicted multiclass label
+        true_label: True label
+        predicted_label: Predicted label
     
     Returns:
         Dictionary containing misclassification details
@@ -107,10 +103,8 @@ def create_misclassification_record(
         "dataset_name": sample.get("dataset_name", "unknown"),
         "media_type": sample.get("media_type", "unknown"),
         "model_name": sample.get("model_name", "unknown"),
-        "true_label": true_label_binary,
-        "predicted_label": predicted_binary,
-        "true_label_multiclass": true_label_multiclass,
-        "predicted_multiclass": predicted_multiclass,
+        "true_label": true_label,
+        "predicted_label": predicted_label,
     }
 
 

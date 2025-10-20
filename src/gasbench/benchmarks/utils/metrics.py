@@ -78,9 +78,6 @@ def update_generator_stats(
     pred_binary: int
 ) -> None:
     """Update per-generator fooling statistics for gasstation datasets."""
-    from ..logger import get_logger
-    logger = get_logger(__name__)
-    
     generator_hotkey = sample.get("generator_hotkey")
     # Skip if no generator info or not synthetic sample or "unknown" generator
     if generator_hotkey is None or true_binary != 1 or str(generator_hotkey).lower() == "unknown":

@@ -13,13 +13,14 @@ from ..logger import get_logger
 from .config import BenchmarkDatasetConfig
 from .download import download_and_extract
 from .cache import save_sample_to_cache, save_dataset_cache_files
+from .cache_policy import load_cache_policy, get_generator_priority
 from . import gasstation_utils
 
 logger = get_logger(__name__)
 
 DEFAULT_MAX_SAMPLES = 10000
 CACHE_MAX_SAMPLES = 2000
-GASSTATION_CACHE_MAX_SAMPLES = 5000
+GASSTATION_CACHE_MAX_SAMPLES = 10000
 
 
 class DatasetIterator:
@@ -32,13 +33,17 @@ class DatasetIterator:
         cache_dir: str = "/.cache/gasbench",
         download: bool = True,
         num_weeks: int = None,
+        cache_policy: Optional[str] = None,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.num_weeks = num_weeks
-        
+
+        # Load cache policy for intelligent eviction
+        self.cache_policy = load_cache_policy(cache_policy)
+
         self.is_gasstation = "gasstation" in dataset_config.name.lower()
         if self.is_gasstation:
             # Gasstation datasets use week-based subdirectories
@@ -78,7 +83,7 @@ class DatasetIterator:
 
     def ensure_cached(self):
         """Ensure dataset is fully cached (download if needed or incomplete).
-        
+
         For gasstation datasets, ensures each target week is cached separately.
         """
         if self.is_gasstation:
@@ -88,13 +93,15 @@ class DatasetIterator:
         else:
             # Standard caching for non-gasstation datasets
             if self._is_cache_complete():
-                logger.info(f"Cache complete for {self.config.name} ({self._get_cached_count()} samples)")
+                logger.info(
+                    f"Cache complete for {self.config.name} ({self._get_cached_count()} samples)"
+                )
                 return
             self._download_and_cache()
 
     def get_samples(self):
         """Generator that yields samples from cached data.
-        
+
         For gasstation datasets, loads from all target week directories.
 
         Note: This generator yields ALL available cached samples. The __next__() method
@@ -107,18 +114,24 @@ class DatasetIterator:
                     if not os.path.exists(week_dir):
                         continue
 
-                    logger.info(f"Loading cached data for {self.config.name} week {week_str}")
+                    logger.info(
+                        f"Loading cached data for {self.config.name} week {week_str}"
+                    )
                     for sample in self._load_from_cache_dir(week_dir):
                         yield sample
             else:
                 # Non-gasstation datasets: standard loading
                 if not self._has_cached_dataset():
-                    logger.warning(f"No cached data found for {self.config.name}. Call ensure_cached() first.")
+                    logger.warning(
+                        f"No cached data found for {self.config.name}. Call ensure_cached() first."
+                    )
                     return
 
                 cached_count = self._get_cached_count()
                 samples_to_load = min(cached_count, self.max_samples)
-                logger.info(f"Loading {samples_to_load} cached samples for {self.config.name}")
+                logger.info(
+                    f"Loading {samples_to_load} cached samples for {self.config.name}"
+                )
 
                 for sample in self._load_from_cache_dir(self.dataset_dir):
                     yield sample
@@ -126,12 +139,13 @@ class DatasetIterator:
         except Exception as e:
             logger.error(f"Failed to get samples from {self.config.name}: {e}")
             import traceback
+
             logger.error(f"Full traceback:\n{traceback.format_exc()}")
             return
 
     def _ensure_week_cached(self, week_str: str, week_dir: str):
         """Ensure a specific week is cached for gasstation datasets.
-        
+
         Args:
             week_str: ISO week string (e.g., "2025W40")
             week_dir: Directory path for this week's cache
@@ -141,21 +155,23 @@ class DatasetIterator:
             self.config.path,
             week_str,
             getattr(self.config, "source_format", ""),
-            self.config.modality
+            self.config.modality,
         ):
             sample_count = gasstation_utils.get_week_sample_count(week_dir)
-            logger.info(f"Cache complete for {self.config.name} week {week_str} ({sample_count} samples)")
+            logger.info(
+                f"Cache complete for {self.config.name} week {week_str} ({sample_count} samples)"
+            )
             return
-        
+
         downloaded_archives = gasstation_utils.load_downloaded_archives(week_dir)
         self._download_and_cache_week(week_str, week_dir, downloaded_archives)
-    
+
     def _extract_sample_metadata(self, sample: Dict) -> Dict:
         """Extract metadata from sample for caching.
-        
+
         Args:
             sample: Sample dictionary with media data and metadata
-            
+
         Returns:
             Dictionary with extracted metadata fields
         """
@@ -164,46 +180,90 @@ class DatasetIterator:
             "model_name": sample.get("model_name", ""),
             "media_type": sample.get("media_type", ""),
         }
-        
+
         # gasstation-specific fields
         for field in ["iso_week", "generator_hotkey", "generator_uid"]:
             if field in sample:
                 metadata[field] = sample.get(field)
 
         return metadata
-    
-    def _find_oldest_sample(self, sample_metadata: Dict, samples_dir: str) -> Optional[str]:
-        """Find the oldest sample file to evict (based on filename index).
-        
+
+    def _select_sample_to_evict(
+        self, sample_metadata: Dict, samples_dir: str
+    ) -> Optional[str]:
+        """Find the best sample to evict using priority-aware scoring.
+
+        Scoring heavily prioritizes generator performance (fool rate):
+        - Priority (fool rate) is primary factor: (1 - priority) * 100 (0-100 range)
+        - Age is only a tiebreaker: normalized age (0-1 range)
+        - Evict sample with highest score = low-performing generator + older age
+
         Args:
             sample_metadata: Dictionary mapping filenames to metadata
             samples_dir: Directory containing sample files
-            
+
         Returns:
-            Filename of oldest sample, or None if none found
+            Filename of sample to evict, or None if none found
         """
         if not sample_metadata:
             return None
-        
-        # Samples are named like img_000000.jpg, img_000001.jpg, vid_000000.mp4, etc.
-        # Find the one with the lowest index number
-        oldest_file = None
-        oldest_index = float('inf')
-        
+
+        # If no policy loaded, fall back to pure age-based eviction
+        has_policy = bool(self.cache_policy.get("generator_priorities"))
+
+        best_file = None
+        best_score = -1.0
+
+        # Extract all indices first to normalize age
+        all_indices = []
         for filename in sample_metadata.keys():
-            # Extract numeric index from filename (e.g., "000123" from "img_000123.jpg")
-            match = re.search(r'_(\d+)', filename)
+            match = re.search(r"_(\d+)", filename)
             if match:
-                index = int(match.group(1))
-                if index < oldest_index:
-                    oldest_index = index
-                    oldest_file = filename
-        
-        return oldest_file
-    
-    def _download_and_cache_week(self, week_str: str, week_dir: str, downloaded_archives: set):
+                all_indices.append(int(match.group(1)))
+
+        if not all_indices:
+            return None
+
+        min_index = min(all_indices)
+        max_index = max(all_indices)
+        index_range = max_index - min_index if max_index > min_index else 1
+
+        for filename, metadata in sample_metadata.items():
+            # Extract numeric index (age proxy)
+            match = re.search(r"_(\d+)", filename)
+            if not match:
+                continue
+
+            index = int(match.group(1))
+
+            # Normalize age: 0 (newest) to 1 (oldest)
+            age_factor = (index - min_index) / index_range if index_range > 0 else 0
+
+            if has_policy:
+                # Get generator priority from policy (default 0.5 if not found)
+                hotkey = metadata.get("generator_hotkey", "")
+                priority = get_generator_priority(self.cache_policy, hotkey)
+
+                # Score: (1 - priority) * 100 + age_factor
+                # Priority is heavily weighted (0-100 range)
+                # Age is only a tiebreaker (0-1 range)
+                # High score = low priority + old = evict first
+                score = (1.0 - priority) * 100 + age_factor
+            else:
+                # No policy: use pure age
+                score = age_factor
+
+            if score > best_score:
+                best_score = score
+                best_file = filename
+
+        return best_file
+
+    def _download_and_cache_week(
+        self, week_str: str, week_dir: str, downloaded_archives: set
+    ):
         """Download and cache data for a specific ISO week (gasstation datasets only).
-        
+
         Args:
             week_str: ISO week string (e.g., "2025W40")
             week_dir: Directory path for this week's cache
@@ -212,33 +272,37 @@ class DatasetIterator:
         samples_dir = os.path.join(week_dir, "samples")
         metadata_file = os.path.join(week_dir, "sample_metadata.json")
         archive_tracker_file = os.path.join(week_dir, "downloaded_archives.json")
-        
+
         sample_metadata = {}
         sample_count = 0
         next_index = 0  # Track the next index to use for new files
-        
+
         # Load existing cache
         if os.path.exists(metadata_file):
             try:
                 with open(metadata_file, "r") as f:
                     sample_metadata = json.load(f)
                 sample_count = len(sample_metadata)
-                
+
                 # Find the highest index used so far to continue from there
                 max_index = -1
                 for filename in sample_metadata.keys():
-                    match = re.search(r'_(\d+)', filename)
+                    match = re.search(r"_(\d+)", filename)
                     if match:
                         max_index = max(max_index, int(match.group(1)))
                 next_index = max_index + 1
-                
-                logger.info(f"Found {sample_count} existing samples for week {week_str}, next index: {next_index}")
+
+                logger.info(
+                    f"Found {sample_count} existing samples for week {week_str}, next index: {next_index}"
+                )
             except Exception as e:
-                logger.warning(f"Failed to load partial metadata for week {week_str}: {e}")
+                logger.warning(
+                    f"Failed to load partial metadata for week {week_str}: {e}"
+                )
                 sample_metadata = {}
                 sample_count = 0
                 next_index = 0
-        
+
         # If we're at max_samples and there are new archives, we'll do sample replacement
         # Keep the most recent samples by evicting oldest ones
         replacing_samples = sample_count >= GASSTATION_CACHE_MAX_SAMPLES
@@ -247,9 +311,9 @@ class DatasetIterator:
                 f"Week {week_str} has {sample_count} samples (at gasstation limit {GASSTATION_CACHE_MAX_SAMPLES}). "
                 f"Will replace oldest samples with fresh data from new archives"
             )
-        
+
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
-        
+
         initial_sample_count = sample_count
 
         # Download with week filter (num_weeks=None to download just this week via week filtering in download_and_extract)
@@ -264,26 +328,30 @@ class DatasetIterator:
             cache_dir=self.cache_dir,
             num_weeks=None,
             downloaded_archives=downloaded_archives,
-            target_week=week_str
+            target_week=week_str,
         ):
-            archive_name = sample.get("archive_filename") or sample.get("source_file", "")
+            archive_name = sample.get("archive_filename") or sample.get(
+                "source_file", ""
+            )
             if archive_name:
                 downloaded_archives.add(archive_name)
-            
-            # If we're replacing samples, find and remove the oldest sample
+
+            # If we're replacing samples, select and evict a sample using priority-aware scoring
             if replacing_samples and sample_count >= GASSTATION_CACHE_MAX_SAMPLES:
-                oldest_sample = self._find_oldest_sample(sample_metadata, samples_dir)
-                if oldest_sample:
-                    old_file = os.path.join(samples_dir, oldest_sample)
+                sample_to_evict = self._select_sample_to_evict(
+                    sample_metadata, samples_dir
+                )
+                if sample_to_evict:
+                    old_file = os.path.join(samples_dir, sample_to_evict)
                     try:
                         if os.path.exists(old_file):
                             os.remove(old_file)
-                        del sample_metadata[oldest_sample]
+                        del sample_metadata[sample_to_evict]
                         sample_count -= 1
-                        logger.debug(f"Evicted oldest sample: {oldest_sample}")
+                        logger.debug(f"Evicted sample: {sample_to_evict}")
                     except Exception as e:
-                        logger.warning(f"Failed to evict old sample {oldest_sample}: {e}")
-            
+                        logger.warning(f"Failed to evict sample {sample_to_evict}: {e}")
+
             # Use next_index for the filename to avoid overwriting existing files
             filename = save_sample_to_cache(
                 sample, self.config, samples_dir, next_index
@@ -297,8 +365,12 @@ class DatasetIterator:
                     save_dataset_cache_files(
                         self.config, week_dir, sample_metadata, sample_count
                     )
-                    gasstation_utils.save_downloaded_archives(week_dir, downloaded_archives)
-                    logger.info(f"Downloaded {sample_count} samples for week {week_str}")
+                    gasstation_utils.save_downloaded_archives(
+                        week_dir, downloaded_archives
+                    )
+                    logger.info(
+                        f"Downloaded {sample_count} samples for week {week_str}"
+                    )
 
         new_samples = sample_count - initial_sample_count
 
@@ -307,7 +379,7 @@ class DatasetIterator:
                 self.config, week_dir, sample_metadata, sample_count
             )
             gasstation_utils.save_downloaded_archives(week_dir, downloaded_archives)
-            
+
             if replacing_samples:
                 logger.info(
                     f"Week {week_str}: Downloaded {new_samples} new samples (replaced old samples). "
@@ -320,10 +392,10 @@ class DatasetIterator:
                 )
         elif sample_count < 0:
             logger.warning(f"No samples cached for week {week_str}")
-    
+
     def _download_and_cache(self):
         """Download samples and save them to cache with incremental checkpointing.
-        
+
         Used for non-gasstation datasets.
         """
         samples_dir = os.path.join(self.dataset_dir, "samples")
@@ -339,14 +411,14 @@ class DatasetIterator:
                 with open(metadata_file, "r") as f:
                     sample_metadata = json.load(f)
                 sample_count = len(sample_metadata)
-                
+
                 max_index = -1
                 for filename in sample_metadata.keys():
-                    match = re.search(r'_(\d+)', filename)
+                    match = re.search(r"_(\d+)", filename)
                     if match:
                         max_index = max(max_index, int(match.group(1)))
                 next_index = max_index + 1
-                
+
                 logger.info(
                     f"Found partial cache with {sample_count} samples, next index: {next_index}, resuming download"
                 )
@@ -406,15 +478,18 @@ class DatasetIterator:
             logger.info(
                 f"Download complete: Saved {sample_count} samples to cache for {self.config.name}"
             )
-            
+
             # Create completion marker file to indicate dataset is fully downloaded
             completion_marker = os.path.join(self.dataset_dir, ".download_complete")
-            with open(completion_marker, 'w') as f:
-                json.dump({
-                    "sample_count": sample_count,
-                    "completed_at": time.time(),
-                    "cache_max_samples": CACHE_MAX_SAMPLES
-                }, f)
+            with open(completion_marker, "w") as f:
+                json.dump(
+                    {
+                        "sample_count": sample_count,
+                        "completed_at": time.time(),
+                        "cache_max_samples": CACHE_MAX_SAMPLES,
+                    },
+                    f,
+                )
         else:
             logger.warning(f"No samples were downloaded for {self.config.name}")
 
@@ -436,7 +511,7 @@ class DatasetIterator:
 
     def _is_cache_complete(self) -> bool:
         """Check if cached dataset has enough samples for max_samples.
-        
+
         For gasstation datasets, checks all week directories.
         For non-gasstation datasets, checks the single dataset directory.
         """
@@ -477,13 +552,13 @@ class DatasetIterator:
             return len(metadata)
         except Exception:
             return 0
-    
+
     def get_total_cached_count(self) -> int:
         """Get total number of samples cached across all directories.
-        
+
         For gasstation datasets, counts across all week directories.
         For non-gasstation datasets, counts from the single dataset directory.
-        
+
         This reads metadata files directly without loading actual samples.
         """
         try:
@@ -497,10 +572,10 @@ class DatasetIterator:
 
     def _load_from_cache_dir(self, cache_dir: str):
         """Load samples from a specific cache directory.
-        
+
         Args:
             cache_dir: Path to the cache directory to load from
-        
+
         Note: This is a generator that yields samples. The caller (get_samples) is responsible
         for tracking counts and enforcing limits. This method should NOT check or increment
         self.samples_yielded as that creates double-counting issues.
@@ -508,10 +583,10 @@ class DatasetIterator:
         try:
             samples_dir = os.path.join(cache_dir, "samples")
             metadata_file = os.path.join(cache_dir, "sample_metadata.json")
-            
+
             if not os.path.exists(metadata_file) or not os.path.exists(samples_dir):
                 return
-            
+
             with open(metadata_file, "r") as f:
                 metadata_map = json.load(f)
 
@@ -520,14 +595,14 @@ class DatasetIterator:
                 for f in os.listdir(samples_dir)
                 if os.path.isfile(os.path.join(samples_dir, f))
             ]
-            
+
             # Sort by numeric index in reverse order (newest first)
             # Files are named like img_000000.jpg, img_000001.jpg, etc.
             # Higher indices = newer files
             def extract_index(filename):
-                match = re.search(r'_(\d+)', filename)
+                match = re.search(r"_(\d+)", filename)
                 return int(match.group(1)) if match else -1
-            
+
             sample_files.sort(key=extract_index, reverse=True)
 
             for filename in sample_files:

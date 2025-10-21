@@ -68,6 +68,11 @@ Examples:
         help="Only use gasstation datasets for evaluation"
     )
     parser.add_argument(
+        "--download-latest-gasstation-data",
+        action="store_true",
+        help="Download latest gasstation data before benchmarking (default: False, uses cached data)"
+    )
+    parser.add_argument(
         "--cache-dir", 
         help="Directory for caching datasets (default: /.cache/gasbench)"
     )
@@ -102,6 +107,7 @@ Examples:
         "modality": args.modality.upper(),
         "mode": mode.upper(),
         "gasstation_only": args.gasstation_only,
+        "download_latest_gasstation_data": args.download_latest_gasstation_data,
     }
     if args.cache_dir:
         config["cache_directory"] = args.cache_dir
@@ -117,7 +123,8 @@ Examples:
                 modality=args.modality,
                 mode=mode,
                 gasstation_only=args.gasstation_only,
-                cache_dir=args.cache_dir
+                cache_dir=args.cache_dir,
+                download_latest_gasstation_data=args.download_latest_gasstation_data
             )
         )
         

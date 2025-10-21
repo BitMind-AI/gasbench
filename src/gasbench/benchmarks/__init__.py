@@ -2,7 +2,7 @@
 
 from .image_bench import run_image_benchmark
 from .video_bench import run_video_benchmark
-from .metrics import (
+from .utils import (
     ConfusionMatrix,
     multiclass_to_binary,
     update_generator_stats,

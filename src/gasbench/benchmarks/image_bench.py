@@ -1,7 +1,7 @@
 import json
 import time
 import numpy as np
-from typing import Dict
+from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.media import process_image_sample
@@ -13,11 +13,14 @@ from ..dataset.config import (
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
-from .metrics import (
+from .utils import (
     ConfusionMatrix,
     multiclass_to_binary,
     update_generator_stats,
     calculate_per_source_accuracy,
+    should_track_sample,
+    create_misclassification_record,
+    aggregate_misclassification_stats,
 )
 from ..model.inference import process_model_output
 
@@ -31,6 +34,8 @@ async def run_image_benchmark(
     mode: str = "full",
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
+    download_latest_gasstation_data: bool = False,
+    cache_policy: Optional[str] = None,
 ) -> float:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -54,6 +59,7 @@ async def run_image_benchmark(
         inference_times = []
         per_dataset_results = {}
         confusion_matrix = ConfusionMatrix()
+        incorrect_samples = []  # Track misclassified gasstation samples
 
         target_size = get_benchmark_size("image", mode)
         dataset_sampling = calculate_weighted_dataset_sampling(available_datasets, target_size)
@@ -97,9 +103,17 @@ async def run_image_benchmark(
             dataset_total = 0
 
             try:
-                dataset_iterator = DatasetIterator(dataset_config, max_samples=dataset_cap, cache_dir=cache_dir)
+                dataset_iterator = DatasetIterator(
+                    dataset_config, 
+                    max_samples=dataset_cap, 
+                    cache_dir=cache_dir,
+                    download=download_latest_gasstation_data,
+                    cache_policy=cache_policy,
+                )
 
+                sample_index = 0  # Track sample index for unique IDs
                 for sample in dataset_iterator:
+                    sample_index += 1
                     try:
                         # Process image sample (load, convert to numpy)
                         image_array, true_label_multiclass = process_image_sample(sample)
@@ -136,6 +150,16 @@ async def run_image_benchmark(
                         if is_correct:
                             correct += 1
                             dataset_correct += 1
+                        else:
+                            # Track misclassified gasstation samples with generator info
+                            if should_track_sample(sample, dataset_config.name):
+                                misclassification = create_misclassification_record(
+                                    sample,
+                                    sample_index,
+                                    true_label_multiclass,
+                                    predicted_multiclass,
+                                )
+                                incorrect_samples.append(misclassification)
 
                         total += 1
                         dataset_total += 1
@@ -190,6 +214,8 @@ async def run_image_benchmark(
 
         per_source_accuracy = calculate_per_source_accuracy(available_datasets, per_dataset_results)
 
+        misclassification_stats = aggregate_misclassification_stats(incorrect_samples)
+
         benchmark_results["image_results"] = {
             "benchmark_score": accuracy,
             "total_samples": total,
@@ -201,6 +227,8 @@ async def run_image_benchmark(
             "per_source_accuracy": per_source_accuracy,
             "per_dataset_results": per_dataset_results,
             "dataset_info": dataset_info,
+            "misclassified_samples": incorrect_samples,
+            "misclassification_stats": misclassification_stats,
         }
 
         if benchmark_results.get("image_generator_stats"):

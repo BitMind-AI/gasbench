@@ -440,6 +440,8 @@ def load_benchmark_datasets_from_yaml(
                         zips_per_dataset=dataset_dict.get("zips_per_dataset", 2),
                         source_format=dataset_dict.get("source_format", ""),
                         source=dataset_dict.get("source", "huggingface"),
+                        include_paths=dataset_dict.get("include_paths"),
+                        exclude_paths=dataset_dict.get("exclude_paths"),
                     )
                     result[modality].append(config)
 

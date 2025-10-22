@@ -407,7 +407,7 @@ def _filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]
     
     Args:
         files: List of file paths
-        num_weeks: Number of most recent weeks to include (e.g., 2 means last 2 weeks)
+        num_weeks: Number of most recent weeks to include
     
     Returns:
         Filtered list of files
@@ -476,9 +476,12 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
 
     Matching strategy:
     - Strip archive suffix (e.g., .tar.gz, .tgz, .zip, .tar) to get the stem
-    - Replace underscores with hyphens to match parquet naming (e.g., shard-<stem>_archive###.parquet)
-    - Find parquets containing the stem and the word 'archive'
+    - Extract UID prefix (before timestamp) to match against parquet shards
+    - Find parquets containing the UID prefix and the word 'archive'
     - Download those small parquet files and collect metadata per filename column
+
+    Note: Archives and their metadata parquets may have different timestamps,
+    so we match on UID prefix only (e.g., '5EUQ8xz5' from '5EUQ8xz5_1760919909.tar.gz')
     """
     try:
         archive_stem = archive_path.name
@@ -487,7 +490,8 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
                 archive_stem = archive_stem[: -len(suf)]
                 break
 
-        alt_stem = archive_stem.replace("_", "-")
+        uid_prefix = archive_stem.split("_")[0] if "_" in archive_stem else archive_stem
+        alt_uid_prefix = uid_prefix.replace("_", "-")
 
         source = getattr(dataset, "source", "huggingface")
 
@@ -497,7 +501,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
             parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet")
 
         matching = [
-            p for p in parquet_files if alt_stem in p and "archive" in p and p.endswith(".parquet")
+            p for p in parquet_files if alt_uid_prefix in p and "archive" in p and p.endswith(".parquet")
         ]
 
         if not matching:
@@ -525,11 +529,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
                     ]
                     name_col = filename_cols[0] if filename_cols else None
                     for _, row in df.iterrows():
-                        meta = dict(row)
-                        clean_meta = {
-                            str(k): (str(v) if isinstance(v, (bytes, bytearray)) else v)
-                            for k, v in meta.items()
-                        }
+                        clean_meta = _extract_row_metadata(row, name_col or "")
                         if name_col:
                             key_name = str(row[name_col])
                             if key_name:

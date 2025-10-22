@@ -475,15 +475,20 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
     """Build a filename->metadata map for a given video archive using matching parquet shards.
 
     Matching strategy:
+    - Extract ISO week from archive path to filter metadata to same week
     - Strip archive suffix (e.g., .tar.gz, .tgz, .zip, .tar) to get the stem
     - Extract UID prefix (before timestamp) to match against parquet shards
-    - Find parquets containing the UID prefix and the word 'archive'
+    - Find parquets containing the week, UID prefix, and the word 'archive'
     - Download those small parquet files and collect metadata per filename column
 
     Note: Archives and their metadata parquets may have different timestamps,
     so we match on UID prefix only (e.g., '5EUQ8xz5' from '5EUQ8xz5_1760919909.tar.gz')
     """
     try:
+        iso_week = _extract_iso_week_from_path(str(archive_path))
+        if not iso_week:
+            return {}
+        
         archive_stem = archive_path.name
         for suf in [".tar.gz", ".tgz", ".zip", ".tar"]:
             if archive_stem.endswith(suf):
@@ -501,7 +506,8 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
             parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet")
 
         matching = [
-            p for p in parquet_files if alt_uid_prefix in p and "archive" in p and p.endswith(".parquet")
+            p for p in parquet_files 
+            if iso_week in p and alt_uid_prefix in p and "archive" in p and p.endswith(".parquet")
         ]
 
         if not matching:

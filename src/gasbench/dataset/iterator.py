@@ -34,12 +34,14 @@ class DatasetIterator:
         download: bool = True,
         num_weeks: int = None,
         cache_policy: Optional[str] = None,
+        allow_eviction: bool = True,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.num_weeks = num_weeks
+        self.allow_eviction = allow_eviction
 
         # Load cache policy for intelligent eviction
         self.cache_policy = load_cache_policy(cache_policy)
@@ -303,18 +305,12 @@ class DatasetIterator:
                 sample_count = 0
                 next_index = 0
 
-        # If we're at max_samples and there are new archives, we'll do sample replacement
-        # Keep the most recent samples by evicting oldest ones
-        replacing_samples = sample_count >= GASSTATION_CACHE_MAX_SAMPLES
-        if replacing_samples:
-            logger.info(
-                f"Week {week_str} has {sample_count} samples (at gasstation limit {GASSTATION_CACHE_MAX_SAMPLES}). "
-                f"Will replace oldest samples with fresh data from new archives"
-            )
 
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
 
         initial_sample_count = sample_count
+        
+        replacing_samples = self.allow_eviction and sample_count >= GASSTATION_CACHE_MAX_SAMPLES
 
         # Download with week filter (num_weeks=None to download just this week via week filtering in download_and_extract)
         for sample in download_and_extract(

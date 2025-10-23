@@ -471,11 +471,11 @@ def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
     ]
 
 
-def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[str, Any]]:
+def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
     """Build a filename->metadata map for a given video archive using matching parquet shards.
 
     Matching strategy:
-    - Extract ISO week from archive path to filter metadata to same week
+    - Use provided ISO week to filter metadata to same week
     - Strip archive suffix (e.g., .tar.gz, .tgz, .zip, .tar) to get the stem
     - Extract UID prefix (before timestamp) to match against parquet shards
     - Find parquets containing the week, UID prefix, and the word 'archive'
@@ -485,7 +485,6 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
     so we match on UID prefix only (e.g., '5EUQ8xz5' from '5EUQ8xz5_1760919909.tar.gz')
     """
     try:
-        iso_week = _extract_iso_week_from_path(str(archive_path))
         if not iso_week:
             return {}
         
@@ -524,16 +523,13 @@ def _load_archive_metadata_map(dataset, archive_path: Path) -> Dict[str, Dict[st
                 try:
                     table = pq.read_table(pq_path)
                     df = table.to_pandas()
-                    # Try to find a filename column
-                    filename_cols = [
-                        c
-                        for c in df.columns
-                        if any(
-                            k in str(c).lower()
-                            for k in ["video_filename", "filename", "file", "name", "path"]
-                        )
-                    ]
-                    name_col = filename_cols[0] if filename_cols else None
+                    # Try to find a filename column (prioritize video_path, then more specific matches)
+                    name_col = None
+                    for keyword in ["video_path_in_archive", "video_path", "video_filename", "filename", "filepath", "file_path"]:
+                        matching = [c for c in df.columns if keyword in str(c).lower()]
+                        if matching:
+                            name_col = matching[0]
+                            break
                     for _, row in df.iterrows():
                         clean_meta = _extract_row_metadata(row, name_col or "")
                         if name_col:
@@ -806,7 +802,7 @@ def _process_zip_or_tar(
 
             # Load associated metadata parquet(s) for video archives if available
             archive_metadata_map: Dict[str, Dict[str, Any]] = (
-                _load_archive_metadata_map(dataset, source_path)
+                _load_archive_metadata_map(dataset, source_path, iso_week)
                 if dataset.modality == "video"
                 else {}
             )

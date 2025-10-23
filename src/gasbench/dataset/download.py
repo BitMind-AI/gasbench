@@ -494,7 +494,9 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
                 archive_stem = archive_stem[: -len(suf)]
                 break
 
-        uid_prefix = archive_stem.split("_")[0] if "_" in archive_stem else archive_stem
+        parts = archive_stem.split("_")
+        uid_prefix = parts[0] if parts else archive_stem
+        timestamp = parts[1] if len(parts) > 1 else None
         alt_uid_prefix = uid_prefix.replace("_", "-")
 
         source = getattr(dataset, "source", "huggingface")
@@ -504,9 +506,14 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
         else:
             parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet")
 
+        # Match on week, UID, timestamp, 'archive'
         matching = [
             p for p in parquet_files 
-            if iso_week in p and alt_uid_prefix in p and "archive" in p and p.endswith(".parquet")
+            if iso_week in p 
+            and alt_uid_prefix in p 
+            and (timestamp in p if timestamp else True)
+            and "archive" in p 
+            and p.endswith(".parquet")
         ]
 
         if not matching:

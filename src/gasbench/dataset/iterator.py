@@ -273,7 +273,6 @@ class DatasetIterator:
         """
         samples_dir = os.path.join(week_dir, "samples")
         metadata_file = os.path.join(week_dir, "sample_metadata.json")
-        archive_tracker_file = os.path.join(week_dir, "downloaded_archives.json")
 
         sample_metadata = {}
         sample_count = 0

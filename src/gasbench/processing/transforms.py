@@ -11,7 +11,7 @@ import time
 from io import BytesIO
 from PIL import Image
 import torch
-from torchvision.io import decode_jpeg
+from torchvision.io import decode_jpeg, encode_jpeg
 
 
 def ensure_mask_3d(mask: np.ndarray) -> np.ndarray:
@@ -677,7 +677,7 @@ def compress_image_jpeg_pil(image_hwc: np.ndarray, quality: int = 75) -> np.ndar
 
 def compress_video_frames_jpeg_torchvision(video_thwc: np.ndarray, quality: int = 75) -> np.ndarray:
     """
-    Compress each frame of a video using torchvision.transforms.JPEG at fixed quality.
+    Compress each frame of a video using torchvision's encode_jpeg/decode_jpeg at fixed quality.
 
     Args:
         video_thwc: numpy array (T, H, W, C), dtype uint8, RGB
@@ -696,17 +696,10 @@ def compress_video_frames_jpeg_torchvision(video_thwc: np.ndarray, quality: int 
     T, H, W, C = video_thwc.shape
     out = np.empty_like(video_thwc)
 
-    # Explicitly use torchvision.transforms.JPEG
-    jpeg_enc = transforms.JPEG(quality=int(quality))
-
     for t in range(T):
         frame_chw = torch.from_numpy(video_thwc[t]).permute(2, 0, 1).contiguous()  # CHW uint8
-        encoded = jpeg_enc(frame_chw)
-        # Handle both tensor and bytes outputs for robustness
-        if isinstance(encoded, torch.Tensor):
-            decoded_chw = decode_jpeg(encoded)
-        else:
-            decoded_chw = decode_jpeg(torch.frombuffer(encoded, dtype=torch.uint8))
+        encoded_bytes = encode_jpeg(frame_chw, quality=int(quality))
+        decoded_chw = decode_jpeg(encoded_bytes)
         out[t] = decoded_chw.permute(1, 2, 0).contiguous().numpy()
 
     return out
@@ -983,6 +976,8 @@ class RandomRotationWithParams:
             self.params = {"rotate": rotate}
 
         if not rotate:
+            if mask is not None:
+                return img, mask
             return img
 
         order = self.order if order is None else order

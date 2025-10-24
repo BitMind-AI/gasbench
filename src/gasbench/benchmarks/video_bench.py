@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import asyncio
 import numpy as np
@@ -61,7 +62,9 @@ async def video_prefetcher(
                     aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
                     video_array = np.expand_dims(aug_tchw, 0)
-                except Exception:
+                    print('TRANSFORMED MF')
+                except Exception as e:
+                    print(e)
                     pass
 
                 true_label_binary = multiclass_to_binary(true_label_multiclass)
@@ -91,6 +94,8 @@ async def run_video_benchmark(
     """Test model on benchmark video datasets for AI-generated content detection."""
 
     try:
+        hf_token = os.environ.get("HF_TOKEN")
+
         if gasstation_only:
             logger.info("Loading gasstation video datasets only")
         else:
@@ -158,12 +163,17 @@ async def run_video_benchmark(
                 dataset_skipped = 0
 
                 try:
+                    # Download gasstation datasets only if flag is set; always download regular datasets if not cached
+                    is_gasstation = "gasstation" in dataset_config.name.lower()
+                    should_download = download_latest_gasstation_data if is_gasstation else True
+
                     dataset_iterator = DatasetIterator(
                         dataset_config, 
                         max_samples=dataset_cap, 
                         cache_dir=cache_dir,
-                        download=download_latest_gasstation_data,
+                        download=should_download,
                         cache_policy=cache_policy,
+                        hf_token=hf_token,
                     )
 
                     # Create prefetch queue (size 2 means we can have 1 video being processed + 1 ready)

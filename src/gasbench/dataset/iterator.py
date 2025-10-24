@@ -35,6 +35,7 @@ class DatasetIterator:
         num_weeks: int = None,
         cache_policy: Optional[str] = None,
         allow_eviction: bool = True,
+        hf_token: Optional[str] = None,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
@@ -42,6 +43,7 @@ class DatasetIterator:
         self.cache_dir = cache_dir
         self.num_weeks = num_weeks
         self.allow_eviction = allow_eviction
+        self.hf_token = hf_token
 
         # Load cache policy for intelligent eviction
         self.cache_policy = load_cache_policy(cache_policy)
@@ -324,6 +326,7 @@ class DatasetIterator:
             num_weeks=None,
             downloaded_archives=downloaded_archives,
             target_week=week_str,
+            hf_token=self.hf_token,
         ):
             archive_name = sample.get("archive_filename") or sample.get(
                 "source_file", ""
@@ -444,6 +447,7 @@ class DatasetIterator:
             cache_dir=self.cache_dir,
             num_weeks=self.num_weeks,
             downloaded_archives=None,  # Not used for non-gasstation datasets
+            hf_token=self.hf_token,
         ):
             if sample_count >= CACHE_MAX_SAMPLES:
                 break

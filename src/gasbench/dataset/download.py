@@ -42,6 +42,7 @@ def download_and_extract(
     cache_dir: str = "/.cache/gasbench",
     downloaded_archives: Optional[set] = None,
     target_week: Optional[str] = None,
+    hf_token: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Download datasets and yield extracted media as a generator.
@@ -100,7 +101,7 @@ def download_and_extract(
 
             filenames = _list_remote_dataset_files(
                 dataset.path, dataset.source_format, current_week_only, num_weeks, target_week,
-                include_paths, exclude_paths, source
+                include_paths, exclude_paths, source, hf_token
             )
             if not filenames:
                 logger.warning(
@@ -124,7 +125,7 @@ def download_and_extract(
                         )
                         filenames = _list_remote_dataset_files(
                             dataset.path, fallback_format, current_week_only, num_weeks, target_week,
-                            include_paths, exclude_paths, source
+                            include_paths, exclude_paths, source, hf_token
                         )
                         if filenames:
                             logger.info(
@@ -188,7 +189,7 @@ def download_and_extract(
             processed_files = 0
             for url in to_download:
                 iso_week = _extract_iso_week_from_path(url)
-                downloaded_file = download_single_file(url, temp_dir_root, 8192)
+                downloaded_file = download_single_file(url, temp_dir_root, 8192, hf_token)
                 if not downloaded_file:
                     continue
                 processed_files += 1
@@ -201,7 +202,7 @@ def download_and_extract(
                 )
                 try:
                     for sample in yield_media_from_source(
-                        downloaded_file, dataset, num_items, iso_week
+                        downloaded_file, dataset, num_items, iso_week, hf_token
                     ):
                         yield sample
                 finally:
@@ -230,6 +231,7 @@ def yield_media_from_source(
     dataset,  # BenchmarkDatasetConfig
     num_items: int,
     iso_week: Optional[str] = None,
+    hf_token: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Unified media extractor for parquet, zip, and tar sources.
@@ -245,7 +247,7 @@ def yield_media_from_source(
             return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
-            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week)
+            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week, hf_token)
             return
 
         if any(
@@ -315,7 +317,8 @@ def _list_remote_dataset_files(
     target_week: str = None,
     include_paths: Optional[List[str]] = None,
     exclude_paths: Optional[List[str]] = None,
-    source: str = "huggingface"
+    source: str = "huggingface",
+    hf_token: Optional[str] = None,
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format and path patterns.
 
@@ -342,7 +345,7 @@ def _list_remote_dataset_files(
     if source == "modelscope":
         files = list_modelscope_files(repo_id=dataset_path, extension=source_format)
     else:  # hf
-        files = list_hf_files(repo_id=dataset_path, extension=source_format)
+        files = list_hf_files(repo_id=dataset_path, extension=source_format, token=hf_token)
 
     if include_paths:
         files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
@@ -471,7 +474,7 @@ def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
     ]
 
 
-def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None, hf_token: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
     """Build a filename->metadata map for a given video archive using matching parquet shards.
 
     Matching strategy:
@@ -504,7 +507,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
         if source == "modelscope":
             parquet_files = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
         else:
-            parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet")
+            parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet", token=hf_token)
 
         # Match on week, UID, timestamp, 'archive'
         matching = [
@@ -524,7 +527,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
         try:
             urls = _get_download_urls(dataset.path, matching, source)
             for url in urls:
-                pq_path = download_single_file(url, temp_dir, 8192)
+                pq_path = download_single_file(url, temp_dir, 8192, hf_token)
                 if not pq_path:
                     continue
                 try:
@@ -765,7 +768,7 @@ def _process_parquet(
 
 
 def _process_zip_or_tar(
-    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, hf_token: Optional[str] = None
 ):  # BenchmarkDatasetConfig
     filename = str(source_path.name).lower()
     is_zip = _is_zip_file(filename)
@@ -809,7 +812,7 @@ def _process_zip_or_tar(
 
             # Load associated metadata parquet(s) for video archives if available
             archive_metadata_map: Dict[str, Dict[str, Any]] = (
-                _load_archive_metadata_map(dataset, source_path, iso_week)
+                _load_archive_metadata_map(dataset, source_path, iso_week, hf_token)
                 if dataset.modality == "video"
                 else {}
             )
@@ -881,13 +884,14 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
         return
 
 
-def list_hf_files(repo_id, repo_type="dataset", extension=None):
+def list_hf_files(repo_id, repo_type="dataset", extension=None, token=None):
     """List files from a Hugging Face repository.
 
     Args:
         repo_id: Repository ID
         repo_type: Type of repository ('dataset', 'model', etc.)
         extension: Filter files by extension
+        token: Hugging Face API token for private datasets
 
     Returns:
         List of files in the repository
@@ -896,7 +900,7 @@ def list_hf_files(repo_id, repo_type="dataset", extension=None):
     try:
         import huggingface_hub as hf_hub
 
-        files = list(hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type))
+        files = list(hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type, token=token))
         if extension:
             if isinstance(extension, (list, tuple, set)):
                 exts = tuple(extension)
@@ -989,13 +993,14 @@ def download_files(
     return downloaded_files
 
 
-def download_single_file(url: str, output_dir: Path, chunk_size: int) -> Optional[Path]:
+def download_single_file(url: str, output_dir: Path, chunk_size: int, hf_token: Optional[str] = None) -> Optional[Path]:
     """Download a single file synchronously.
 
     Args:
         url: URL to download
         output_dir: Directory to save the file
         chunk_size: Size of chunks to download at a time
+        hf_token: Hugging Face API token for private datasets
 
     Returns:
         Path to the downloaded file, or None if failed
@@ -1003,7 +1008,11 @@ def download_single_file(url: str, output_dir: Path, chunk_size: int) -> Optiona
     try:
         logger.info(f"Downloading {url}")
 
-        response = requests.get(url, stream=True, timeout=3600)
+        headers = {}
+        if hf_token and "huggingface.co" in url:
+            headers["Authorization"] = f"Bearer {hf_token}"
+
+        response = requests.get(url, stream=True, timeout=3600, headers=headers)
         if response.status_code != 200:
             logger.error(f"Failed to download {url}: Status {response.status_code}")
             return None

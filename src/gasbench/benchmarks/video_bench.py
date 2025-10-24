@@ -62,7 +62,6 @@ async def video_prefetcher(
                     aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
                     video_array = np.expand_dims(aug_tchw, 0)
-                    print('TRANSFORMED MF')
                 except Exception as e:
                     print(e)
                     pass

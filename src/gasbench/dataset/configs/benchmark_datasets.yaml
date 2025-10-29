@@ -11,10 +11,10 @@ image:
     images_per_parquet: -1
     parquet_per_dataset: -1
 
-  - name: ideogram-25k
-    path: terminusresearch/ideogram-25k
+  - name: ideogram-27k
+    path: bitmind/ideogram-27k
     modality: image
-    source_format: tar
+    source_format: zip
     media_type: synthetic
     images_per_parquet: 200
     parquet_per_dataset: 5

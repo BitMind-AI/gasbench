@@ -29,24 +29,12 @@ BENCHMARK_TOTAL_OVERRIDES = {
 # In "full" mode, YAML configs are respected
 DOWNLOAD_SIZE_OVERRIDES = {
     "debug": {
-        "image": {
-            "images_per_parquet": 100,
-            "parquet_per_dataset": 1,
-        },
-        "video": {
-            "videos_per_zip": 50,
-            "zips_per_dataset": 1,
-        },
+        "media_per_archive": 100,
+        "archives_per_dataset": 1,
     },
     "small": {
-        "image": {
-            "images_per_parquet": 100,
-            "parquet_per_dataset": 1,
-        },
-        "video": {
-            "videos_per_zip": 100,
-            "zips_per_dataset": 1,
-        },
+        "media_per_archive": 100,
+        "archives_per_dataset": 1,
     },
 }
 
@@ -58,10 +46,8 @@ class BenchmarkDatasetConfig:
     media_type: str  # "real", "synthetic", or "semisynthetic"
 
     # Download parameters
-    images_per_parquet: int = 100
-    videos_per_zip: int = 50
-    parquet_per_dataset: int = 5
-    zips_per_dataset: int = 2
+    media_per_archive: int = 100
+    archives_per_dataset: int = 5
     source_format: str = ""  # Auto-detected if empty
     source: str = "huggingface"  # "huggingface" or "modelscope"
 
@@ -119,26 +105,22 @@ def apply_mode_to_datasets(
         if not datasets:
             return []
         dataset = datasets[0]
-        mode_config = DOWNLOAD_SIZE_OVERRIDES["debug"][dataset.modality]
+        mode_config = DOWNLOAD_SIZE_OVERRIDES["debug"]
         modified = replace(
             dataset,
-            images_per_parquet=mode_config.get("images_per_parquet", dataset.images_per_parquet),
-            videos_per_zip=mode_config.get("videos_per_zip", dataset.videos_per_zip),
-            parquet_per_dataset=mode_config.get("parquet_per_dataset", dataset.parquet_per_dataset),
-            zips_per_dataset=mode_config.get("zips_per_dataset", dataset.zips_per_dataset),
+            media_per_archive=mode_config.get("media_per_archive", dataset.media_per_archive),
+            archives_per_dataset=mode_config.get("archives_per_dataset", dataset.archives_per_dataset),
         )
         return [modified]
     
     elif mode == "small":
         modified_datasets = []
         for dataset in datasets:
-            mode_config = DOWNLOAD_SIZE_OVERRIDES["small"][dataset.modality]
+            mode_config = DOWNLOAD_SIZE_OVERRIDES["small"]
             modified = replace(
                 dataset,
-                images_per_parquet=mode_config.get("images_per_parquet", dataset.images_per_parquet),
-                videos_per_zip=mode_config.get("videos_per_zip", dataset.videos_per_zip),
-                parquet_per_dataset=mode_config.get("parquet_per_dataset", dataset.parquet_per_dataset),
-                zips_per_dataset=mode_config.get("zips_per_dataset", dataset.zips_per_dataset),
+                media_per_archive=mode_config.get("media_per_archive", dataset.media_per_archive),
+                archives_per_dataset=mode_config.get("archives_per_dataset", dataset.archives_per_dataset),
             )
             modified_datasets.append(modified)
         return modified_datasets
@@ -291,10 +273,8 @@ def validate_dataset_config(
             )
 
     numeric_fields = [
-        "images_per_parquet",
-        "videos_per_zip",
-        "parquet_per_dataset",
-        "zips_per_dataset",
+        "media_per_archive",
+        "archives_per_dataset",
     ]
     for field in numeric_fields:
         if field in config_dict:
@@ -349,10 +329,8 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                     path=dataset_dict["path"],
                     modality=dataset_dict["modality"],
                     media_type=dataset_dict["media_type"],
-                    images_per_parquet=dataset_dict.get("images_per_parquet", 100),
-                    videos_per_zip=dataset_dict.get("videos_per_zip", 50),
-                    parquet_per_dataset=dataset_dict.get("parquet_per_dataset", 5),
-                    zips_per_dataset=dataset_dict.get("zips_per_dataset", 2),
+                    media_per_archive=dataset_dict.get("media_per_archive", 100),
+                    archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
                     source_format=dataset_dict.get("source_format", ""),
                     source=dataset_dict.get("source", "huggingface"),
                     include_paths=dataset_dict.get("include_paths"),
@@ -434,10 +412,8 @@ def load_benchmark_datasets_from_yaml(
                         path=dataset_dict["path"],
                         modality=dataset_dict["modality"],
                         media_type=dataset_dict["media_type"],
-                        images_per_parquet=dataset_dict.get("images_per_parquet", 100),
-                        videos_per_zip=dataset_dict.get("videos_per_zip", 50),
-                        parquet_per_dataset=dataset_dict.get("parquet_per_dataset", 5),
-                        zips_per_dataset=dataset_dict.get("zips_per_dataset", 2),
+                        media_per_archive=dataset_dict.get("media_per_archive", 100),
+                        archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
                         source_format=dataset_dict.get("source_format", ""),
                         source=dataset_dict.get("source", "huggingface"),
                         include_paths=dataset_dict.get("include_paths"),

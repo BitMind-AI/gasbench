@@ -316,10 +316,8 @@ class DatasetIterator:
         # Download with week filter (num_weeks=None to download just this week via week filtering in download_and_extract)
         for sample in download_and_extract(
             self.config,
-            images_per_parquet=self.config.images_per_parquet,
-            videos_per_zip=self.config.videos_per_zip,
-            parquet_per_dataset=self.config.parquet_per_dataset,
-            zips_per_dataset=self.config.zips_per_dataset,
+            media_per_archive=self.config.media_per_archive,
+            archives_per_dataset=self.config.archives_per_dataset,
             temp_dir=f"{self.cache_dir}/temp_downloads",
             force_download=False,
             cache_dir=self.cache_dir,
@@ -438,10 +436,8 @@ class DatasetIterator:
 
         for sample in download_and_extract(
             self.config,
-            images_per_parquet=self.config.images_per_parquet,
-            videos_per_zip=self.config.videos_per_zip,
-            parquet_per_dataset=self.config.parquet_per_dataset,
-            zips_per_dataset=self.config.zips_per_dataset,
+            media_per_archive=self.config.media_per_archive,
+            archives_per_dataset=self.config.archives_per_dataset,
             temp_dir=f"{self.cache_dir}/temp_downloads",
             force_download=False,
             cache_dir=self.cache_dir,

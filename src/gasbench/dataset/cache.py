@@ -119,10 +119,8 @@ def save_dataset_cache_files(
             "sample_count": sample_count,
             "cached_at": datetime.now().isoformat(),
             "config": {
-                "images_per_parquet": dataset_config.images_per_parquet,
-                "videos_per_zip": dataset_config.videos_per_zip,
-                "parquet_per_dataset": dataset_config.parquet_per_dataset,
-                "zips_per_dataset": dataset_config.zips_per_dataset,
+                "media_per_archive": dataset_config.media_per_archive,
+                "archives_per_dataset": dataset_config.archives_per_dataset,
             },
         }
 

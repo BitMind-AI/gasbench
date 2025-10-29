@@ -17,6 +17,7 @@ from zipfile import ZipFile
 import numpy as np
 import pyarrow.parquet as pq
 import requests
+import huggingface_hub as hf_hub
 from PIL import Image
 from modelscope.hub.api import HubApi as MSHubApi
 
@@ -29,12 +30,36 @@ IMAGE_FILE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".web
 VIDEO_FILE_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v"}
 
 
+def _calculate_files_to_download(
+    dataset,
+    source_format: str,
+    media_per_archive: int,
+    archives_per_dataset: int,
+) -> int:
+    """Calculate # files to download based on dataset modality and source format.
+    Returns -1 to indicate "download all files", or a positive integer for the count.
+    """
+    src_fmt = source_format.lower().lstrip(".")
+
+    # Direct media files (jpg, png, mp4, etc.) - download equivalent to archive extraction
+    if dataset.modality == "image":
+        is_direct_media = src_fmt in {ext.lstrip(".") for ext in IMAGE_FILE_EXTENSIONS}
+    else:
+        is_direct_media = src_fmt == "mp4"
+
+    if is_direct_media:
+        if media_per_archive == -1 or archives_per_dataset == -1:
+            return -1
+        return media_per_archive * archives_per_dataset
+
+    # Archive-based media (parquet, zip, tar, etc.)
+    return archives_per_dataset
+
+
 def download_and_extract(
     dataset,  # BenchmarkDatasetConfig
-    images_per_parquet: int = 100,
-    videos_per_zip: int = 50,
-    parquet_per_dataset: int = 5,
-    zips_per_dataset: int = 2,
+    media_per_archive: int = 100,
+    archives_per_dataset: int = 5,
     temp_dir: Optional[str] = None,
     force_download: bool = False,
     current_week_only: bool = False,
@@ -42,6 +67,7 @@ def download_and_extract(
     cache_dir: str = "/.cache/gasbench",
     downloaded_archives: Optional[set] = None,
     target_week: Optional[str] = None,
+    hf_token: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Download datasets and yield extracted media as a generator.
@@ -51,10 +77,8 @@ def download_and_extract(
 
     Args:
         dataset: BenchmarkDatasetConfig object
-        images_per_parquet: Number of images to extract per parquet file
-        videos_per_zip: Number of videos to extract per zip file
-        parquet_per_dataset: Number of parquet files to download per dataset
-        zips_per_dataset: Number of zip files to download per dataset
+        media_per_archive: Number of media items (images/videos) to extract per archive file
+        archives_per_dataset: Number of archive files to download per dataset
         temp_dir: Temporary directory for downloads
         force_download: Force download even if dataset appears to be cached
         cache_dir: Base cache directory for persistent storage
@@ -82,16 +106,14 @@ def download_and_extract(
                     f"Fallback to download: {dataset.name} will be downloaded fresh"
                 )
                 # Fall through to download logic
-        # temp dir for zip/parquet
-        temp_dir_root = None
+
+        # Create temporary directory for downloads
         if temp_dir is not None:
             try:
                 Path(temp_dir).mkdir(parents=True, exist_ok=True)
             except Exception:
                 pass
-            temp_dir_root = Path(tempfile.mkdtemp(dir=temp_dir))
-        else:
-            temp_dir_root = Path(tempfile.mkdtemp())
+        temp_dir_root = Path(tempfile.mkdtemp(dir=temp_dir))
 
         try:
             include_paths = getattr(dataset, "include_paths", None)
@@ -100,23 +122,15 @@ def download_and_extract(
 
             filenames = _list_remote_dataset_files(
                 dataset.path, dataset.source_format, current_week_only, num_weeks, target_week,
-                include_paths, exclude_paths, source
+                include_paths, exclude_paths, source, hf_token
             )
             if not filenames:
                 logger.warning(
                     f"No files found for {dataset.path} with format {dataset.source_format}"
                 )
-                # Try modality-aware fallback formats for datasets
-                # For video: prefer archives (zip/tar) and direct mp4; avoid parquet unless explicitly configured
-                # For image: keep existing order with parquet first
+
                 src_fmt = str(getattr(dataset, "source_format", "")).lower().lstrip(".")
-                if dataset.modality == "video":
-                    if src_fmt == "parquet":
-                        fallback_formats = [".parquet", ".zip", ".tar", ".mp4"]
-                    else:
-                        fallback_formats = [".zip", ".tar", ".mp4"]
-                else:
-                    fallback_formats = [".parquet", ".zip", ".tar", ".tar.gz"]
+                fallback_formats = [".parquet", ".zip", ".tar", ".tar.gz"]
                 for fallback_format in fallback_formats:
                     if fallback_format != dataset.source_format:
                         logger.info(
@@ -124,7 +138,7 @@ def download_and_extract(
                         )
                         filenames = _list_remote_dataset_files(
                             dataset.path, fallback_format, current_week_only, num_weeks, target_week,
-                            include_paths, exclude_paths, source
+                            include_paths, exclude_paths, source, hf_token
                         )
                         if filenames:
                             logger.info(
@@ -138,35 +152,20 @@ def download_and_extract(
 
             remote_paths = _get_download_urls(dataset.path, filenames, source)
 
-            src_fmt = str(getattr(dataset, "source_format", "")).lower().lstrip(".")
-            if dataset.modality == "image":
-                # For direct image datasets, download as many files as we would have extracted
-                # from parquets (images_per_parquet * parquet_per_dataset).
-                image_exts_nodot = {ext.lstrip(".") for ext in IMAGE_FILE_EXTENSIONS}
-                is_direct_image_format = src_fmt in image_exts_nodot
-                if is_direct_image_format:
-                    # If either is -1, treat as "all"
-                    n_files = -1 if (images_per_parquet == -1 or parquet_per_dataset == -1) else (images_per_parquet * parquet_per_dataset)
-                else:
-                    # Parquet-based images; -1 means download all parquets
-                    n_files = -1 if parquet_per_dataset == -1 else parquet_per_dataset
-            else:
-                # For direct mp4 datasets, download as many files as we would have extracted
-                # from archives (zips_per_dataset * videos_per_zip).
-                if src_fmt == "mp4":
-                    n_files = -1 if (zips_per_dataset == -1 or videos_per_zip == -1) else (zips_per_dataset * videos_per_zip)
-                elif src_fmt == "parquet":
-                    n_files = -1 if parquet_per_dataset == -1 else parquet_per_dataset
-                else:
-                    # Archive sources (zip/tar). -1 zips_per_dataset means download all archives
-                    n_files = -1 if zips_per_dataset == -1 else zips_per_dataset
+            n_files = _calculate_files_to_download(
+                dataset,
+                dataset.source_format,
+                media_per_archive,
+                archives_per_dataset,
+            )
 
-            # For gasstation datasets, prioritize newest archives
+            # For gasstation datasets, prioritize newest archives and skip already-downloaded ones
             is_gasstation = "gasstation" in dataset.name.lower()
-            to_download = _select_files_to_download(remote_paths, n_files, prioritize_recent=is_gasstation)
+            to_download = _select_files_to_download(
+                remote_paths, n_files, prioritize_recent=is_gasstation
+            )
             
-            # Filter out already-downloaded archives for gasstation datasets
-            if downloaded_archives is not None and "gasstation" in dataset.name.lower():
+            if is_gasstation and downloaded_archives is not None:
                 original_count = len(to_download)
                 to_download = [
                     url for url in to_download 
@@ -175,7 +174,8 @@ def download_and_extract(
                 filtered_count = original_count - len(to_download)
                 if filtered_count > 0:
                     logger.info(
-                        f"Skipping {filtered_count} already-downloaded archives, downloading {len(to_download)} new archives"
+                        f"Skipping {filtered_count} already-downloaded archives, "
+                        f"downloading {len(to_download)} new archives"
                     )
 
             if len(to_download) == 0:
@@ -185,27 +185,24 @@ def download_and_extract(
                 f"Downloading {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
             )
 
-            processed_files = 0
+            successfully_processed = 0
             for url in to_download:
                 iso_week = _extract_iso_week_from_path(url)
-                downloaded_file = download_single_file(url, temp_dir_root, 8192)
+                downloaded_file = download_single_file(url, temp_dir_root, 8192, hf_token)
                 if not downloaded_file:
                     continue
-                processed_files += 1
 
-                # num_items of -1 means extract all items from each file
-                num_items = (
-                    images_per_parquet
-                    if dataset.modality == "image"
-                    else videos_per_zip
-                )
+                successfully_processed += 1
                 try:
                     for sample in yield_media_from_source(
-                        downloaded_file, dataset, num_items, iso_week
+                        downloaded_file,
+                        dataset,
+                        media_per_archive,
+                        iso_week,
+                        hf_token
                     ):
                         yield sample
                 finally:
-                    # Remove the downloaded file to free space; directory cleaned later too
                     try:
                         if downloaded_file.exists():
                             downloaded_file.unlink()
@@ -213,11 +210,11 @@ def download_and_extract(
                         pass
 
             logger.info(
-                f"Downloaded and processed {processed_files}/{len(to_download)} files for {dataset.name}"
+                f"Downloaded and processed {successfully_processed}/{len(to_download)} files "
+                f"for {dataset.name}"
             )
 
         finally:
-            # Always clean up downloaded files - processed content is cached elsewhere
             if temp_dir_root.exists():
                 shutil.rmtree(temp_dir_root)
 
@@ -230,6 +227,7 @@ def yield_media_from_source(
     dataset,  # BenchmarkDatasetConfig
     num_items: int,
     iso_week: Optional[str] = None,
+    hf_token: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Unified media extractor for parquet, zip, and tar sources.
@@ -245,7 +243,7 @@ def yield_media_from_source(
             return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
-            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week)
+            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week, hf_token)
             return
 
         if any(
@@ -315,7 +313,8 @@ def _list_remote_dataset_files(
     target_week: str = None,
     include_paths: Optional[List[str]] = None,
     exclude_paths: Optional[List[str]] = None,
-    source: str = "huggingface"
+    source: str = "huggingface",
+    hf_token: Optional[str] = None,
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format and path patterns.
 
@@ -342,7 +341,7 @@ def _list_remote_dataset_files(
     if source == "modelscope":
         files = list_modelscope_files(repo_id=dataset_path, extension=source_format)
     else:  # hf
-        files = list_hf_files(repo_id=dataset_path, extension=source_format)
+        files = list_hf_files(repo_id=dataset_path, extension=source_format, token=hf_token)
 
     if include_paths:
         files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
@@ -471,7 +470,7 @@ def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
     ]
 
 
-def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None, hf_token: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
     """Build a filename->metadata map for a given video archive using matching parquet shards.
 
     Matching strategy:
@@ -504,7 +503,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
         if source == "modelscope":
             parquet_files = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
         else:
-            parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet")
+            parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet", token=hf_token)
 
         # Match on week, UID, timestamp, 'archive'
         matching = [
@@ -524,7 +523,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
         try:
             urls = _get_download_urls(dataset.path, matching, source)
             for url in urls:
-                pq_path = download_single_file(url, temp_dir, 8192)
+                pq_path = download_single_file(url, temp_dir, 8192, hf_token)
                 if not pq_path:
                     continue
                 try:
@@ -765,7 +764,7 @@ def _process_parquet(
 
 
 def _process_zip_or_tar(
-    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, hf_token: Optional[str] = None
 ):  # BenchmarkDatasetConfig
     filename = str(source_path.name).lower()
     is_zip = _is_zip_file(filename)
@@ -809,7 +808,7 @@ def _process_zip_or_tar(
 
             # Load associated metadata parquet(s) for video archives if available
             archive_metadata_map: Dict[str, Dict[str, Any]] = (
-                _load_archive_metadata_map(dataset, source_path, iso_week)
+                _load_archive_metadata_map(dataset, source_path, iso_week, hf_token)
                 if dataset.modality == "video"
                 else {}
             )
@@ -881,22 +880,21 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
         return
 
 
-def list_hf_files(repo_id, repo_type="dataset", extension=None):
+def list_hf_files(repo_id, repo_type="dataset", extension=None, token=None):
     """List files from a Hugging Face repository.
 
     Args:
         repo_id: Repository ID
         repo_type: Type of repository ('dataset', 'model', etc.)
         extension: Filter files by extension
+        token: Hugging Face API token for private datasets
 
     Returns:
         List of files in the repository
     """
     files = []
     try:
-        import huggingface_hub as hf_hub
-
-        files = list(hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type))
+        files = list(hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type, token=token))
         if extension:
             if isinstance(extension, (list, tuple, set)):
                 exts = tuple(extension)
@@ -989,34 +987,102 @@ def download_files(
     return downloaded_files
 
 
-def download_single_file(url: str, output_dir: Path, chunk_size: int) -> Optional[Path]:
-    """Download a single file synchronously.
+def download_single_file(
+    url: str, 
+    output_dir: Path, 
+    chunk_size: int, 
+    hf_token: Optional[str] = None
+) -> Optional[Path]:
+    """Download a single file synchronously
 
     Args:
         url: URL to download
         output_dir: Directory to save the file
-        chunk_size: Size of chunks to download at a time
+        chunk_size: Size of chunks to download at a time (unused for HF downloads)
+        hf_token: Hugging Face API token for private datasets
 
     Returns:
         Path to the downloaded file, or None if failed
     """
     try:
-        logger.info(f"Downloading {url}")
+        filename = os.path.basename(url)
+        filepath = output_dir / filename
 
-        response = requests.get(url, stream=True, timeout=3600)
+        if "huggingface.co" in url:
+            try:
+                # URL format: https://huggingface.co/datasets/{repo_id}/resolve/main/{filename}
+                match = re.match(r'https://huggingface\.co/datasets/([^/]+/[^/]+)/resolve/[^/]+/(.+)', url)
+                if match:
+                    repo_id = match.group(1)
+                    repo_filename = match.group(2)
+                    logger.info(f"Downloading from HuggingFace: {repo_id}/{repo_filename}")
+                    downloaded_path = hf_hub.hf_hub_download(
+                        repo_id=repo_id,
+                        filename=repo_filename,
+                        repo_type="dataset",
+                        token=hf_token,
+                        cache_dir=str(output_dir),
+                        local_dir=str(output_dir),
+                        local_dir_use_symlinks=False,
+                        resume_download=True,
+                    )
+
+                    # hf_hub_download may return path in cache, ensure it's in output_dir
+                    final_path = output_dir / filename
+                    if Path(downloaded_path) != final_path:
+                        shutil.move(downloaded_path, final_path)
+
+                    # Verify file exists and has content
+                    if final_path.exists() and final_path.stat().st_size > 0:
+                        file_size_mb = final_path.stat().st_size / (1024 * 1024)
+                        logger.info(f"✅ Downloaded successfully: {filename} ({file_size_mb:.1f} MB)")
+                        return final_path
+                    else:
+                        logger.error(f"Download verification failed: {filename}")
+                        return None
+
+            except Exception as hf_error:
+                logger.warning(f"HuggingFace hub download failed, falling back to requests: {hf_error}")
+                # Fall through to requests-based download
+
+        logger.info(f"Downloading {url}")
+        headers = {}
+        if hf_token and "huggingface.co" in url:
+            headers["Authorization"] = f"Bearer {hf_token}"
+
+        response = requests.get(url, stream=True, timeout=3600, headers=headers)
         if response.status_code != 200:
             logger.error(f"Failed to download {url}: Status {response.status_code}")
             return None
 
-        filename = os.path.basename(url)
-        filepath = output_dir / filename
+        total_size = int(response.headers.get('content-length', 0))
+        logger.info(f"Writing to {filepath} (size: {total_size/(1024*1024):.1f} MB)")
 
-        logger.debug(f"Writing to {filepath}")
-
+        downloaded = 0
+        last_log_mb = 0
         with open(filepath, "wb") as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:  # filter out keep-alive chunks
+            for chunk in response.iter_content(chunk_size=max(chunk_size, 1024*1024)):  # Use at least 1MB chunks
+                if chunk:
                     f.write(chunk)
+                    downloaded += len(chunk)
+                    current_mb = downloaded / (1024 * 1024)
+                    if current_mb - last_log_mb >= 100:
+                        if total_size > 0:
+                            pct = (downloaded / total_size) * 100
+                            logger.info(f"Progress: {current_mb:.0f}MB / {total_size/(1024*1024):.0f}MB ({pct:.1f}%)")
+                        else:
+                            logger.info(f"Downloaded: {current_mb:.0f}MB")
+                        last_log_mb = current_mb
+
+        # Verify download completeness
+        if total_size > 0:
+            actual_size = filepath.stat().st_size
+            if actual_size != total_size:
+                logger.error(f"❌ Download incomplete: expected {total_size} bytes, got {actual_size} bytes")
+                return None
+            logger.info(f"✅ Download verified: {filename} ({actual_size/(1024*1024):.1f} MB)")
+        else:
+            logger.info(f"✅ Downloaded: {filename}")
 
         return filepath
 

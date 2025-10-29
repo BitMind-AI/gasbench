@@ -1,159 +1,211 @@
 # Benchmark Dataset Configurations
 
 image_benchmark_size: 10000
-video_benchmark_size: 15000
+video_benchmark_size: 5000
 
 image:
   - name: gasstation-generated-images
     path: gasstation/generated-images
     modality: image
     media_type: synthetic
-    images_per_parquet: -1
-    parquet_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: ideogram-27k
+    path: bitmind/ideogram-27k
+    modality: image
+    source_format: zip
+    media_type: synthetic
+    media_per_archive: 200
+    archives_per_dataset: 5
+
+  - name: Dalle-3-1M
+    path: bitmind/Dalle-3-1M
+    modality: image
+    source_format: tar
+    media_type: synthetic
+    media_per_archive: 200
+    archives_per_dataset: 5
+
+  - name: SFHQ-part1
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    source_format: zip
+    media_type: synthetic
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part1.zip"]
+
+  - name: SFHQ-part2
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    source_format: zip
+    media_type: synthetic
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part2.zip"]
+
+  - name: SFHQ-part3
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    source_format: zip
+    media_type: synthetic
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part3.zip"]
+
+  - name: SFHQ-part4
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    source_format: zip
+    media_type: synthetic
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part4.zip"]
 
   - name: leonardo-stablecog
     path: bitmind/Deepfake-leonardo-stablecog
     modality: image
     media_type: synthetic
-    images_per_parquet: 250
-    parquet_per_dataset: 4
+    media_per_archive: 250
+    archives_per_dataset: 4
     
   - name: fashionpedia
     path: detection-datasets/fashionpedia
     modality: image
     media_type: real
     source_format: parquet
-    images_per_parquet: 1000
-    parquet_per_dataset: 1
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: megalith-10m
     path: drawthingsai/megalith-10m
     modality: image
     media_type: real
     source_format: tar
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
 
   - name: eidon-image
     path: bitmind/bm-eidon-image
     modality: image
     media_type: real
-    images_per_parquet: -1
-    parquet_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
 
   - name: celeb-a-hq
     path: bitmind/celeb-a-hq
     modality: image
     media_type: real
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: ffhq-256
     path: bitmind/ffhq-256
     modality: image
     media_type: real
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: ms-coco-unique
     path: bitmind/MS-COCO-unique-256
     modality: image
     media_type: real
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: journeydb
     path: bitmind/JourneyDB
     modality: image
     media_type: synthetic
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: genimage-midjourney
     path: bitmind/GenImage_MidJourney
     modality: image
     media_type: synthetic
-    images_per_parquet: 100
-    parquet_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
 
   - name: aura-imagegen
     path: bitmind/bm-aura-imagegen
     modality: image
     media_type: synthetic
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: imagine-grok
     path: bitmind/bm-imagine
     modality: image
     media_type: synthetic
     source_format: jpg
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: face-swap
     path: bitmind/face-swap
     modality: image
     media_type: semisynthetic
-    images_per_parquet: 333
-    parquet_per_dataset: 3
+    media_per_archive: 333
+    archives_per_dataset: 3
 
   - name: open-image-v7
     path: bitmind/open-image-v7-256
     modality: image
     media_type: real
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: afhq
     path: bitmind/AFHQ
     modality: image
     media_type: real
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: lfw
     path: bitmind/lfw
     modality: image
     media_type: real
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: caltech-256
     path: bitmind/caltech-256
     modality: image
     media_type: real
-    images_per_parquet: 250
-    parquet_per_dataset: 4
+    media_per_archive: 250
+    archives_per_dataset: 4
 
   - name: caltech-101
     path: bitmind/caltech-101
     modality: image
     media_type: real
-    images_per_parquet: 1000
-    parquet_per_dataset: 1
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: dtd-textures
     path: bitmind/dtd
     modality: image
     media_type: real
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
 
   - name: idoc-mugshots
     path: bitmind/idoc-mugshots-images
     modality: image
     media_type: real
-    images_per_parquet: 200
-    parquet_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: klingai-images
     path: bitmind/klingai-images
     modality: image
     media_type: synthetic
     source_format: png
-    images_per_parquet: 100
-    parquet_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
 
   # FakeClue dataset - reorganized with label/category hierarchy
   - name: fakeclue-fake-chameleon
@@ -161,8 +213,8 @@ image:
     modality: image
     media_type: synthetic
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/fake/chameleon/"]
 
   - name: fakeclue-fake-doc
@@ -170,8 +222,8 @@ image:
     modality: image
     media_type: synthetic
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/fake/doc/"]
 
   - name: fakeclue-fake-ffpp
@@ -179,8 +231,8 @@ image:
     modality: image
     media_type: synthetic
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/fake/ff++/"]
 
   - name: fakeclue-fake-genimage
@@ -188,8 +240,8 @@ image:
     modality: image
     media_type: synthetic
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/fake/genimage/"]
 
   - name: fakeclue-fake-satellite
@@ -197,8 +249,8 @@ image:
     modality: image
     media_type: synthetic
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/fake/satellite/"]
 
   - name: fakeclue-real-doc
@@ -206,8 +258,8 @@ image:
     modality: image
     media_type: real
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/real/doc/"]
 
   - name: fakeclue-real-ffpp
@@ -215,8 +267,8 @@ image:
     modality: image
     media_type: real
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/real/ff++/"]
 
   - name: fakeclue-real-genimage
@@ -224,8 +276,8 @@ image:
     modality: image
     media_type: real
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/real/genimage/"]
 
   - name: fakeclue-real-satellite
@@ -233,8 +285,8 @@ image:
     modality: image
     media_type: real
     source_format: zip
-    images_per_parquet: 500
-    parquet_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: ["data/real/satellite/"]
 
 video:
@@ -242,81 +294,81 @@ video:
     path: gasstation/generated-videos
     modality: video
     media_type: synthetic
-    source_format: tar.gz
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
 
   - name: eidon-video
     path: bitmind/bm-eidon-video
     modality: video
     media_type: real
     source_format: zip
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
 
   - name: imagenet-vidvrd
     path: shangxd/imagenet-vidvrd
     modality: video
     media_type: real
     source_format: zip
-    videos_per_zip: 500
-    zips_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
 
   - name: pe-video
     path: facebook/PE-Video
     modality: video
     media_type: real
     source_format: tar
-    videos_per_zip: 500
-    zips_per_dataset: 2
+    media_per_archive: 500
+    archives_per_dataset: 2
 
   - name: veo3-preferences
     path: Rapidata/text-2-video-human-preferences-veo3
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
 
   - name: veo2-preferences
     path: Rapidata/text-2-video-human-preferences-veo2
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
 
   - name: aura-video
     path: bitmind/aura-video
     modality: video
     media_type: synthetic
     source_format: parquet
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
 
   - name: aislop-videos
     path: bitmind/aislop-videos
     modality: video
     media_type: synthetic
     source_format: tar
-    videos_per_zip: 200
-    zips_per_dataset: 5
+    media_per_archive: 200
+    archives_per_dataset: 5
 
   - name: semisynthetic-video
     path: bitmind/semisynthetic-video
     modality: video
     media_type: semisynthetic
     source_format: zip
-    videos_per_zip: 100
-    zips_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
  
   - name: fakeparts-t2v
     path: hi-paris/FakeParts
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: 100
-    zips_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
     include_paths: ["t2v/"]
  
   - name: fakeparts-faceswap
@@ -324,8 +376,8 @@ video:
     modality: video
     media_type: semisynthetic
     source_format: mp4
-    videos_per_zip: 100
-    zips_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
     include_paths: ["faceswap/"]
  
   - name: fakeparts-inpainting
@@ -333,8 +385,8 @@ video:
     modality: video
     media_type: semisynthetic
     source_format: mp4
-    videos_per_zip: 100
-    zips_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
     include_paths: ["inpainting/"]
  
   - name: fakeparts-outpainting
@@ -342,8 +394,8 @@ video:
     modality: video
     media_type: semisynthetic
     source_format: mp4
-    videos_per_zip: 100
-    zips_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
     include_paths: ["outpainting/"]
  
   - name: fakeparts-stylechange
@@ -351,8 +403,8 @@ video:
     modality: video
     media_type: semisynthetic
     source_format: mp4
-    videos_per_zip: 100
-    zips_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
     include_paths: ["stylechange/"]
  
   # DeepAction v1 dataset - split by subdirectory and media type.
@@ -362,8 +414,8 @@ video:
     modality: video
     media_type: real
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
     include_paths: ["Pexels/"]
  
   - name: deepaction-bdanimate
@@ -371,8 +423,8 @@ video:
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
     include_paths: ["BDAnimateDiffLightning/"]
  
   - name: deepaction-cogvideox5b
@@ -380,8 +432,8 @@ video:
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
     include_paths: ["CogVideoX5B/"]
  
   - name: deepaction-runwayml
@@ -389,8 +441,8 @@ video:
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
     include_paths: ["RunwayML/"]
  
   - name: deepaction-stablediffusion
@@ -398,8 +450,8 @@ video:
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
     include_paths: ["StableDiffusion/"]
  
   - name: deepaction-veo
@@ -407,8 +459,8 @@ video:
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
     include_paths: ["Veo/"]
  
   - name: deepaction-videopoet
@@ -416,8 +468,8 @@ video:
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
     include_paths: ["VideoPoet/"]
 
   - name: moviegen-bench
@@ -425,14 +477,14 @@ video:
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: -1
-    zips_per_dataset: -1
+    media_per_archive: -1
+    archives_per_dataset: -1
 
   - name: klingai-videos
     path: bitmind/klingai-videos
     modality: video
     media_type: synthetic
     source_format: mp4
-    videos_per_zip: 100
-    zips_per_dataset: 10
+    media_per_archive: 100
+    archives_per_dataset: 10
 

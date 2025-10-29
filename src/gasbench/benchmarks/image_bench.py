@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import numpy as np
 from typing import Dict, Optional
@@ -40,11 +41,13 @@ async def run_image_benchmark(
     """Test model on benchmark image datasets for AI-generated content detection."""
 
     try:
+        hf_token = os.environ.get("HF_TOKEN")
+
         if gasstation_only:
             logger.info("Loading gasstation image datasets only")
         else:
             logger.info("Loading benchmark image datasets")
-        
+
         available_datasets = discover_benchmark_image_datasets(mode, gasstation_only)
 
         if not available_datasets:
@@ -103,12 +106,17 @@ async def run_image_benchmark(
             dataset_total = 0
 
             try:
+                # Download gasstation datasets only if flag is set; always download regular datasets if not cached
+                is_gasstation = "gasstation" in dataset_config.name.lower()
+                should_download = download_latest_gasstation_data if is_gasstation else True
+
                 dataset_iterator = DatasetIterator(
                     dataset_config, 
                     max_samples=dataset_cap, 
                     cache_dir=cache_dir,
-                    download=download_latest_gasstation_data,
+                    download=should_download,
                     cache_policy=cache_policy,
+                    hf_token=hf_token,
                 )
 
                 sample_index = 0  # Track sample index for unique IDs

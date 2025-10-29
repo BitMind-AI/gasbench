@@ -16,8 +16,8 @@ image:
     modality: image
     source_format: zip
     media_type: synthetic
-    media_per_archive: 200
-    archives_per_dataset: 5
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: Dalle-3-1M
     path: bitmind/Dalle-3-1M

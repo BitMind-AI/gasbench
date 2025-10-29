@@ -14,6 +14,7 @@ image:
   - name: ideogram-25k
     path: terminusresearch/ideogram-25k
     modality: image
+    source_format: tar
     media_type: synthetic
     images_per_parquet: 200
     parquet_per_dataset: 5
@@ -21,6 +22,7 @@ image:
   - name: Dalle-3-1M
     path: bitmind/Dalle-3-1M
     modality: image
+    source_format: tar
     media_type: synthetic
     images_per_parquet: 200
     parquet_per_dataset: 5
@@ -28,6 +30,7 @@ image:
   - name: SFHQ-part1
     path: bitmind/SyntheticFacesHQ
     modality: image
+    source_format: zip
     media_type: synthetic
     images_per_parquet: 1000
     parquet_per_dataset: 1
@@ -36,6 +39,7 @@ image:
   - name: SFHQ-part2
     path: bitmind/SyntheticFacesHQ
     modality: image
+    source_format: zip
     media_type: synthetic
     images_per_parquet: 1000
     parquet_per_dataset: 1
@@ -44,6 +48,7 @@ image:
   - name: SFHQ-part3
     path: bitmind/SyntheticFacesHQ
     modality: image
+    source_format: zip
     media_type: synthetic
     images_per_parquet: 1000
     parquet_per_dataset: 1
@@ -52,6 +57,7 @@ image:
   - name: SFHQ-part4
     path: bitmind/SyntheticFacesHQ
     modality: image
+    source_format: zip
     media_type: synthetic
     images_per_parquet: 1000
     parquet_per_dataset: 1

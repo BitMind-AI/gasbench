@@ -34,12 +34,16 @@ class DatasetIterator:
         download: bool = True,
         num_weeks: int = None,
         cache_policy: Optional[str] = None,
+        allow_eviction: bool = True,
+        hf_token: Optional[str] = None,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.num_weeks = num_weeks
+        self.allow_eviction = allow_eviction
+        self.hf_token = hf_token
 
         # Load cache policy for intelligent eviction
         self.cache_policy = load_cache_policy(cache_policy)
@@ -271,7 +275,6 @@ class DatasetIterator:
         """
         samples_dir = os.path.join(week_dir, "samples")
         metadata_file = os.path.join(week_dir, "sample_metadata.json")
-        archive_tracker_file = os.path.join(week_dir, "downloaded_archives.json")
 
         sample_metadata = {}
         sample_count = 0
@@ -303,32 +306,25 @@ class DatasetIterator:
                 sample_count = 0
                 next_index = 0
 
-        # If we're at max_samples and there are new archives, we'll do sample replacement
-        # Keep the most recent samples by evicting oldest ones
-        replacing_samples = sample_count >= GASSTATION_CACHE_MAX_SAMPLES
-        if replacing_samples:
-            logger.info(
-                f"Week {week_str} has {sample_count} samples (at gasstation limit {GASSTATION_CACHE_MAX_SAMPLES}). "
-                f"Will replace oldest samples with fresh data from new archives"
-            )
 
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
 
         initial_sample_count = sample_count
+        
+        replacing_samples = self.allow_eviction and sample_count >= GASSTATION_CACHE_MAX_SAMPLES
 
         # Download with week filter (num_weeks=None to download just this week via week filtering in download_and_extract)
         for sample in download_and_extract(
             self.config,
-            images_per_parquet=self.config.images_per_parquet,
-            videos_per_zip=self.config.videos_per_zip,
-            parquet_per_dataset=self.config.parquet_per_dataset,
-            zips_per_dataset=self.config.zips_per_dataset,
+            media_per_archive=self.config.media_per_archive,
+            archives_per_dataset=self.config.archives_per_dataset,
             temp_dir=f"{self.cache_dir}/temp_downloads",
             force_download=False,
             cache_dir=self.cache_dir,
             num_weeks=None,
             downloaded_archives=downloaded_archives,
             target_week=week_str,
+            hf_token=self.hf_token,
         ):
             archive_name = sample.get("archive_filename") or sample.get(
                 "source_file", ""
@@ -440,15 +436,14 @@ class DatasetIterator:
 
         for sample in download_and_extract(
             self.config,
-            images_per_parquet=self.config.images_per_parquet,
-            videos_per_zip=self.config.videos_per_zip,
-            parquet_per_dataset=self.config.parquet_per_dataset,
-            zips_per_dataset=self.config.zips_per_dataset,
+            media_per_archive=self.config.media_per_archive,
+            archives_per_dataset=self.config.archives_per_dataset,
             temp_dir=f"{self.cache_dir}/temp_downloads",
             force_download=False,
             cache_dir=self.cache_dir,
             num_weeks=self.num_weeks,
             downloaded_archives=None,  # Not used for non-gasstation datasets
+            hf_token=self.hf_token,
         ):
             if sample_count >= CACHE_MAX_SAMPLES:
                 break

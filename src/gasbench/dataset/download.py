@@ -998,7 +998,7 @@ def download_single_file(
     Args:
         url: URL to download
         output_dir: Directory to save the file
-        chunk_size: Size of chunks to download at a time (unused for HF downloads)
+        chunk_size: Size of chunks to download at a time
         hf_token: Hugging Face API token for private datasets
 
     Returns:
@@ -1007,43 +1007,6 @@ def download_single_file(
     try:
         filename = os.path.basename(url)
         filepath = output_dir / filename
-
-        if "huggingface.co" in url:
-            try:
-                # URL format: https://huggingface.co/datasets/{repo_id}/resolve/main/{filename}
-                match = re.match(r'https://huggingface\.co/datasets/([^/]+/[^/]+)/resolve/[^/]+/(.+)', url)
-                if match:
-                    repo_id = match.group(1)
-                    repo_filename = match.group(2)
-                    logger.info(f"Downloading from HuggingFace: {repo_id}/{repo_filename}")
-                    downloaded_path = hf_hub.hf_hub_download(
-                        repo_id=repo_id,
-                        filename=repo_filename,
-                        repo_type="dataset",
-                        token=hf_token,
-                        cache_dir=str(output_dir),
-                        local_dir=str(output_dir),
-                        local_dir_use_symlinks=False,
-                        resume_download=True,
-                    )
-
-                    # hf_hub_download may return path in cache, ensure it's in output_dir
-                    final_path = output_dir / filename
-                    if Path(downloaded_path) != final_path:
-                        shutil.move(downloaded_path, final_path)
-
-                    # Verify file exists and has content
-                    if final_path.exists() and final_path.stat().st_size > 0:
-                        file_size_mb = final_path.stat().st_size / (1024 * 1024)
-                        logger.info(f"✅ Downloaded successfully: {filename} ({file_size_mb:.1f} MB)")
-                        return final_path
-                    else:
-                        logger.error(f"Download verification failed: {filename}")
-                        return None
-
-            except Exception as hf_error:
-                logger.warning(f"HuggingFace hub download failed, falling back to requests: {hf_error}")
-                # Fall through to requests-based download
 
         logger.info(f"Downloading {url}")
         headers = {}

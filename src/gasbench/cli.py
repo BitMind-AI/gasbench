@@ -18,24 +18,29 @@ def main():
         epilog="""
 Examples:
   # Run image benchmark in debug mode
-  gasbench model.onnx image --debug
+  gasbench --image-model model.onnx --debug
   
   # Run video benchmark with custom cache directory
-  gasbench model.onnx video --cache-dir /tmp/my_cache
+  gasbench --video-model model.onnx --cache-dir /tmp/my_cache
   
   # Run only gasstation datasets
-  gasbench model.onnx image --gasstation-only
+  gasbench --image-model model.onnx --gasstation-only
         """
     )
     
-    parser.add_argument(
-        "model_path", 
-        help="Path to ONNX model file"
+    # Model selection (mutually exclusive)
+    model_group = parser.add_mutually_exclusive_group(required=True)
+    model_group.add_argument(
+        "--image-model",
+        type=str,
+        metavar="PATH",
+        help="Path to ONNX image detection model"
     )
-    parser.add_argument(
-        "modality", 
-        choices=["image", "video"], 
-        help="Model modality to benchmark"
+    model_group.add_argument(
+        "--video-model",
+        type=str,
+        metavar="PATH",
+        help="Path to ONNX video detection model"
     )
     
     # Mode selection (mutually exclusive)
@@ -91,8 +96,15 @@ Examples:
     # Default mode is 'full' if no mode flag is provided
     mode = args.mode if args.mode else "full"
     
+    # Determine model path and modality
+    if args.image_model:
+        model_path = Path(args.image_model)
+        modality = "image"
+    else:  # args.video_model
+        model_path = Path(args.video_model)
+        modality = "video"
+    
     # Validate model path
-    model_path = Path(args.model_path)
     if not model_path.exists():
         print(f"Error: Model file not found: {model_path}")
         return 1
@@ -104,7 +116,7 @@ Examples:
     # Print configuration as JSON for clarity
     config = {
         "model": str(model_path),
-        "modality": args.modality.upper(),
+        "modality": modality.upper(),
         "mode": mode.upper(),
         "gasstation_only": args.gasstation_only,
         "download_latest_gasstation_data": args.download_latest_gasstation_data,
@@ -120,7 +132,7 @@ Examples:
         results = asyncio.run(
             run_benchmark(
                 model_path=str(model_path),
-                modality=args.modality,
+                modality=modality,
                 mode=mode,
                 gasstation_only=args.gasstation_only,
                 cache_dir=args.cache_dir,

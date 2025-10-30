@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import __version__
 from .benchmark import run_benchmark, print_benchmark_summary, save_results_to_json
 
 
@@ -88,7 +89,7 @@ Examples:
     parser.add_argument(
         "--version", 
         action="version", 
-        version="%(prog)s 0.1.0"
+        version=f"%(prog)s {__version__}"
     )
     
     args = parser.parse_args()

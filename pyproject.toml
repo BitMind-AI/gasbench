@@ -24,6 +24,8 @@ dependencies = [
     "datasets>=4.0.0",
     "modelscope>=1.11.0",
     "scipy>=1.10.0",
+    "psutil==7.1.2",
+    "rich==14.2.0"
 ]
 
 [project.optional-dependencies]

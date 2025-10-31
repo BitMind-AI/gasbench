@@ -34,7 +34,8 @@ async def video_prefetcher(
     dataset_iterator,
     dataset_config,
     queue: asyncio.Queue,
-    max_queue_size: int = 2
+    max_queue_size: int = 2,
+    seed: int = None,
 ):
     """
     Prefetch and preprocess videos from the dataset iterator.
@@ -44,9 +45,12 @@ async def video_prefetcher(
         dataset_config: Configuration for the dataset
         queue: Async queue to put processed videos into
         max_queue_size: Maximum size of prefetch queue
+        seed: Optional random seed for reproducible augmentations
     """
     try:
+        sample_index = 0
         for sample in dataset_iterator:
+            sample_index += 1
             try:
                 video_array, true_label_multiclass = process_video_bytes_sample(sample)
 
@@ -58,7 +62,8 @@ async def video_prefetcher(
                 try:
                     tchw = video_array[0]
                     thwc = np.transpose(tchw, (0, 2, 3, 1))
-                    aug_thwc, _, _, _ = apply_random_augmentations(thwc)
+                    sample_seed = None if seed is None else (seed + sample_index)
+                    aug_thwc, _, _, _ = apply_random_augmentations(thwc, seed=sample_seed)
                     aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
                     video_array = np.expand_dims(aug_tchw, 0)
@@ -89,6 +94,7 @@ async def run_video_benchmark(
     cache_dir: str = "/.cache/gasbench",
     download_latest_gasstation_data: bool = False,
     cache_policy: Optional[str] = None,
+    seed: Optional[int] = None,
 ) -> float:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -173,14 +179,14 @@ async def run_video_benchmark(
                         download=should_download,
                         cache_policy=cache_policy,
                         hf_token=hf_token,
+                        seed=seed,
                     )
 
                     # Create prefetch queue (size 2 means we can have 1 video being processed + 1 ready)
                     prefetch_queue = asyncio.Queue(maxsize=2)
 
-                    # Start the prefetcher task
                     prefetch_task = asyncio.create_task(
-                        video_prefetcher(dataset_iterator, dataset_config, prefetch_queue)
+                        video_prefetcher(dataset_iterator, dataset_config, prefetch_queue, seed=seed)
                     )
 
                     sample_index = 0  # Track sample index for unique IDs

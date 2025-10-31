@@ -68,6 +68,7 @@ def download_and_extract(
     downloaded_archives: Optional[set] = None,
     target_week: Optional[str] = None,
     hf_token: Optional[str] = None,
+    seed: Optional[int] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Download datasets and yield extracted media as a generator.
@@ -159,10 +160,9 @@ def download_and_extract(
                 archives_per_dataset,
             )
 
-            # For gasstation datasets, prioritize newest archives and skip already-downloaded ones
             is_gasstation = "gasstation" in dataset.name.lower()
             to_download = _select_files_to_download(
-                remote_paths, n_files, prioritize_recent=is_gasstation
+                remote_paths, n_files, prioritize_recent=is_gasstation, seed=seed
             )
             
             if is_gasstation and downloaded_archives is not None:
@@ -199,7 +199,8 @@ def download_and_extract(
                         dataset,
                         media_per_archive,
                         iso_week,
-                        hf_token
+                        hf_token,
+                        seed
                     ):
                         yield sample
                 finally:
@@ -228,6 +229,7 @@ def yield_media_from_source(
     num_items: int,
     iso_week: Optional[str] = None,
     hf_token: Optional[str] = None,
+    seed: Optional[int] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Unified media extractor for parquet, zip, and tar sources.
@@ -239,11 +241,11 @@ def yield_media_from_source(
         filename = str(source_path.name).lower()
 
         if _is_parquet_file(filename):
-            yield from _process_parquet(source_path, dataset, num_items, iso_week)
+            yield from _process_parquet(source_path, dataset, num_items, iso_week, seed)
             return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
-            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week, hf_token)
+            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week, hf_token, seed)
             return
 
         if any(
@@ -279,7 +281,7 @@ def _extract_iso_week_from_path(file_path: str) -> Optional[str]:
     return None
 
 
-def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bool = False) -> List[str]:
+def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bool = False, seed: Optional[int] = None) -> List[str]:
     """Select files to download.
 
     Args:
@@ -287,6 +289,7 @@ def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bo
         count: Number of files to select (-1 = all files)
         prioritize_recent: If True, sort by filename (descending) to get newest first.
                           Useful for gasstation datasets to get freshest data.
+        seed: Random seed for reproducible sampling (non-gasstation only)
 
     Returns:
         List of selected URLs
@@ -296,12 +299,13 @@ def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bo
     if count <= 0:
         return []
     
-    # For gasstation datasets, prioritize newest files by sorting descending
     if prioritize_recent:
-        sorted_urls = sorted(urls, reverse=True)  # Newest filenames last in alphabet
+        sorted_urls = sorted(urls, reverse=True)
         return sorted_urls[:min(count, len(urls))]
     
-    # For other datasets, random sampling is fine
+    if seed is not None:
+        rng = random.Random(seed)
+        return rng.sample(urls, min(count, len(urls)))
     return random.sample(urls, min(count, len(urls)))
 
 
@@ -664,14 +668,14 @@ def _extract_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
 
 
 def _process_parquet(
-    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, seed: Optional[int] = None
 ):  # BenchmarkDatasetConfig
     table = pq.read_table(source_path)
     df = table.to_pandas()
     if num_items == -1:
         sample_df = df
     else:
-        sample_df = df.sample(n=min(num_items, len(df)))
+        sample_df = df.sample(n=min(num_items, len(df)), random_state=seed)
 
     if dataset.modality == "image":
         # First try exact match, then exclude _id columns, then any column with "image"
@@ -764,7 +768,7 @@ def _process_parquet(
 
 
 def _process_zip_or_tar(
-    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, hf_token: Optional[str] = None
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, hf_token: Optional[str] = None, seed: Optional[int] = None
 ):  # BenchmarkDatasetConfig
     filename = str(source_path.name).lower()
     is_zip = _is_zip_file(filename)
@@ -804,7 +808,11 @@ def _process_zip_or_tar(
             if num_items == -1:
                 selected = candidates
             else:
-                selected = random.sample(candidates, min(num_items, len(candidates)))
+                if seed is not None:
+                    rng = random.Random(seed)
+                    selected = rng.sample(candidates, min(num_items, len(candidates)))
+                else:
+                    selected = random.sample(candidates, min(num_items, len(candidates)))
 
             # Load associated metadata parquet(s) for video archives if available
             archive_metadata_map: Dict[str, Dict[str, Any]] = (

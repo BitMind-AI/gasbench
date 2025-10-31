@@ -30,6 +30,10 @@ class DatasetTask:
     dataset: BenchmarkDatasetConfig
     cache_dir: str
     num_weeks: Optional[int] = None
+    seed: Optional[int] = None
+    cache_policy: Optional[str] = None
+    allow_eviction: bool = True
+    unlimited_samples: bool = False
 
 
 class DownloadManager:
@@ -40,10 +44,16 @@ class DownloadManager:
         max_workers: int,
         cache_dir: str,
         hf_token: Optional[str] = None,
+        seed: Optional[int] = None,
+        cache_policy: Optional[str] = None,
+        allow_eviction: bool = True,
     ):
         self.max_workers = max_workers
         self.cache_dir = cache_dir
         self.hf_token = hf_token
+        self.seed = seed
+        self.cache_policy = cache_policy
+        self.allow_eviction = allow_eviction
         self.semaphore = asyncio.Semaphore(max_workers)
         self.completed = []
         self.failed = {}
@@ -150,15 +160,25 @@ class DownloadManager:
         iterator_logger.setLevel(logging.WARNING)
         
         try:
+            if task.unlimited_samples:
+                max_samples = 999999  # Effectively unlimited
+            elif "gasstation" not in task.dataset.name.lower():
+                max_samples = 2000
+            else:
+                max_samples = 10000
+            
             # DatasetIterator with download=True will call download_and_extract
-            # Same exact same logic as gasbench run
+            # Same exact same logic as `gasbench run``
             iterator = DatasetIterator(
                 dataset_config=task.dataset,
-                max_samples=2000 if "gasstation" not in task.dataset.name.lower() else 10000,
+                max_samples=max_samples,
                 cache_dir=task.cache_dir,
-                download=True,  # This triggers ensure_cached() which calls download_and_extract
+                download=True,
                 num_weeks=task.num_weeks,
                 hf_token=self.hf_token,
+                seed=task.seed,
+                cache_policy=task.cache_policy,
+                allow_eviction=task.allow_eviction,
             )
         finally:
             # Restore original log levels
@@ -210,6 +230,10 @@ async def download_datasets(
     cache_dir: Optional[str] = None,
     concurrent_downloads: Optional[int] = None,
     num_weeks: Optional[int] = None,
+    seed: Optional[int] = None,
+    cache_policy: Optional[str] = None,
+    allow_eviction: bool = True,
+    unlimited_samples: bool = False,
 ):
     """Main entry point for efficient dataset downloads.
     
@@ -220,6 +244,10 @@ async def download_datasets(
         cache_dir: Cache directory path
         concurrent_downloads: Number of concurrent downloads (auto if None)
         num_weeks: Number of recent weeks for gasstation datasets
+        seed: Random seed for non-gasstation dataset sampling (for reproducible random sampling)
+        cache_policy: Path to cache policy JSON file for intelligent sample eviction
+        allow_eviction: If False, disable sample eviction and accumulate all samples
+        unlimited_samples: If True, download ALL available samples (no cap)
     """
     if not cache_dir:
         cache_dir = "/.cache/gasbench"
@@ -242,6 +270,10 @@ async def download_datasets(
                 dataset=dataset,
                 cache_dir=cache_dir,
                 num_weeks=num_weeks,
+                seed=seed,
+                cache_policy=cache_policy,
+                allow_eviction=allow_eviction,
+                unlimited_samples=unlimited_samples,
             )
             tasks.append(task)
         else:
@@ -258,6 +290,9 @@ async def download_datasets(
         max_workers=workers,
         cache_dir=cache_dir,
         hf_token=hf_token,
+        seed=seed,
+        cache_policy=cache_policy,
+        allow_eviction=allow_eviction,
     )
     
     await manager.download_all(tasks)

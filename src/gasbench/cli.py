@@ -95,6 +95,7 @@ def command_run(args):
                 gasstation_only=args.gasstation_only,
                 cache_dir=args.cache_dir,
                 download_latest_gasstation_data=args.download_latest_gasstation_data,
+                seed=args.seed,
             )
         )
 
@@ -133,6 +134,12 @@ def command_download(args):
         config["cache_directory"] = args.cache_dir
     if args.num_weeks:
         config["num_weeks"] = args.num_weeks
+    if hasattr(args, 'cache_policy') and args.cache_policy:
+        config["cache_policy"] = args.cache_policy
+    if hasattr(args, 'unlimited_samples') and args.unlimited_samples:
+        config["unlimited_samples"] = True
+    if hasattr(args, 'no_eviction') and args.no_eviction:
+        config["allow_eviction"] = False
 
     print(json.dumps(config, indent=2))
     print("-" * 60)
@@ -148,6 +155,10 @@ def command_download(args):
                 cache_dir=args.cache_dir,
                 concurrent_downloads=args.concurrent,
                 num_weeks=args.num_weeks,
+                seed=args.seed,
+                cache_policy=getattr(args, 'cache_policy', None),
+                allow_eviction=not getattr(args, 'no_eviction', False),
+                unlimited_samples=getattr(args, 'unlimited_samples', False),
             )
         )
 
@@ -230,6 +241,11 @@ Examples:
         "--output-dir",
         help="Directory to save JSON results file (default: current directory)",
     )
+    run_parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed for non-gasstation dataset sampling (for reproducible random sampling)",
+    )
 
     run_parser.set_defaults(func=command_run)
 
@@ -278,6 +294,25 @@ Examples:
         "--num-weeks",
         type=int,
         help="For gasstation datasets: number of recent weeks to download (default: current week only)",
+    )
+    download_parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed for non-gasstation dataset sampling (for reproducible random sampling)",
+    )
+    download_parser.add_argument(
+        "--cache-policy",
+        help="Path to cache policy JSON file for intelligent sample eviction",
+    )
+    download_parser.add_argument(
+        "--no-eviction",
+        action="store_true",
+        help="Disable sample eviction and accumulate all samples (even beyond cache limits)",
+    )
+    download_parser.add_argument(
+        "--unlimited-samples",
+        action="store_true",
+        help="Download ALL available samples (no 10k/5k cap)",
     )
 
     download_parser.set_defaults(func=command_download)

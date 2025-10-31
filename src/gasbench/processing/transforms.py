@@ -30,6 +30,7 @@ def apply_random_augmentations(
     level=None,
     resize_prob=0.5,
     crop_prob=0.5,
+    seed=None,
 ):
     """
     Apply image transformations based on randomly selected difficulty level.
@@ -47,6 +48,7 @@ def apply_random_augmentations(
         level: set to override level_probs
         resize_prob: probability of resizing image (keeping aspect ratio the same)
         crop_prob: probability of cropping randomly
+        seed: int, optional. Random seed for reproducible augmentations
 
     Returns:
         tuple: (aug_image, aug_mask, level, transform_params)
@@ -59,6 +61,9 @@ def apply_random_augmentations(
     Raises:
         ValueError: If probabilities don't sum to 1.0 (within floating point precision)
     """
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
     if level is None:
         if level_probs is None:
             level_probs = {

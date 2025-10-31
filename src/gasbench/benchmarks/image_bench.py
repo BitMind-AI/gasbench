@@ -121,26 +121,24 @@ async def run_image_benchmark(
                     seed=seed,
                 )
 
-                sample_index = 0  # Track sample index for unique IDs
+                sample_index = 0
                 for sample in dataset_iterator:
                     sample_index += 1
                     try:
-                        # Process image sample (load, convert to numpy)
                         image_array, true_label_multiclass = process_image_sample(sample)
 
                         if image_array is None or true_label_multiclass is None:
                             continue
 
-                        # Apply augmentations
                         try:
                             chw = image_array[0]
                             hwc = np.transpose(chw, (1, 2, 0))
-                            aug_hwc, _, _, _ = apply_random_augmentations(hwc)
+                            sample_seed = None if seed is None else (seed + sample_index)
+                            aug_hwc, _, _, _ = apply_random_augmentations(hwc, seed=sample_seed)
                             aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
                             aug_chw = np.transpose(aug_hwc, (2, 0, 1))
                             image_array = np.expand_dims(aug_chw, 0)
                         except Exception:
-                            # If augmentation fails, continue with unaugmented image
                             pass
 
                         # Run inference

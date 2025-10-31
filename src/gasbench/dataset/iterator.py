@@ -2,6 +2,7 @@
 
 import os
 import json
+import random
 import re
 import time
 from pathlib import Path
@@ -36,6 +37,7 @@ class DatasetIterator:
         cache_policy: Optional[str] = None,
         allow_eviction: bool = True,
         hf_token: Optional[str] = None,
+        seed: Optional[int] = None,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
@@ -44,6 +46,7 @@ class DatasetIterator:
         self.num_weeks = num_weeks
         self.allow_eviction = allow_eviction
         self.hf_token = hf_token
+        self.seed = seed
 
         # Load cache policy for intelligent eviction
         self.cache_policy = load_cache_policy(cache_policy)
@@ -591,14 +594,17 @@ class DatasetIterator:
                 if os.path.isfile(os.path.join(samples_dir, f))
             ]
 
-            # Sort by numeric index in reverse order (newest first)
-            # Files are named like img_000000.jpg, img_000001.jpg, etc.
-            # Higher indices = newer files
-            def extract_index(filename):
-                match = re.search(r"_(\d+)", filename)
-                return int(match.group(1)) if match else -1
+            if self.is_gasstation:
+                def extract_index(filename):
+                    match = re.search(r"_(\d+)", filename)
+                    return int(match.group(1)) if match else -1
 
-            sample_files.sort(key=extract_index, reverse=True)
+                sample_files.sort(key=extract_index, reverse=True)
+            else:
+                if self.seed is not None:
+                    random.Random(self.seed).shuffle(sample_files)
+                else:
+                    random.shuffle(sample_files)
 
             for filename in sample_files:
                 file_path = os.path.join(samples_dir, filename)

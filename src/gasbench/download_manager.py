@@ -30,6 +30,7 @@ class DatasetTask:
     dataset: BenchmarkDatasetConfig
     cache_dir: str
     num_weeks: Optional[int] = None
+    seed: Optional[int] = None
 
 
 class DownloadManager:
@@ -40,10 +41,12 @@ class DownloadManager:
         max_workers: int,
         cache_dir: str,
         hf_token: Optional[str] = None,
+        seed: Optional[int] = None,
     ):
         self.max_workers = max_workers
         self.cache_dir = cache_dir
         self.hf_token = hf_token
+        self.seed = seed
         self.semaphore = asyncio.Semaphore(max_workers)
         self.completed = []
         self.failed = {}
@@ -159,6 +162,7 @@ class DownloadManager:
                 download=True,  # This triggers ensure_cached() which calls download_and_extract
                 num_weeks=task.num_weeks,
                 hf_token=self.hf_token,
+                seed=task.seed,
             )
         finally:
             # Restore original log levels
@@ -210,6 +214,7 @@ async def download_datasets(
     cache_dir: Optional[str] = None,
     concurrent_downloads: Optional[int] = None,
     num_weeks: Optional[int] = None,
+    seed: Optional[int] = None,
 ):
     """Main entry point for efficient dataset downloads.
     
@@ -220,6 +225,7 @@ async def download_datasets(
         cache_dir: Cache directory path
         concurrent_downloads: Number of concurrent downloads (auto if None)
         num_weeks: Number of recent weeks for gasstation datasets
+        seed: Random seed for non-gasstation dataset sampling (for reproducible random sampling)
     """
     if not cache_dir:
         cache_dir = "/.cache/gasbench"
@@ -242,6 +248,7 @@ async def download_datasets(
                 dataset=dataset,
                 cache_dir=cache_dir,
                 num_weeks=num_weeks,
+                seed=seed,
             )
             tasks.append(task)
         else:
@@ -258,6 +265,7 @@ async def download_datasets(
         max_workers=workers,
         cache_dir=cache_dir,
         hf_token=hf_token,
+        seed=seed,
     )
     
     await manager.download_all(tasks)

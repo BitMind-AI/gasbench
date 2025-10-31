@@ -95,6 +95,7 @@ def command_run(args):
                 gasstation_only=args.gasstation_only,
                 cache_dir=args.cache_dir,
                 download_latest_gasstation_data=args.download_latest_gasstation_data,
+                seed=args.seed,
             )
         )
 
@@ -148,6 +149,7 @@ def command_download(args):
                 cache_dir=args.cache_dir,
                 concurrent_downloads=args.concurrent,
                 num_weeks=args.num_weeks,
+                seed=args.seed,
             )
         )
 
@@ -230,6 +232,11 @@ Examples:
         "--output-dir",
         help="Directory to save JSON results file (default: current directory)",
     )
+    run_parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed for non-gasstation dataset sampling (for reproducible random sampling)",
+    )
 
     run_parser.set_defaults(func=command_run)
 
@@ -278,6 +285,11 @@ Examples:
         "--num-weeks",
         type=int,
         help="For gasstation datasets: number of recent weeks to download (default: current week only)",
+    )
+    download_parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed for non-gasstation dataset sampling (for reproducible random sampling)",
     )
 
     download_parser.set_defaults(func=command_download)

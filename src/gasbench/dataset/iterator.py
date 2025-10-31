@@ -316,7 +316,6 @@ class DatasetIterator:
         
         replacing_samples = self.allow_eviction and sample_count >= GASSTATION_CACHE_MAX_SAMPLES
 
-        # Download with week filter (num_weeks=None to download just this week via week filtering in download_and_extract)
         for sample in download_and_extract(
             self.config,
             media_per_archive=self.config.media_per_archive,
@@ -328,6 +327,7 @@ class DatasetIterator:
             downloaded_archives=downloaded_archives,
             target_week=week_str,
             hf_token=self.hf_token,
+            seed=self.seed,
         ):
             archive_name = sample.get("archive_filename") or sample.get(
                 "source_file", ""
@@ -445,8 +445,9 @@ class DatasetIterator:
             force_download=False,
             cache_dir=self.cache_dir,
             num_weeks=self.num_weeks,
-            downloaded_archives=None,  # Not used for non-gasstation datasets
+            downloaded_archives=None,
             hf_token=self.hf_token,
+            seed=self.seed,
         ):
             if sample_count >= CACHE_MAX_SAMPLES:
                 break

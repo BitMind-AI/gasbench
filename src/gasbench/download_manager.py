@@ -234,6 +234,7 @@ async def download_datasets(
     modality: Optional[str] = None,
     mode: str = "full",
     gasstation_only: bool = False,
+    no_gasstation: bool = False,
     cache_dir: Optional[str] = None,
     concurrent_downloads: Optional[int] = None,
     num_weeks: Optional[int] = None,
@@ -248,6 +249,7 @@ async def download_datasets(
         modality: 'image', 'video', or None for all
         mode: 'debug', 'small', or 'full'
         gasstation_only: Only download gasstation datasets
+        no_gasstation: Skip gasstation datasets (download everything else)
         cache_dir: Cache directory path
         concurrent_downloads: Number of concurrent downloads (auto if None)
         num_weeks: Number of recent weeks for gasstation datasets
@@ -261,7 +263,7 @@ async def download_datasets(
     
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
     
-    datasets = _discover_datasets(modality, mode, gasstation_only)
+    datasets = _discover_datasets(modality, mode, gasstation_only, no_gasstation)
     
     if not datasets:
         logger.warning("No datasets found matching criteria")
@@ -309,16 +311,17 @@ def _discover_datasets(
     modality: Optional[str],
     mode: str,
     gasstation_only: bool,
+    no_gasstation: bool = False,
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
-        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only)
+        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation)
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
-        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only)
+        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation)
         datasets.extend(video_datasets)
     
     return datasets

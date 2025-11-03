@@ -132,6 +132,7 @@ def apply_mode_to_datasets(
 def discover_benchmark_image_datasets(
     mode: str = "full",
     gasstation_only: bool = False,
+    no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Return list of available benchmark image datasets.
@@ -139,6 +140,7 @@ def discover_benchmark_image_datasets(
     Args:
         mode: Benchmark mode - "debug", "small", or "full"
         gasstation_only: If True, only return gasstation datasets
+        no_gasstation: If True, exclude gasstation datasets
         yaml_path: Optional path to custom yaml config
     """
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
@@ -149,6 +151,10 @@ def discover_benchmark_image_datasets(
     if gasstation_only:
         gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
         return gasstation_datasets
+    
+    if no_gasstation:
+        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+        return non_gasstation_datasets
 
     return datasets
 
@@ -156,6 +162,7 @@ def discover_benchmark_image_datasets(
 def discover_benchmark_video_datasets(
     mode: str = "full",
     gasstation_only: bool = False,
+    no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Return list of available benchmark video datasets.
@@ -163,6 +170,7 @@ def discover_benchmark_video_datasets(
     Args:
         mode: Benchmark mode - "debug", "small", or "full"
         gasstation_only: If True, only return gasstation datasets
+        no_gasstation: If True, exclude gasstation datasets
         yaml_path: Optional path to custom yaml config
     """
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
@@ -173,6 +181,10 @@ def discover_benchmark_video_datasets(
     if gasstation_only:
         gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
         return gasstation_datasets
+    
+    if no_gasstation:
+        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+        return non_gasstation_datasets
 
     return datasets
 

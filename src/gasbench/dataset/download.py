@@ -185,6 +185,18 @@ def download_and_extract(
                 f"Downloading {len(to_download)} files from {dataset.path} (dataset: {dataset.name})"
             )
 
+            parquet_files_cache = None
+            if dataset.modality == "video":
+                try:
+                    if source == "modelscope":
+                        parquet_files_cache = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
+                    else:
+                        parquet_files_cache = list_hf_files(repo_id=dataset.path, extension=".parquet", token=hf_token)
+                    logger.info(f"Cached {len(parquet_files_cache)} parquet files for metadata lookup")
+                except Exception as e:
+                    logger.warning(f"Failed to cache parquet file list: {e}")
+                    parquet_files_cache = []
+
             successfully_processed = 0
             for url in to_download:
                 iso_week = _extract_iso_week_from_path(url)
@@ -200,7 +212,8 @@ def download_and_extract(
                         media_per_archive,
                         iso_week,
                         hf_token,
-                        seed
+                        seed,
+                        parquet_files_cache
                     ):
                         yield sample
                 finally:
@@ -230,6 +243,7 @@ def yield_media_from_source(
     iso_week: Optional[str] = None,
     hf_token: Optional[str] = None,
     seed: Optional[int] = None,
+    parquet_files_cache: Optional[List[str]] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
     Unified media extractor for parquet, zip, and tar sources.
@@ -245,7 +259,7 @@ def yield_media_from_source(
             return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
-            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week, hf_token, seed)
+            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week, hf_token, seed, parquet_files_cache)
             return
 
         if any(
@@ -474,7 +488,7 @@ def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
     ]
 
 
-def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None, hf_token: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None, hf_token: Optional[str] = None, parquet_files_cache: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
     """Build a filename->metadata map for a given video archive using matching parquet shards.
 
     Matching strategy:
@@ -504,10 +518,14 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
 
         source = getattr(dataset, "source", "huggingface")
 
-        if source == "modelscope":
-            parquet_files = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
+        # Use cached parquet files if available, otherwise fetch them (fallback for backwards compatibility)
+        if parquet_files_cache is not None:
+            parquet_files = parquet_files_cache
         else:
-            parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet", token=hf_token)
+            if source == "modelscope":
+                parquet_files = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
+            else:
+                parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet", token=hf_token)
 
         # Match on week, UID, timestamp, 'archive'
         matching = [
@@ -768,7 +786,7 @@ def _process_parquet(
 
 
 def _process_zip_or_tar(
-    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, hf_token: Optional[str] = None, seed: Optional[int] = None
+    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, hf_token: Optional[str] = None, seed: Optional[int] = None, parquet_files_cache: Optional[List[str]] = None
 ):  # BenchmarkDatasetConfig
     filename = str(source_path.name).lower()
     is_zip = _is_zip_file(filename)
@@ -816,7 +834,7 @@ def _process_zip_or_tar(
 
             # Load associated metadata parquet(s) for video archives if available
             archive_metadata_map: Dict[str, Dict[str, Any]] = (
-                _load_archive_metadata_map(dataset, source_path, iso_week, hf_token)
+                _load_archive_metadata_map(dataset, source_path, iso_week, hf_token, parquet_files_cache)
                 if dataset.modality == "video"
                 else {}
             )

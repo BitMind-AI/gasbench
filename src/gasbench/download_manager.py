@@ -118,7 +118,7 @@ class DownloadManager:
         # Create spinner for this dataset (no percentage since we can't update from sync executor)
         task_id = progress.add_task(
             f"[cyan]⏳ {task.dataset.name[:45]}", 
-            total=None,  # Indeterminate spinner
+            total=None,
             visible=True
         )
         
@@ -180,6 +180,13 @@ class DownloadManager:
                 cache_policy=task.cache_policy,
                 allow_eviction=task.allow_eviction,
             )
+
+            sample_count = 0
+            for _ in iterator:
+                sample_count += 1
+
+            logger.debug(f"Processed {sample_count} samples from {task.dataset.name}")
+
         finally:
             # Restore original log levels
             download_logger.setLevel(old_download_level)
@@ -348,20 +355,21 @@ def _is_week_cached(week_dir: Path) -> bool:
     if not samples_dir.exists():
         return False
     
-    samples = list(samples_dir.glob("img_*.png")) + list(samples_dir.glob("img_*.jpg"))
-    return len(samples) > 10
+    # Check for both image and video samples
+    image_samples = list(samples_dir.glob("img_*.png")) + list(samples_dir.glob("img_*.jpg"))
+    video_samples = list(samples_dir.glob("vid_*.mp4"))
+    total_samples = len(image_samples) + len(video_samples)
+    
+    return total_samples > 10
 
 
 def _get_required_samples_for_mode(dataset: BenchmarkDatasetConfig) -> int:
     """Calculate required samples based on dataset config (reflects mode)."""
-    # The dataset config already has media_per_archive and archives_per_dataset
-    # set by apply_mode_to_datasets() based on debug/small/full
     if dataset.media_per_archive == -1 or dataset.archives_per_dataset == -1:
         return 10000  # "full" download within reason
     
-    # Calculate expected samples
     expected = dataset.media_per_archive * dataset.archives_per_dataset
-    return max(expected, 10)  # At least 10 samples
+    return max(expected, 10)
 
 
 def _is_dataset_cached_for_mode(dataset_dir: Path, dataset: BenchmarkDatasetConfig) -> bool:

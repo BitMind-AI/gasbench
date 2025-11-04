@@ -13,6 +13,7 @@ from ..processing.transforms import (
     compress_video_frames_jpeg_torchvision,
     extract_target_size_from_input_specs,
     DEFAULT_TARGET_SIZE,
+    DEFAULT_BATCH_SIZE,
 )
 from ..dataset.config import (
     get_benchmark_size,
@@ -33,6 +34,54 @@ from .utils import (
 from ..model.inference import process_model_output
 
 logger = get_logger(__name__)
+
+
+def process_video_batch(
+    session,
+    input_specs,
+    batch_videos,
+    batch_metadata,
+    confusion_matrix,
+    generator_stats,
+    incorrect_samples,
+):
+    """push a batch of videos through the model."""
+    if not batch_videos:
+        return 0, 0, []
+
+    batch_array = np.stack(batch_videos, axis=0)
+
+    start = time.time()
+    outputs = session.run(None, {input_specs[0].name: batch_array})
+    batch_inference_time = (time.time() - start) * 1000
+    per_sample_time = batch_inference_time / len(batch_videos)
+    inference_times = [per_sample_time] * len(batch_videos)
+
+    correct = 0
+    for i, (true_label_binary, true_label_multiclass, sample, sample_index, dataset_name) in enumerate(batch_metadata):
+        predicted_binary, predicted_multiclass = process_model_output(outputs[0][i])
+
+        confusion_matrix.update(
+            true_label_binary, predicted_binary,
+            true_label_multiclass, predicted_multiclass
+        )
+
+        is_correct = predicted_binary == true_label_binary
+        if is_correct:
+            correct += 1
+        else:
+            if should_track_sample(sample, dataset_name):
+                misclassification = create_misclassification_record(
+                    sample,
+                    sample_index,
+                    true_label_multiclass,
+                    predicted_multiclass,
+                )
+                incorrect_samples.append(misclassification)
+
+        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
+
+    return correct, len(batch_videos), inference_times
 
 
 async def video_prefetcher(
@@ -211,18 +260,17 @@ async def run_video_benchmark(
                         )
                     )
 
-                    sample_index = 0  # Track sample index for unique IDs
-                    # Process videos from the queue
+                    sample_index = 0
+                    batch_videos = []
+                    batch_metadata = []
+
                     while True:
-                        # Get next preprocessed video from queue
                         item = await prefetch_queue.get()
                         item_type = item[0]
 
                         if item_type == "done":
-                            # End of dataset
                             break
                         elif item_type == "skip":
-                            # Skipped sample
                             dataset_skipped += 1
                             skipped_samples += 1
                             if dataset_skipped % 10 == 0:
@@ -231,67 +279,50 @@ async def run_video_benchmark(
                                 )
                             continue
                         elif item_type == "error":
-                            # Error during preprocessing
                             benchmark_results["errors"].append(f"Video processing error during prefetch")
                             dataset_skipped += 1
                             skipped_samples += 1
                             continue
 
-                        # Extract video data
                         video_array, true_label_binary, true_label_multiclass, sample = item[1], item[2], item[3], item[4]
-
                         sample_index += 1
                         
-                        start = time.time()
-                        outputs = session.run(None, {input_specs[0].name: video_array})
-                        inference_times.append((time.time() - start) * 1000)
+                        batch_videos.append(video_array[0])
+                        batch_metadata.append((true_label_binary, true_label_multiclass, sample, sample_index, dataset_config.name))
 
-                        predicted_binary, predicted_multiclass = process_model_output(outputs[0])
+                        if len(batch_videos) >= DEFAULT_BATCH_SIZE:
+                            batch_correct, batch_total, batch_times = process_video_batch(
+                                session, input_specs, batch_videos, batch_metadata,
+                                confusion_matrix, generator_stats, incorrect_samples
+                            )
+                            correct += batch_correct
+                            dataset_correct += batch_correct
+                            total += batch_total
+                            dataset_total += batch_total
+                            inference_times.extend(batch_times)
+                            
+                            batch_videos = []
+                            batch_metadata = []
 
-                        confusion_matrix.update(
-                            true_label_binary, predicted_binary,
-                            true_label_multiclass, predicted_multiclass
-                        )
-
-                        is_correct = predicted_binary == true_label_binary
-                        if is_correct:
-                            correct += 1
-                            dataset_correct += 1
-                        else:
-                            if should_track_sample(sample, dataset_config.name):
-                                misclassification = create_misclassification_record(
-                                    sample,
-                                    sample_index,
-                                    true_label_multiclass,
-                                    predicted_multiclass,
+                            if total % 500 == 0:
+                                logger.info(
+                                    f"Progress: {total}/{target_size} samples, "
+                                    f"Accuracy: {correct / total:.2%}"
                                 )
-                                incorrect_samples.append(misclassification)
-
-                        total += 1
-                        dataset_total += 1
-
-                        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
-
-                        if total % 500 == 0:
-                            logger.info(
-                                f"Progress: {total}/{target_size} samples, "
-                                f"Accuracy: {correct / total:.2%}"
-                            )
-
-                        if total % 100 == 0:
-                            frames_count = video_array.shape[1] if video_array is not None else 0
-                            logger.debug(
-                                f"Sample {total}: "
-                                f"True={true_label_multiclass}→{true_label_binary}, "
-                                f"Pred={predicted_multiclass}→{predicted_binary}, "
-                                f"Correct={is_correct}, "
-                                f"Generator={sample.get('model_name', 'unknown')}, "
-                                f"Dataset={dataset_config.name}, "
-                                f"Frames={frames_count}"
-                            )
                     
                     # Wait for prefetcher to finish
                     await prefetch_task
+
+                    if batch_videos:
+                        batch_correct, batch_total, batch_times = process_video_batch(
+                            session, input_specs, batch_videos, batch_metadata,
+                            confusion_matrix, generator_stats, incorrect_samples
+                        )
+                        correct += batch_correct
+                        dataset_correct += batch_correct
+                        total += batch_total
+                        dataset_total += batch_total
+                        inference_times.extend(batch_times)
 
                     dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
                     per_dataset_results[dataset_config.name] = {

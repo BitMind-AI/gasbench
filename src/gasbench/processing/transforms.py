@@ -16,6 +16,7 @@ from torchvision.io import decode_jpeg, encode_jpeg
 
 # Default target size for models with dynamic axes
 DEFAULT_TARGET_SIZE = (224, 224)
+DEFAULT_BATCH_SIZE = 8  # TODO determine based on vram + model size, move globals elsewhere
 
 
 def extract_target_size_from_input_specs(input_specs):

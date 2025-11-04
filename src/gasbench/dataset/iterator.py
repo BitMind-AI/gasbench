@@ -48,12 +48,13 @@ class DatasetIterator:
         self.hf_token = hf_token
         self.seed = seed
 
-        # Load cache policy for intelligent eviction
-        self.cache_policy = load_cache_policy(cache_policy)
-
         self.is_gasstation = "gasstation" in dataset_config.name.lower()
+        
+        self.cache_policy = None 
         if self.is_gasstation:
-            # Gasstation datasets use week-based subdirectories
+            self.cache_policy = load_cache_policy(cache_policy)
+
+        if self.is_gasstation:
             self.target_weeks = gasstation_utils.calculate_target_weeks(num_weeks)
             self.week_dirs = gasstation_utils.get_week_directories(
                 dataset_config.name, cache_dir, self.target_weeks
@@ -61,7 +62,6 @@ class DatasetIterator:
             self.dataset_base_dir = f"{cache_dir}/datasets/{dataset_config.name}"
             self.dataset_dir = None
         else:
-            # Non-gasstation datasets use simple directory
             self.dataset_dir = f"{cache_dir}/datasets/{dataset_config.name}"
             self.target_weeks = None
             self.week_dirs = None
@@ -74,7 +74,6 @@ class DatasetIterator:
         return self
 
     def __next__(self):
-        # Single source of truth: only check the limit here, not in get_samples()
         if self.samples_yielded >= self.max_samples:
             raise StopIteration
 
@@ -216,7 +215,7 @@ class DatasetIterator:
             return None
 
         # If no policy loaded, fall back to pure age-based eviction
-        has_policy = bool(self.cache_policy.get("generator_priorities"))
+        has_policy = bool(self.cache_policy and self.cache_policy.get("generator_priorities"))
 
         best_file = None
         best_score = -1.0

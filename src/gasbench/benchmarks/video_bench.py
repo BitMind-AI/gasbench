@@ -8,7 +8,12 @@ from typing import Dict, Optional
 from ..logger import get_logger
 from ..processing.archive import video_archive_manager
 from ..processing.media import process_video_bytes_sample
-from ..processing.transforms import apply_random_augmentations, compress_video_frames_jpeg_torchvision
+from ..processing.transforms import (
+    apply_random_augmentations,
+    compress_video_frames_jpeg_torchvision,
+    extract_target_size_from_input_specs,
+    DEFAULT_TARGET_SIZE,
+)
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_video_datasets,
@@ -36,6 +41,7 @@ async def video_prefetcher(
     queue: asyncio.Queue,
     max_queue_size: int = 2,
     seed: int = None,
+    target_size=None,
 ):
     """
     Prefetch and preprocess videos from the dataset iterator.
@@ -46,6 +52,7 @@ async def video_prefetcher(
         queue: Async queue to put processed videos into
         max_queue_size: Maximum size of prefetch queue
         seed: Optional random seed for reproducible augmentations
+        target_size: Optional (H, W) tuple for fixed target size from model specs
     """
     try:
         sample_index = 0
@@ -63,7 +70,9 @@ async def video_prefetcher(
                     tchw = video_array[0]
                     thwc = np.transpose(tchw, (0, 2, 3, 1))
                     sample_seed = None if seed is None else (seed + sample_index)
-                    aug_thwc, _, _, _ = apply_random_augmentations(thwc, seed=sample_seed)
+                    aug_thwc, _, _, _ = apply_random_augmentations(
+                        thwc, target_size, seed=sample_seed
+                    )
                     aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
                     video_array = np.expand_dims(aug_tchw, 0)
@@ -114,6 +123,13 @@ async def run_video_benchmark(
             return 0.0
 
         logger.info(f"Using {len(available_datasets)} video datasets for benchmarking")
+
+        target_size = extract_target_size_from_input_specs(input_specs)
+        if target_size is None:
+            target_size = DEFAULT_TARGET_SIZE
+            logger.info(f"Model has dynamic axes, using default target size: {target_size[0]}x{target_size[1]}")
+        else:
+            logger.info(f"Using fixed target size from model: {target_size[0]}x{target_size[1]}")
 
         with video_archive_manager(cache_dir=cache_dir) as video_cache:
             correct = 0
@@ -186,7 +202,13 @@ async def run_video_benchmark(
                     prefetch_queue = asyncio.Queue(maxsize=2)
 
                     prefetch_task = asyncio.create_task(
-                        video_prefetcher(dataset_iterator, dataset_config, prefetch_queue, seed=seed)
+                        video_prefetcher(
+                            dataset_iterator,
+                            dataset_config,
+                            prefetch_queue,
+                            seed=seed,
+                            target_size=target_size,
+                        )
                     )
 
                     sample_index = 0  # Track sample index for unique IDs

@@ -6,7 +6,12 @@ from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.media import process_image_sample
-from ..processing.transforms import apply_random_augmentations, compress_image_jpeg_pil
+from ..processing.transforms import (
+    apply_random_augmentations,
+    compress_image_jpeg_pil,
+    extract_target_size_from_input_specs,
+    DEFAULT_TARGET_SIZE,
+)
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_image_datasets,
@@ -57,6 +62,13 @@ async def run_image_benchmark(
             return 0.0
 
         logger.info(f"Using {len(available_datasets)} image datasets for benchmarking")
+
+        target_size = extract_target_size_from_input_specs(input_specs)
+        if target_size is None:
+            target_size = DEFAULT_TARGET_SIZE
+            logger.info(f"Model has dynamic axes, using default target size: {target_size}")
+        else:
+            logger.info(f"Using fixed target size from model: {target_size}")
 
         correct = 0
         total = 0
@@ -134,7 +146,9 @@ async def run_image_benchmark(
                             chw = image_array[0]
                             hwc = np.transpose(chw, (1, 2, 0))
                             sample_seed = None if seed is None else (seed + sample_index)
-                            aug_hwc, _, _, _ = apply_random_augmentations(hwc, seed=sample_seed)
+                            aug_hwc, _, _, _ = apply_random_augmentations(
+                                hwc, target_size, seed=sample_seed
+                            )
                             aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
                             aug_chw = np.transpose(aug_hwc, (2, 0, 1))
                             image_array = np.expand_dims(aug_chw, 0)

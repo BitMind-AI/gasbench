@@ -23,7 +23,7 @@ from ..dataset.config import (
 )
 from ..dataset.iterator import DatasetIterator
 from .utils import (
-    ConfusionMatrix,
+    Metrics,
     multiclass_to_binary,
     update_generator_stats,
     calculate_per_source_accuracy,
@@ -41,7 +41,7 @@ def process_video_batch(
     input_specs,
     batch_videos,
     batch_metadata,
-    confusion_matrix,
+    metrics,
     generator_stats,
     incorrect_samples,
 ):
@@ -59,11 +59,12 @@ def process_video_batch(
 
     correct = 0
     for i, (true_label_binary, true_label_multiclass, sample, sample_index, dataset_name) in enumerate(batch_metadata):
-        predicted_binary, predicted_multiclass = process_model_output(outputs[0][i])
+        predicted_binary, predicted_multiclass, pred_probs = process_model_output(outputs[0][i])
 
-        confusion_matrix.update(
+        metrics.update(
             true_label_binary, predicted_binary,
-            true_label_multiclass, predicted_multiclass
+            true_label_multiclass, predicted_multiclass,
+            pred_probs
         )
 
         is_correct = predicted_binary == true_label_binary
@@ -185,7 +186,7 @@ async def run_video_benchmark(
             total = 0
             inference_times = []
             per_dataset_results = {}
-            confusion_matrix = ConfusionMatrix()
+            metrics = Metrics()
             skipped_samples = 0
             incorrect_samples = []  # Track misclassified gasstation samples
 
@@ -293,7 +294,7 @@ async def run_video_benchmark(
                         if len(batch_videos) >= DEFAULT_BATCH_SIZE:
                             batch_correct, batch_total, batch_times = process_video_batch(
                                 session, input_specs, batch_videos, batch_metadata,
-                                confusion_matrix, generator_stats, incorrect_samples
+                                metrics, generator_stats, incorrect_samples
                             )
                             correct += batch_correct
                             dataset_correct += batch_correct
@@ -316,7 +317,7 @@ async def run_video_benchmark(
                     if batch_videos:
                         batch_correct, batch_total, batch_times = process_video_batch(
                             session, input_specs, batch_videos, batch_metadata,
-                            confusion_matrix, generator_stats, incorrect_samples
+                            metrics, generator_stats, incorrect_samples
                         )
                         correct += batch_correct
                         dataset_correct += batch_correct
@@ -351,8 +352,11 @@ async def run_video_benchmark(
             avg_inference_time = sum(inference_times) / len(inference_times) if inference_times else 0.0
             p95_inference_time = float(np.percentile(inference_times, 95)) if inference_times else 0.0
 
-            binary_mcc = confusion_matrix.calculate_binary_mcc() if total > 0 else 0.0
-            multiclass_mcc = confusion_matrix.calculate_multiclass_mcc()
+            binary_mcc = metrics.calculate_binary_mcc() if total > 0 else 0.0
+            multiclass_mcc = metrics.calculate_multiclass_mcc()
+            binary_ce = metrics.calculate_binary_cross_entropy()
+            multiclass_ce = metrics.calculate_multiclass_cross_entropy()
+            sn34_score = metrics.compute_sn34_score()
 
             per_source_accuracy = calculate_per_source_accuracy(available_datasets, per_dataset_results)
 
@@ -362,12 +366,15 @@ async def run_video_benchmark(
 
             benchmark_results["video_results"] = {
                 "benchmark_score": accuracy,
+                "sn34_score": sn34_score,
                 "total_samples": total,
                 "correct_predictions": correct,
                 "avg_inference_time_ms": avg_inference_time,
                 "p95_inference_time_ms": p95_inference_time,
                 "binary_mcc": binary_mcc,
                 "multiclass_mcc": multiclass_mcc,
+                "binary_cross_entropy": binary_ce,
+                "multiclass_cross_entropy": multiclass_ce,
                 "per_source_accuracy": per_source_accuracy,
                 "per_dataset_results": per_dataset_results,
                 "dataset_info": dataset_info,

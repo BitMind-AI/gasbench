@@ -45,7 +45,7 @@ def create_inference_session(model_path: str, model_type: str):
     return session
 
 
-def process_model_output(logits: np.ndarray) -> Tuple[int, int]:
+def process_model_output(logits: np.ndarray) -> Tuple[int, int, np.ndarray]:
     """
     Process model output logits into binary and multiclass predictions.
     
@@ -55,9 +55,10 @@ def process_model_output(logits: np.ndarray) -> Tuple[int, int]:
         logits: Raw model output logits
     
     Returns:
-        Tuple of (binary_prediction, multiclass_prediction)
+        Tuple of (binary_prediction, multiclass_prediction, probabilities)
         - binary: 0=real, 1=AI-generated
         - multiclass: 0=real, 1=synthetic, 2=semisynthetic
+        - probabilities: softmax probabilities (shape depends on model output)
     """
     exp_x = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
     probabilities = exp_x / np.sum(exp_x, axis=-1, keepdims=True)
@@ -71,8 +72,9 @@ def process_model_output(logits: np.ndarray) -> Tuple[int, int]:
         predicted_binary = int(np.argmax(pred_probs))
         predicted_multiclass = predicted_binary
     else:
-        predicted_binary = int(probabilities.flatten()[0] > 0.5)
+        pred_probs = probabilities.flatten()
+        predicted_binary = int(pred_probs[0] > 0.5)
         predicted_multiclass = predicted_binary
     
-    return predicted_binary, predicted_multiclass
+    return predicted_binary, predicted_multiclass, pred_probs
 

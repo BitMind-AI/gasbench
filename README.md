@@ -7,8 +7,8 @@ A benchmark evaluation package for discriminative models on [Bittensor Subnet 34
 This package provides a self-contained benchmark evaluation system for testing models on diverse datasets:
 
 - **Image & Video Benchmarks** - Test models on various datasets for AI-generated content detection
-- **Data Processing** - Dataset downloads, caching,  preprocessing, amd augmenting
-- **Comprehensive Metrics** - Accuracy, MCC, inference times, and per-dataset breakdowns
+- **Data Processing** - Dataset downloads, caching, preprocessing, and augmentation with aspect ratio preservation
+- **Comprehensive Metrics** - Accuracy, MCC, cross-entropy, SN34 score, inference times, and per-dataset breakdowns
 
 ## Installation
 
@@ -114,6 +114,23 @@ asyncio.run(evaluate_model())
 
 ## Model Requirements
 
+### Input Shape
+
+**Set explicit spatial dimensions in your ONNX model** (e.g., `[batch, 3, 224, 224]` or `[batch, 3, 384, 384]`).
+
+Models with dynamic dimensions (e.g., `[batch, 3, height, width]`) will fallback to 224×224, but this is not recommended as it may not match your model's training resolution.
+
+### Preprocessing
+
+All inputs are automatically preprocessed with:
+- **Shortest-edge resize** to target dimensions (preserves aspect ratio)
+- **Center crop** to exact target size (square output)
+- **Random augmentations** (rotation, flip, distortions, JPEG compression)
+
+This ensures consistent input sizes for efficient batching while preserving image quality.
+
+### Output Format
+
 For detailed ONNX model requirements, see the [ONNX Model Specification](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/ONNX.md) from the BitMind Subnet documentation.
 
 ## Configuration
@@ -131,6 +148,15 @@ Use `gasstation_only=True` to evaluate only on gasstation datasets for faster, f
 ### Cache Directory
 
 By default, datasets are cached at `/tmp/benchmark_data/`. Specify a custom location with `cache_dir` parameter or `--cache-dir` flag.
+
+### Metrics
+
+- **benchmark_score**: Raw accuracy (correct predictions / total samples)
+- **sn34_score**: Combined metric [0, 1] averaging normalized MCC and cross-entropy (higher is better)
+- **binary_mcc**: Matthews Correlation Coefficient for binary classification (real vs AI)
+- **multiclass_mcc**: Matthews Correlation Coefficient for 3-class (real, synthetic, semisynthetic)
+- **binary_cross_entropy**: Cross-entropy loss for binary classification
+- **multiclass_cross_entropy**: Cross-entropy loss for multiclass classification
 
 ### JSON Output
 
@@ -151,13 +177,16 @@ Benchmark results are automatically saved to a timestamped JSON file with the fo
   },
   "overall_score": 0.1111,
   "results": {
+    "benchmark_score": 0.8523,
+    "sn34_score": 0.7891,
     "total_samples": 5000,
     "correct_predictions": 4261,
-    "accuracy": 0.1234,
     "avg_inference_time_ms": 12.3,
     "p95_inference_time_ms": 45.6,
     "binary_mcc": 0.4321,
-    "multiclass_mcc": 0.1234
+    "multiclass_mcc": 0.1234,
+    "binary_cross_entropy": 0.2345,
+    "multiclass_cross_entropy": 0.3456
   },
   "per_source_accuracy": {
     "real": {

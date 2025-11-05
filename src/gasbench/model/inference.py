@@ -52,27 +52,28 @@ def process_model_output(logits: np.ndarray) -> Tuple[int, int, np.ndarray]:
     Handles 3-class, 2-class, and single-output model formats.
     
     Args:
-        logits: Raw model output logits
+        logits: Raw model output logits (1D array from single sample)
     
     Returns:
         Tuple of (binary_prediction, multiclass_prediction, probabilities)
         - binary: 0=real, 1=AI-generated
         - multiclass: 0=real, 1=synthetic, 2=semisynthetic
-        - probabilities: softmax probabilities (shape depends on model output)
+        - probabilities: softmax probabilities as 1D array
     """
-    exp_x = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
-    probabilities = exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+    # Ensure logits is 1D
+    logits = np.atleast_1d(logits).flatten()
     
-    if probabilities.shape[-1] == 3:
-        pred_probs = probabilities[0]
+    # Compute softmax
+    exp_x = np.exp(logits - np.max(logits))
+    pred_probs = exp_x / np.sum(exp_x)
+    
+    if len(pred_probs) == 3:
         predicted_multiclass = int(np.argmax(pred_probs))
         predicted_binary = 0 if predicted_multiclass == 0 else 1
-    elif probabilities.shape[-1] == 2:
-        pred_probs = probabilities[0]
+    elif len(pred_probs) == 2:
         predicted_binary = int(np.argmax(pred_probs))
         predicted_multiclass = predicted_binary
-    else:
-        pred_probs = probabilities.flatten()
+    else:  # Single output
         predicted_binary = int(pred_probs[0] > 0.5)
         predicted_multiclass = predicted_binary
     

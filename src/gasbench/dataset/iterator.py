@@ -99,7 +99,7 @@ class DatasetIterator:
         else:
             # Standard caching for non-gasstation datasets
             if self._is_cache_complete():
-                logger.info(
+                logger.debug(
                     f"Cache complete for {self.config.name} ({self._get_cached_count()} samples)"
                 )
                 return
@@ -135,7 +135,7 @@ class DatasetIterator:
 
                 cached_count = self._get_cached_count()
                 samples_to_load = min(cached_count, self.max_samples)
-                logger.info(
+                logger.debug(
                     f"Loading {samples_to_load} cached samples for {self.config.name}"
                 )
 
@@ -164,7 +164,7 @@ class DatasetIterator:
             self.config.modality,
         ):
             sample_count = gasstation_utils.get_week_sample_count(week_dir)
-            logger.info(
+            logger.debug(
                 f"Cache complete for {self.config.name} week {week_str} ({sample_count} samples)"
             )
             return

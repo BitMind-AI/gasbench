@@ -96,6 +96,7 @@ def command_run(args):
                 cache_dir=args.cache_dir,
                 download_latest_gasstation_data=args.download_latest_gasstation_data,
                 seed=args.seed,
+                batch_size=args.batch_size,
             )
         )
 
@@ -245,6 +246,11 @@ Examples:
         "--seed",
         type=int,
         help="Random seed for non-gasstation dataset sampling (for reproducible random sampling)",
+    )
+    run_parser.add_argument(
+        "--batch-size",
+        type=int,
+        help="Batch size for model inference (default: 8)",
     )
 
     run_parser.set_defaults(func=command_run)

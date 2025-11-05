@@ -26,6 +26,7 @@ async def run_benchmark(
     download_latest_gasstation_data: bool = False,
     cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
+    batch_size: Optional[int] = None,
 ) -> Dict:
     """
     Args:
@@ -37,6 +38,7 @@ async def run_benchmark(
         download_latest_gasstation_data: If True, download latest gasstation data before benchmarking (default: False)
         cache_policy: Optional path to cache policy JSON file with generator priorities
         seed: Optional random seed for non-gasstation dataset sampling (for reproducible random sampling)
+        batch_size: Batch size for model inference (default: 8)
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -87,6 +89,7 @@ async def run_benchmark(
             download_latest_gasstation_data,
             cache_policy,
             seed,
+            batch_size,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -142,12 +145,19 @@ async def load_model_for_benchmark(
         benchmark_results["validation"]["output_shape"] = str(output_specs[0].shape)
 
         logger.info(f"✅ Model loaded successfully")
+        
+        # Get execution providers
+        providers = session.get_providers()
+        using_gpu = "CUDAExecutionProvider" in providers
+        
         model_info = {
             "path": model_path,
             "input_shape": str(input_specs[0].shape),
-            "output_shape": str(output_specs[0].shape)
+            "output_shape": str(output_specs[0].shape),
+            "execution_provider": providers[0] if providers else "Unknown",
+            "gpu_enabled": using_gpu
         }
-        logger.info(f"Model info: {json.dumps(model_info)}")
+        logger.info(f"Model info:\n{json.dumps(model_info, indent=2)}")
 
         return session, input_specs
 
@@ -169,6 +179,7 @@ async def execute_benchmark(
     download_latest_gasstation_data: bool = False,
     cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
+    batch_size: Optional[int] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -184,6 +195,7 @@ async def execute_benchmark(
             download_latest_gasstation_data,
             cache_policy,
             seed,
+            batch_size,
         )
     elif modality == "video":
         benchmark_score = await run_video_benchmark(
@@ -196,6 +208,7 @@ async def execute_benchmark(
             download_latest_gasstation_data,
             cache_policy,
             seed,
+            batch_size,
         )
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")

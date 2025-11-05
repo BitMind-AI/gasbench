@@ -155,8 +155,12 @@ async def run_video_benchmark(
     download_latest_gasstation_data: bool = False,
     cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
+    batch_size: Optional[int] = None,
 ) -> float:
     """Test model on benchmark video datasets for AI-generated content detection."""
+    
+    if batch_size is None:
+        batch_size = DEFAULT_BATCH_SIZE
 
     try:
         hf_token = os.environ.get("HF_TOKEN")
@@ -207,6 +211,7 @@ async def run_video_benchmark(
             )
 
             sampling_info = {
+                "batch_size": batch_size,
                 "target_samples": target_samples,
                 "actual_total_samples": actual_total_samples,
                 "num_datasets": len(available_datasets),
@@ -295,7 +300,7 @@ async def run_video_benchmark(
                         batch_videos.append(video_array[0])
                         batch_metadata.append((true_label_binary, true_label_multiclass, sample, sample_index, dataset_config.name))
 
-                        if len(batch_videos) >= DEFAULT_BATCH_SIZE:
+                        if len(batch_videos) >= batch_size:
                             batch_correct, batch_total, batch_times = process_video_batch(
                                 session, input_specs, batch_videos, batch_metadata,
                                 metrics, generator_stats, incorrect_samples

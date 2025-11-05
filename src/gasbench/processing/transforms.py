@@ -16,7 +16,7 @@ from torchvision.io import decode_jpeg, encode_jpeg
 
 # Default target size for models with dynamic axes
 DEFAULT_TARGET_SIZE = (224, 224)
-DEFAULT_BATCH_SIZE = 8  # TODO determine based on vram + model size, move globals elsewhere
+DEFAULT_BATCH_SIZE = 32  # TODO determine based on vram + model size, move globals elsewhere
 
 
 def extract_target_size_from_input_specs(input_specs):
@@ -132,24 +132,22 @@ def apply_random_augmentations(
                 level = curr_level
                 break
 
-    resize_res = target_size
-
     # determine crop scale for h and w
     crop_scale = (1., 1.)
     if np.random.rand() < crop_prob:
         crop_scale = (np.random.uniform(0.35, 0.99), np.random.uniform(0.35, 0.99))
-        min_scale_h = max(0.35, 224 / resize_res[0])
-        min_scale_w = max(0.35, 224 / resize_res[1])
+        min_scale_h = max(0.35, 224 / target_size[0])
+        min_scale_w = max(0.35, 224 / target_size[1])
         crop_scale = (max(crop_scale[0], min_scale_h), max(crop_scale[1], min_scale_w))
 
     if level == 0:
-        tforms = get_base_transforms(resize_res, crop_scale)
+        tforms = get_base_transforms(target_size, crop_scale)
     elif level == 1:
-        tforms = get_random_augmentations(resize_res, crop_scale)
+        tforms = get_random_augmentations(target_size, crop_scale)
     elif level == 2:
-        tforms = get_random_augmentations_medium(resize_res, crop_scale)
+        tforms = get_random_augmentations_medium(target_size, crop_scale)
     else:  # level == 3
-        tforms = get_random_augmentations_hard(resize_res, crop_scale)
+        tforms = get_random_augmentations_hard(target_size, crop_scale)
 
     if isinstance(inputs, tuple):
         transformed_A, _ = tforms(inputs[0], reuse_params=False)
@@ -628,8 +626,8 @@ def jpeg_compression(img, param):
         np.ndarray: Distorted RGB image array with compression artifacts
     """
     h, w, _ = img.shape
-    s_h = h // param
-    s_w = w // param
+    s_h = max(1, h // param)
+    s_w = max(1, w // param)
     img = cv2.resize(img, (s_w, s_h))
     return cv2.resize(img, (w, h))
 
@@ -895,7 +893,12 @@ class ResizeShortestEdge:
         else:
             new_w = self.target_w
             new_h = int(h * (self.target_w / w))
-        
+
+        if new_h < self.target_h:
+            new_h = self.target_h
+        if new_w < self.target_w:
+            new_w = self.target_w
+
         img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         if mask is not None:
             mask = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)

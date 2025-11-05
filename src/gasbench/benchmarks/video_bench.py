@@ -127,8 +127,9 @@ async def video_prefetcher(
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
                     video_array = np.expand_dims(aug_tchw, 0)
                 except Exception as e:
-                    print(e)
-                    pass
+                    logger.error(f"Video augmentation failed: {e}")
+                    await queue.put(("skip", None, None, None, None))
+                    continue
 
                 true_label_binary = multiclass_to_binary(true_label_multiclass)
                 await queue.put(("data", video_array, true_label_binary, true_label_multiclass, sample))
@@ -190,9 +191,11 @@ async def run_video_benchmark(
             skipped_samples = 0
             incorrect_samples = []  # Track misclassified gasstation samples
 
-            target_size = get_benchmark_size("video", mode)
-            dataset_sampling = calculate_weighted_dataset_sampling(available_datasets, target_size)
+            target_samples = get_benchmark_size("video", mode)
+            dataset_sampling = calculate_weighted_dataset_sampling(available_datasets, target_samples)
             
+            actual_total_samples = sum(dataset_sampling.values())
+
             # Calculate summary stats for logging
             gasstation_count = len([d for d in available_datasets if "gasstation" in d.name.lower()])
             regular_count = len(available_datasets) - gasstation_count
@@ -202,9 +205,10 @@ async def run_video_benchmark(
             regular_cap = dataset_sampling.get(
                 next((d.name for d in available_datasets if "gasstation" not in d.name.lower()), ""), 0
             )
-            
+
             sampling_info = {
-                "target_samples": target_size,
+                "target_samples": target_samples,
+                "actual_total_samples": actual_total_samples,
                 "num_datasets": len(available_datasets),
                 "gasstation_datasets": gasstation_count,
                 "regular_datasets": regular_count,
@@ -307,7 +311,7 @@ async def run_video_benchmark(
 
                             if total % 500 == 0:
                                 logger.info(
-                                    f"Progress: {total}/{target_size} samples, "
+                                    f"Progress: {total}/{actual_total_samples} samples, "
                                     f"Accuracy: {correct / total:.2%}"
                                 )
                     

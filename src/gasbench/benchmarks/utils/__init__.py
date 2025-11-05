@@ -1,7 +1,7 @@
 """Utilities for benchmark processing."""
 
 from .metrics import (
-    ConfusionMatrix,
+    Metrics,
     multiclass_to_binary,
     update_generator_stats,
     calculate_per_source_accuracy,
@@ -14,7 +14,7 @@ from .misclassifications import (
 )
 
 __all__ = [
-    "ConfusionMatrix",
+    "Metrics",
     "multiclass_to_binary",
     "update_generator_stats",
     "calculate_per_source_accuracy",

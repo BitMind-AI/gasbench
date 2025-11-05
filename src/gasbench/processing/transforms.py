@@ -14,6 +14,49 @@ import torch
 from torchvision.io import decode_jpeg, encode_jpeg
 
 
+# Default target size for models with dynamic axes
+DEFAULT_TARGET_SIZE = (224, 224)
+DEFAULT_BATCH_SIZE = 8  # TODO determine based on vram + model size, move globals elsewhere
+
+
+def extract_target_size_from_input_specs(input_specs):
+    """
+    Extract target (H, W) dimensions from ONNX input specs.
+    Expected shapes:
+        - Image: [batch, channels, height, width] or [batch, height, width, channels]
+        - Video: [batch, time, channels, height, width] or [batch, time, height, width, channels]
+
+    Args:
+        input_specs: ONNX input specification with shape information
+
+    Returns:
+        tuple: (H, W) target dimensions, or None if cannot be determined (e.g., dynamic axes)
+
+    """
+    if not input_specs or len(input_specs) == 0:
+        return None
+
+    shape = input_specs[0].shape
+    if not shape or len(shape) < 3:
+        return None
+
+    shape = [dim if isinstance(dim, int) else None for dim in shape]
+
+    if len(shape) == 5:
+        # Assume [B, T, C, H, W] format for video models
+        h, w = shape[3], shape[4]
+        if h is not None and w is not None:
+            return (h, w)
+
+    elif len(shape) == 4:
+        # Assume [B, C, H, W] format for image models
+        h, w = shape[2], shape[3]
+        if h is not None and w is not None:
+            return (h, w)
+
+    return None
+
+
 def ensure_mask_3d(mask: np.ndarray) -> np.ndarray:
     """
     Ensure the mask is 3D (H, W, 1) if it's 2D (H, W).
@@ -25,10 +68,10 @@ def ensure_mask_3d(mask: np.ndarray) -> np.ndarray:
 
 def apply_random_augmentations(
     inputs,
+    target_size,
     mask=None,
     level_probs=None,
     level=None,
-    resize_prob=0.5,
     crop_prob=0.5,
     seed=None,
 ):
@@ -37,6 +80,7 @@ def apply_random_augmentations(
 
     Args:
         inputs: np.ndarray or tuple of np.ndarray. Image(s) to transform
+        target_size: tuple (H, W). Target size for resize (from model specs or default 224x224)
         mask: np.ndarray, optional. Binary mask to ensure crop contains mask foreground.
             If provided, the returned aug_mask may be 3D (H, W, 1); squeeze to 2D (H, W) for storage or training as needed.
         level_probs: dict with augmentation levels and their probabilities.
@@ -46,7 +90,6 @@ def apply_random_augmentations(
             - Level 2 (25%): Medium distortions
             - Level 3 (25%): Hard distortions
         level: set to override level_probs
-        resize_prob: probability of resizing image (keeping aspect ratio the same)
         crop_prob: probability of cropping randomly
         seed: int, optional. Random seed for reproducible augmentations
 
@@ -89,18 +132,7 @@ def apply_random_augmentations(
                 level = curr_level
                 break
 
-    # determine target resolution (for resize)
-    if isinstance(inputs, tuple):
-        original_res = inputs[0].shape[1:3]
-    else:
-        original_res = inputs.shape[0:2] if inputs.ndim == 3 else inputs.shape[1:3]
-
-    resize_res = original_res
-    if np.random.rand() < resize_prob:
-        scale = np.random.uniform(0.5, 1.5)
-        target_h = min(int(original_res[0] * scale), 2048)
-        target_w = min(int(original_res[1] * scale), 2048)
-        resize_res = (target_h, target_w)        
+    resize_res = target_size
 
     # determine crop scale for h and w
     crop_scale = (1., 1.)
@@ -132,19 +164,22 @@ def apply_random_augmentations(
 
 def get_base_transforms(target_res, crop_scale):
     """
-    Get basic transforms (center crop and resize).
+    Get basic transforms (optional crop and resize).
 
     Args:
-        target_image_size: int or tuple. Output size for resize.
+        target_res: int or tuple. Output size for resize.
+        crop_scale: tuple. Crop scale (ignored if (1.0, 1.0)).
 
     Returns:
         ComposeWithParams: Composed transform pipeline
     """
-    return ComposeWithParams(
-        [
-            ResizeCropWithParams(target_res, crop_scale),
-        ]
-    )
+    transforms_list = []
+
+    if crop_scale != (1.0, 1.0):
+        transforms_list.append(RandomCropWithParams(crop_scale))
+
+    transforms_list.append(ResizeShortestEdge(target_res))
+    return ComposeWithParams(transforms_list)
 
 
 def get_random_augmentations(target_res, crop_scale):
@@ -152,18 +187,20 @@ def get_random_augmentations(target_res, crop_scale):
     Get basic augmentations with geometric transforms.
 
     Args:
-        target_image_size: int or tuple. Output size for resize.
+        target_res: int or tuple. Output size for resize.
+        crop_scale: tuple. Crop scale.
 
     Returns:
         ComposeWithParams: Composed transform pipeline with basic augmentations
     """
-    base_augmentations = [
+    base = get_base_transforms(target_res, crop_scale)
+    transforms_list = [
         RandomRotationWithParams(degrees=20, order=2),
-        ResizeCropWithParams(target_res, crop_scale),
+    ] + base.transforms + [
         RandomHorizontalFlipWithParams(),
         RandomVerticalFlipWithParams(),
     ]
-    return ComposeWithParams(base_augmentations)
+    return ComposeWithParams(transforms_list)
 
 
 def get_random_augmentations_medium(target_res, crop_scale):
@@ -171,24 +208,23 @@ def get_random_augmentations_medium(target_res, crop_scale):
     Get medium difficulty transforms with mild distortions.
 
     Args:
-        target_image_size: int or tuple. Output size for resize.
+        target_res: int or tuple. Output size for resize.
+        crop_scale: tuple. Crop scale.
 
     Returns:
         ComposeWithParams: Composed transform pipeline with medium distortions
     """
-    # Build geometric transforms without compression so we can append compression last
-    base_geometric = [
+    base = get_base_transforms(target_res, crop_scale)
+    transforms_list = [
         RandomRotationWithParams(degrees=20, order=2),
-        ResizeCropWithParams(target_res, crop_scale),
+    ] + base.transforms + [
         RandomHorizontalFlipWithParams(),
         RandomVerticalFlipWithParams(),
-    ]
-    distortions = [
         ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=1),
         ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=1),
         ApplyDeeperForensicsDistortion("JPEG", level_min=0, level_max=1),
     ]
-    return ComposeWithParams(base_geometric + distortions)
+    return ComposeWithParams(transforms_list)
 
 
 def get_random_augmentations_hard(target_res, crop_scale):
@@ -196,26 +232,25 @@ def get_random_augmentations_hard(target_res, crop_scale):
     Get hard difficulty transforms with more severe distortions.
 
     Args:
-        target_image_size: int or tuple. Output size for resize.
+        target_res: int or tuple. Output size for resize.
+        crop_scale: tuple. Crop scale.
 
     Returns:
         ComposeWithParams: Composed transform pipeline with severe distortions
     """
-    # Build geometric transforms without compression so we can append compression last
-    base_geometric = [
+    base = get_base_transforms(target_res, crop_scale)
+    transforms_list = [
         RandomRotationWithParams(degrees=20, order=2),
-        ResizeCropWithParams(target_res, crop_scale),
+    ] + base.transforms + [
         RandomHorizontalFlipWithParams(),
         RandomVerticalFlipWithParams(),
-    ]
-    distortions = [
         ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=2),
         ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=2),
         ApplyDeeperForensicsDistortion("JPEG", level_min=0, level_max=2),
         ApplyDeeperForensicsDistortion("GNC", level_min=0, level_max=2),
         ApplyDeeperForensicsDistortion("GB", level_min=0, level_max=2),
     ]
-    return ComposeWithParams(base_geometric + distortions)
+    return ComposeWithParams(transforms_list)
 
 
 class ComposeWithParams:
@@ -747,82 +782,30 @@ class CenterCrop:
         return img
 
 
-class ResizeCropWithParams:
-    """Randomly crop and resize an image, ensuring the crop contains the mask foreground if a mask is provided."""
+class RandomCropWithParams:
+    """Randomly crop an image with optional mask-aware cropping."""
 
-    def __init__(self, resize_res, crop_scale):
+    def __init__(self, crop_scale):
         """
-        Initialize random resized crop transform.
+        Initialize random crop transform.
 
         Args:
-            size (int or tuple): Target output size
-            scale (tuple): Range of size of the origin size cropped
+            crop_scale (tuple): (height_scale, width_scale) for crop size as fraction of original
         """
         self.params = None
-        self.resize_res = resize_res
         self.crop_scale = crop_scale
 
     def __call__(self, img, mask=None, crop_params=None):
         """
-        Apply random resized crop transform.
-
-        Args:
-            img (np.ndarray): Input image array
-            mask (np.ndarray, optional): Input mask array
-            crop_params (tuple, optional): Pre-computed crop parameters
-
-        Returns:
-            np.ndarray or tuple: Cropped and resized image, or tuple of (image, mask) if mask provided
-        """
-        img, mask = self.resize(img, mask)
-
-        img = self.random_crop(
-            img, mask=mask, crop_params=crop_params, interpolation=cv2.INTER_LINEAR
-        )
-        if mask is not None:
-            prev_crop_params = self.params["crop_params"]
-            mask = self.random_crop(
-                mask,
-                mask=None,
-                crop_params=prev_crop_params,
-                interpolation=cv2.INTER_NEAREST,
-            )
-
-        return img, mask
-
-
-    def resize(self, img, mask=None):
-        """
-        Apply resize transform.
-
-        Args:
-            img: np.ndarray, input image
-            mask: np.ndarray or None, optional mask to resize
-
-        Returns:
-            np.ndarray or tuple: Resized image, or tuple of (image, mask) if mask provided
-        """
-        if img.shape[:2] != self.resize_res:
-            img = cv2.resize(img, (self.resize_res[1], self.resize_res[0]), interpolation=cv2.INTER_LINEAR)
-            if mask is not None and mask.shape[:2] != self.resize_res:
-                mask = cv2.resize(mask, (self.resize_res[1], self.resize_res[0]), interpolation=cv2.INTER_NEAREST)
-
-        return img, mask
-
-    def random_crop(
-        self, img, mask=None, crop_params=None, interpolation=cv2.INTER_LINEAR
-    ):
-        """
-        Randomly crop and resize an image, ensuring the crop contains the mask foreground if a mask is provided.
+        Apply random crop transform.
 
         Args:
             img (np.ndarray): Input image array
             mask (np.ndarray, optional): Input mask array
             crop_params (tuple, optional): Pre-computed crop parameters (i, j, h, w)
-            interpolation (int): Interpolation method
 
         Returns:
-            np.ndarray: Cropped and resized image array
+            np.ndarray or tuple: Cropped image, or tuple of (image, mask) if mask provided
         """
         if crop_params is None:
             height, width = img.shape[:2]
@@ -838,8 +821,8 @@ class ResizeCropWithParams:
 
                 if len(xs) == 0 or len(ys) == 0:
                     # No foreground, fall back to random crop
-                    i = np.random.randint(0, height - h + 1)
-                    j = np.random.randint(0, width - w + 1)
+                    i = np.random.randint(0, height - h + 1) if height > h else 0
+                    j = np.random.randint(0, width - w + 1) if width > w else 0
                 else:
                     x0, x1 = xs.min(), xs.max()
                     y0, y1 = ys.min(), ys.max()
@@ -854,15 +837,88 @@ class ResizeCropWithParams:
                         i = np.random.randint(min_i, max_i + 1) if max_i >= min_i else 0
                         j = np.random.randint(min_j, max_j + 1) if max_j >= min_j else 0
             else:
-                i = np.random.randint(0, height - h + 1)
-                j = np.random.randint(0, width - w + 1)
+                i = np.random.randint(0, height - h + 1) if height > h else 0
+                j = np.random.randint(0, width - w + 1) if width > w else 0
         else:
             i, j, h, w = crop_params
 
         self.params = {"crop_params": (i, j, h, w)}
+        
+        # Crop image
         if img.ndim == 2:
-            return img[i : i + h, j : j + w]
-        return img[i : i + h, j : j + w, :]
+            cropped_img = img[i:i+h, j:j+w]
+        else:
+            cropped_img = img[i:i+h, j:j+w, :]
+        
+        # Crop mask if provided
+        if mask is not None:
+            if mask.ndim == 2:
+                cropped_mask = mask[i:i+h, j:j+w]
+            else:
+                cropped_mask = mask[i:i+h, j:j+w, :]
+            return cropped_img, cropped_mask
+        
+        return cropped_img
+
+
+class ResizeShortestEdge:
+    """Resize image so shortest edge matches target, then center crop to exact 
+    target size if necessary."""
+
+    def __init__(self, target_size):
+        """
+        Args:
+            target_size (int or tuple): Target size (H, W)
+        """
+        if isinstance(target_size, int):
+            self.target_h = self.target_w = target_size
+        else:
+            self.target_h, self.target_w = target_size
+
+    def __call__(self, img, mask=None):
+        """
+        Apply resize transform.
+
+        Args:
+            img (np.ndarray): Input image array
+            mask (np.ndarray, optional): Input mask array
+
+        Returns:
+            np.ndarray or tuple: Resized image, or tuple of (image, mask) if mask provided
+        """
+        h, w = img.shape[:2]
+        
+        # Resize shortest edge to target
+        if h < w:
+            new_h = self.target_h
+            new_w = int(w * (self.target_h / h))
+        else:
+            new_w = self.target_w
+            new_h = int(h * (self.target_w / w))
+        
+        img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        if mask is not None:
+            mask = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
+
+        # Center crop to exact target size if not already at target
+        if new_h != self.target_h or new_w != self.target_w:
+            i = (new_h - self.target_h) // 2
+            j = (new_w - self.target_w) // 2
+
+            if img.ndim == 2:
+                img = img[i:i+self.target_h, j:j+self.target_w]
+            else:
+                img = img[i:i+self.target_h, j:j+self.target_w, :]
+
+            if mask is not None:
+                if mask.ndim == 2:
+                    mask = mask[i:i+self.target_h, j:j+self.target_w]
+                else:
+                    mask = mask[i:i+self.target_h, j:j+self.target_w, :]
+
+        if mask is not None:
+            return img, mask
+        return img
 
 
 class RandomHorizontalFlipWithParams:

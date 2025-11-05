@@ -8,7 +8,13 @@ from typing import Dict, Optional
 from ..logger import get_logger
 from ..processing.archive import video_archive_manager
 from ..processing.media import process_video_bytes_sample
-from ..processing.transforms import apply_random_augmentations, compress_video_frames_jpeg_torchvision
+from ..processing.transforms import (
+    apply_random_augmentations,
+    compress_video_frames_jpeg_torchvision,
+    extract_target_size_from_input_specs,
+    DEFAULT_TARGET_SIZE,
+    DEFAULT_BATCH_SIZE,
+)
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_video_datasets,
@@ -17,7 +23,7 @@ from ..dataset.config import (
 )
 from ..dataset.iterator import DatasetIterator
 from .utils import (
-    ConfusionMatrix,
+    Metrics,
     multiclass_to_binary,
     update_generator_stats,
     calculate_per_source_accuracy,
@@ -30,12 +36,62 @@ from ..model.inference import process_model_output
 logger = get_logger(__name__)
 
 
+def process_video_batch(
+    session,
+    input_specs,
+    batch_videos,
+    batch_metadata,
+    metrics,
+    generator_stats,
+    incorrect_samples,
+):
+    """push a batch of videos through the model."""
+    if not batch_videos:
+        return 0, 0, []
+
+    batch_array = np.stack(batch_videos, axis=0)
+
+    start = time.time()
+    outputs = session.run(None, {input_specs[0].name: batch_array})
+    batch_inference_time = (time.time() - start) * 1000
+    per_sample_time = batch_inference_time / len(batch_videos)
+    inference_times = [per_sample_time] * len(batch_videos)
+
+    correct = 0
+    for i, (true_label_binary, true_label_multiclass, sample, sample_index, dataset_name) in enumerate(batch_metadata):
+        predicted_binary, predicted_multiclass, pred_probs = process_model_output(outputs[0][i])
+
+        metrics.update(
+            true_label_binary, predicted_binary,
+            true_label_multiclass, predicted_multiclass,
+            pred_probs
+        )
+
+        is_correct = predicted_binary == true_label_binary
+        if is_correct:
+            correct += 1
+        else:
+            if should_track_sample(sample, dataset_name):
+                misclassification = create_misclassification_record(
+                    sample,
+                    sample_index,
+                    true_label_multiclass,
+                    predicted_multiclass,
+                )
+                incorrect_samples.append(misclassification)
+
+        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
+
+    return correct, len(batch_videos), inference_times
+
+
 async def video_prefetcher(
     dataset_iterator,
     dataset_config,
     queue: asyncio.Queue,
     max_queue_size: int = 2,
     seed: int = None,
+    target_size=None,
 ):
     """
     Prefetch and preprocess videos from the dataset iterator.
@@ -46,6 +102,7 @@ async def video_prefetcher(
         queue: Async queue to put processed videos into
         max_queue_size: Maximum size of prefetch queue
         seed: Optional random seed for reproducible augmentations
+        target_size: Optional (H, W) tuple for fixed target size from model specs
     """
     try:
         sample_index = 0
@@ -63,7 +120,9 @@ async def video_prefetcher(
                     tchw = video_array[0]
                     thwc = np.transpose(tchw, (0, 2, 3, 1))
                     sample_seed = None if seed is None else (seed + sample_index)
-                    aug_thwc, _, _, _ = apply_random_augmentations(thwc, seed=sample_seed)
+                    aug_thwc, _, _, _ = apply_random_augmentations(
+                        thwc, target_size, seed=sample_seed
+                    )
                     aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
                     video_array = np.expand_dims(aug_tchw, 0)
@@ -115,12 +174,19 @@ async def run_video_benchmark(
 
         logger.info(f"Using {len(available_datasets)} video datasets for benchmarking")
 
+        target_size = extract_target_size_from_input_specs(input_specs)
+        if target_size is None:
+            target_size = DEFAULT_TARGET_SIZE
+            logger.info(f"Model has dynamic axes, using default target size: {target_size[0]}x{target_size[1]}")
+        else:
+            logger.info(f"Using fixed target size from model: {target_size[0]}x{target_size[1]}")
+
         with video_archive_manager(cache_dir=cache_dir) as video_cache:
             correct = 0
             total = 0
             inference_times = []
             per_dataset_results = {}
-            confusion_matrix = ConfusionMatrix()
+            metrics = Metrics()
             skipped_samples = 0
             incorrect_samples = []  # Track misclassified gasstation samples
 
@@ -186,21 +252,26 @@ async def run_video_benchmark(
                     prefetch_queue = asyncio.Queue(maxsize=2)
 
                     prefetch_task = asyncio.create_task(
-                        video_prefetcher(dataset_iterator, dataset_config, prefetch_queue, seed=seed)
+                        video_prefetcher(
+                            dataset_iterator,
+                            dataset_config,
+                            prefetch_queue,
+                            seed=seed,
+                            target_size=target_size,
+                        )
                     )
 
-                    sample_index = 0  # Track sample index for unique IDs
-                    # Process videos from the queue
+                    sample_index = 0
+                    batch_videos = []
+                    batch_metadata = []
+
                     while True:
-                        # Get next preprocessed video from queue
                         item = await prefetch_queue.get()
                         item_type = item[0]
 
                         if item_type == "done":
-                            # End of dataset
                             break
                         elif item_type == "skip":
-                            # Skipped sample
                             dataset_skipped += 1
                             skipped_samples += 1
                             if dataset_skipped % 10 == 0:
@@ -209,67 +280,50 @@ async def run_video_benchmark(
                                 )
                             continue
                         elif item_type == "error":
-                            # Error during preprocessing
                             benchmark_results["errors"].append(f"Video processing error during prefetch")
                             dataset_skipped += 1
                             skipped_samples += 1
                             continue
 
-                        # Extract video data
                         video_array, true_label_binary, true_label_multiclass, sample = item[1], item[2], item[3], item[4]
-
                         sample_index += 1
                         
-                        start = time.time()
-                        outputs = session.run(None, {input_specs[0].name: video_array})
-                        inference_times.append((time.time() - start) * 1000)
+                        batch_videos.append(video_array[0])
+                        batch_metadata.append((true_label_binary, true_label_multiclass, sample, sample_index, dataset_config.name))
 
-                        predicted_binary, predicted_multiclass = process_model_output(outputs[0])
+                        if len(batch_videos) >= DEFAULT_BATCH_SIZE:
+                            batch_correct, batch_total, batch_times = process_video_batch(
+                                session, input_specs, batch_videos, batch_metadata,
+                                metrics, generator_stats, incorrect_samples
+                            )
+                            correct += batch_correct
+                            dataset_correct += batch_correct
+                            total += batch_total
+                            dataset_total += batch_total
+                            inference_times.extend(batch_times)
+                            
+                            batch_videos = []
+                            batch_metadata = []
 
-                        confusion_matrix.update(
-                            true_label_binary, predicted_binary,
-                            true_label_multiclass, predicted_multiclass
-                        )
-
-                        is_correct = predicted_binary == true_label_binary
-                        if is_correct:
-                            correct += 1
-                            dataset_correct += 1
-                        else:
-                            if should_track_sample(sample, dataset_config.name):
-                                misclassification = create_misclassification_record(
-                                    sample,
-                                    sample_index,
-                                    true_label_multiclass,
-                                    predicted_multiclass,
+                            if total % 500 == 0:
+                                logger.info(
+                                    f"Progress: {total}/{target_size} samples, "
+                                    f"Accuracy: {correct / total:.2%}"
                                 )
-                                incorrect_samples.append(misclassification)
-
-                        total += 1
-                        dataset_total += 1
-
-                        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
-
-                        if total % 500 == 0:
-                            logger.info(
-                                f"Progress: {total}/{target_size} samples, "
-                                f"Accuracy: {correct / total:.2%}"
-                            )
-
-                        if total % 100 == 0:
-                            frames_count = video_array.shape[1] if video_array is not None else 0
-                            logger.debug(
-                                f"Sample {total}: "
-                                f"True={true_label_multiclass}→{true_label_binary}, "
-                                f"Pred={predicted_multiclass}→{predicted_binary}, "
-                                f"Correct={is_correct}, "
-                                f"Generator={sample.get('model_name', 'unknown')}, "
-                                f"Dataset={dataset_config.name}, "
-                                f"Frames={frames_count}"
-                            )
                     
                     # Wait for prefetcher to finish
                     await prefetch_task
+
+                    if batch_videos:
+                        batch_correct, batch_total, batch_times = process_video_batch(
+                            session, input_specs, batch_videos, batch_metadata,
+                            metrics, generator_stats, incorrect_samples
+                        )
+                        correct += batch_correct
+                        dataset_correct += batch_correct
+                        total += batch_total
+                        dataset_total += batch_total
+                        inference_times.extend(batch_times)
 
                     dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
                     per_dataset_results[dataset_config.name] = {
@@ -298,8 +352,11 @@ async def run_video_benchmark(
             avg_inference_time = sum(inference_times) / len(inference_times) if inference_times else 0.0
             p95_inference_time = float(np.percentile(inference_times, 95)) if inference_times else 0.0
 
-            binary_mcc = confusion_matrix.calculate_binary_mcc() if total > 0 else 0.0
-            multiclass_mcc = confusion_matrix.calculate_multiclass_mcc()
+            binary_mcc = metrics.calculate_binary_mcc() if total > 0 else 0.0
+            multiclass_mcc = metrics.calculate_multiclass_mcc()
+            binary_ce = metrics.calculate_binary_cross_entropy()
+            multiclass_ce = metrics.calculate_multiclass_cross_entropy()
+            sn34_score = metrics.compute_sn34_score()
 
             per_source_accuracy = calculate_per_source_accuracy(available_datasets, per_dataset_results)
 
@@ -309,12 +366,15 @@ async def run_video_benchmark(
 
             benchmark_results["video_results"] = {
                 "benchmark_score": accuracy,
+                "sn34_score": sn34_score,
                 "total_samples": total,
                 "correct_predictions": correct,
                 "avg_inference_time_ms": avg_inference_time,
                 "p95_inference_time_ms": p95_inference_time,
                 "binary_mcc": binary_mcc,
                 "multiclass_mcc": multiclass_mcc,
+                "binary_cross_entropy": binary_ce,
+                "multiclass_cross_entropy": multiclass_ce,
                 "per_source_accuracy": per_source_accuracy,
                 "per_dataset_results": per_dataset_results,
                 "dataset_info": dataset_info,

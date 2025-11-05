@@ -6,7 +6,13 @@ from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.media import process_image_sample
-from ..processing.transforms import apply_random_augmentations, compress_image_jpeg_pil
+from ..processing.transforms import (
+    apply_random_augmentations,
+    compress_image_jpeg_pil,
+    extract_target_size_from_input_specs,
+    DEFAULT_TARGET_SIZE,
+    DEFAULT_BATCH_SIZE,
+)
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_image_datasets,
@@ -15,7 +21,7 @@ from ..dataset.config import (
 )
 from ..dataset.iterator import DatasetIterator
 from .utils import (
-    ConfusionMatrix,
+    Metrics,
     multiclass_to_binary,
     update_generator_stats,
     calculate_per_source_accuracy,
@@ -26,6 +32,56 @@ from .utils import (
 from ..model.inference import process_model_output
 
 logger = get_logger(__name__)
+
+
+def process_batch(
+    session,
+    input_specs,
+    batch_images,
+    batch_metadata,
+    metrics,
+    generator_stats,
+    incorrect_samples,
+):
+    """push a batch of images through the model."""
+    if not batch_images:
+        return 0, 0, []
+
+    batch_array = np.stack(batch_images, axis=0)
+
+    start = time.time()
+    outputs = session.run(None, {input_specs[0].name: batch_array})
+    batch_inference_time = (time.time() - start) * 1000
+    per_sample_time = batch_inference_time / len(batch_images)
+    inference_times = [per_sample_time] * len(batch_images)
+
+    correct = 0
+    for i, (true_label_multiclass, sample, sample_index, dataset_name) in enumerate(batch_metadata):
+        predicted_binary, predicted_multiclass, pred_probs = process_model_output(outputs[0][i])
+
+        true_label_binary = multiclass_to_binary(true_label_multiclass)
+        metrics.update(
+            true_label_binary, predicted_binary,
+            true_label_multiclass, predicted_multiclass,
+            pred_probs
+        )
+
+        is_correct = predicted_binary == true_label_binary
+        if is_correct:
+            correct += 1
+        else:
+            if should_track_sample(sample, dataset_name):
+                misclassification = create_misclassification_record(
+                    sample,
+                    sample_index,
+                    true_label_multiclass,
+                    predicted_multiclass,
+                )
+                incorrect_samples.append(misclassification)
+
+        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
+    
+    return correct, len(batch_images), inference_times
 
 
 async def run_image_benchmark(
@@ -58,11 +114,18 @@ async def run_image_benchmark(
 
         logger.info(f"Using {len(available_datasets)} image datasets for benchmarking")
 
+        target_size = extract_target_size_from_input_specs(input_specs)
+        if target_size is None:
+            target_size = DEFAULT_TARGET_SIZE
+            logger.info(f"Model has dynamic axes, using default target size: {target_size}")
+        else:
+            logger.info(f"Using fixed target size from model: {target_size}")
+
         correct = 0
         total = 0
         inference_times = []
         per_dataset_results = {}
-        confusion_matrix = ConfusionMatrix()
+        metrics = Metrics()
         incorrect_samples = []  # Track misclassified gasstation samples
 
         target_size = get_benchmark_size("image", mode)
@@ -121,6 +184,9 @@ async def run_image_benchmark(
                     seed=seed,
                 )
 
+                batch_images = []
+                batch_metadata = []
+
                 sample_index = 0
                 for sample in dataset_iterator:
                     sample_index += 1
@@ -134,65 +200,51 @@ async def run_image_benchmark(
                             chw = image_array[0]
                             hwc = np.transpose(chw, (1, 2, 0))
                             sample_seed = None if seed is None else (seed + sample_index)
-                            aug_hwc, _, _, _ = apply_random_augmentations(hwc, seed=sample_seed)
+                            aug_hwc, _, _, _ = apply_random_augmentations(
+                                hwc, target_size, seed=sample_seed
+                            )
                             aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
                             aug_chw = np.transpose(aug_hwc, (2, 0, 1))
-                            image_array = np.expand_dims(aug_chw, 0)
                         except Exception:
-                            pass
+                            continue
 
-                        # Run inference
-                        start = time.time()
-                        outputs = session.run(None, {input_specs[0].name: image_array})
-                        inference_times.append((time.time() - start) * 1000)
+                        batch_images.append(aug_chw)
+                        batch_metadata.append((true_label_multiclass, sample, sample_index, dataset_config.name))
 
-                        predicted_binary, predicted_multiclass = process_model_output(outputs[0])
+                        if len(batch_images) >= DEFAULT_BATCH_SIZE:
+                            batch_correct, batch_total, batch_times = process_batch(
+                                session, input_specs, batch_images, batch_metadata,
+                                metrics, generator_stats, incorrect_samples
+                            )
+                            correct += batch_correct
+                            dataset_correct += batch_correct
+                            total += batch_total
+                            dataset_total += batch_total
+                            inference_times.extend(batch_times)
+                            
+                            batch_images = []
+                            batch_metadata = []
 
-                        true_label_binary = multiclass_to_binary(true_label_multiclass)
-                        confusion_matrix.update(
-                            true_label_binary, predicted_binary,
-                            true_label_multiclass, predicted_multiclass
-                        )
-
-                        is_correct = predicted_binary == true_label_binary
-                        if is_correct:
-                            correct += 1
-                            dataset_correct += 1
-                        else:
-                            # Track misclassified gasstation samples with generator info
-                            if should_track_sample(sample, dataset_config.name):
-                                misclassification = create_misclassification_record(
-                                    sample,
-                                    sample_index,
-                                    true_label_multiclass,
-                                    predicted_multiclass,
+                            if total % 500 == 0:
+                                logger.info(
+                                    f"Progress: {total}/{target_size} samples, "
+                                    f"Accuracy: {correct / total:.2%}"
                                 )
-                                incorrect_samples.append(misclassification)
-
-                        total += 1
-                        dataset_total += 1
-
-                        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
-
-                        if total % 500 == 0:
-                            logger.info(
-                                f"Progress: {total}/{target_size} samples, "
-                                f"Accuracy: {correct / total:.2%}"
-                            )
-
-                        if total % 100 == 0:
-                            logger.debug(
-                                f"Sample {total}: "
-                                f"True={true_label_multiclass}→{true_label_binary}, "
-                                f"Pred={predicted_multiclass}→{predicted_binary}, "
-                                f"Correct={is_correct}, "
-                                f"Generator={sample.get('model_name', 'unknown')}, "
-                                f"Dataset={dataset_config.name}"
-                            )
 
                     except Exception as e:
                         logger.warning(f"Failed to process image sample from {dataset_config.name}: {e}")
                         benchmark_results["errors"].append(f"Image processing error: {str(e)[:100]}")
+
+                if batch_images:
+                    batch_correct, batch_total, batch_times = process_batch(
+                        session, input_specs, batch_images, batch_metadata,
+                        metrics, generator_stats, incorrect_samples
+                    )
+                    correct += batch_correct
+                    dataset_correct += batch_correct
+                    total += batch_total
+                    dataset_total += batch_total
+                    inference_times.extend(batch_times)
 
                 dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
                 per_dataset_results[dataset_config.name] = {
@@ -217,8 +269,11 @@ async def run_image_benchmark(
         avg_inference_time = sum(inference_times) / len(inference_times) if inference_times else 0.0
         p95_inference_time = float(np.percentile(inference_times, 95)) if inference_times else 0.0
 
-        binary_mcc = confusion_matrix.calculate_binary_mcc() if total > 0 else 0.0
-        multiclass_mcc = confusion_matrix.calculate_multiclass_mcc()
+        binary_mcc = metrics.calculate_binary_mcc() if total > 0 else 0.0
+        multiclass_mcc = metrics.calculate_multiclass_mcc()
+        binary_ce = metrics.calculate_binary_cross_entropy()
+        multiclass_ce = metrics.calculate_multiclass_cross_entropy()
+        sn34_score = metrics.compute_sn34_score()
 
         per_source_accuracy = calculate_per_source_accuracy(available_datasets, per_dataset_results)
 
@@ -226,12 +281,15 @@ async def run_image_benchmark(
 
         benchmark_results["image_results"] = {
             "benchmark_score": accuracy,
+            "sn34_score": sn34_score,
             "total_samples": total,
             "correct_predictions": correct,
             "avg_inference_time_ms": avg_inference_time,
             "p95_inference_time_ms": p95_inference_time,
             "binary_mcc": binary_mcc,
             "multiclass_mcc": multiclass_mcc,
+            "binary_cross_entropy": binary_ce,
+            "multiclass_cross_entropy": multiclass_ce,
             "per_source_accuracy": per_source_accuracy,
             "per_dataset_results": per_dataset_results,
             "dataset_info": dataset_info,

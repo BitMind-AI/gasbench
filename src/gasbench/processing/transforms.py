@@ -187,9 +187,7 @@ def get_random_augmentations(target_res, crop_scale):
         ComposeWithParams: Composed transform pipeline with basic augmentations
     """
     base = get_base_transforms(target_res, crop_scale)
-    transforms_list = [
-        RandomRotationWithParams(degrees=20, order=2),
-    ] + base.transforms + [
+    transforms_list = base.transforms + [
         RandomHorizontalFlipWithParams(),
         RandomVerticalFlipWithParams(),
     ]
@@ -208,14 +206,11 @@ def get_random_augmentations_medium(target_res, crop_scale):
         ComposeWithParams: Composed transform pipeline with medium distortions
     """
     base = get_base_transforms(target_res, crop_scale)
-    transforms_list = [
-        RandomRotationWithParams(degrees=20, order=2),
-    ] + base.transforms + [
+    transforms_list = base.transforms + [
         RandomHorizontalFlipWithParams(),
         RandomVerticalFlipWithParams(),
         ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=1),
         ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=1),
-        ApplyDeeperForensicsDistortion("JPEG", level_min=0, level_max=1),
     ]
     return ComposeWithParams(transforms_list)
 
@@ -232,14 +227,11 @@ def get_random_augmentations_hard(target_res, crop_scale):
         ComposeWithParams: Composed transform pipeline with severe distortions
     """
     base = get_base_transforms(target_res, crop_scale)
-    transforms_list = [
-        RandomRotationWithParams(degrees=20, order=2),
-    ] + base.transforms + [
+    transforms_list = base.transforms + [
         RandomHorizontalFlipWithParams(),
         RandomVerticalFlipWithParams(),
         ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=2),
         ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=2),
-        ApplyDeeperForensicsDistortion("JPEG", level_min=0, level_max=2),
         ApplyDeeperForensicsDistortion("GNC", level_min=0, level_max=2),
         ApplyDeeperForensicsDistortion("GB", level_min=0, level_max=2),
     ]

@@ -122,7 +122,6 @@ async def video_prefetcher(
                     aug_thwc, _, _, _ = apply_random_augmentations(
                         thwc, target_size, seed=sample_seed
                     )
-                    aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
 
                     video_array = np.expand_dims(aug_tchw, 0)
@@ -257,8 +256,8 @@ async def run_video_benchmark(
                         seed=seed,
                     )
 
-                    # Create prefetch queue (size 2 means we can have 1 video being processed + 1 ready)
-                    prefetch_queue = asyncio.Queue(maxsize=2)
+                    # Create prefetch queue with larger size to allow more parallelism
+                    prefetch_queue = asyncio.Queue(maxsize=16)
 
                     prefetch_task = asyncio.create_task(
                         video_prefetcher(

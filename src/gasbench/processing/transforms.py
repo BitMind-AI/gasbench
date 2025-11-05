@@ -312,11 +312,11 @@ class ComposeWithParams:
             output_frames = output_frames[0]
             if len(output_masks):
                 output_masks = output_masks[0]
-
-        output_frames = np.array(output_frames)
-        if len(output_masks):
-            output_masks = np.array(output_masks)
-            output_masks = np.array(output_masks > 0).astype(np.uint8)
+        else:
+            output_frames = np.array(output_frames)
+            if len(output_masks):
+                output_masks = np.array(output_masks)
+                output_masks = (output_masks > 0).astype(np.uint8)
 
         return output_frames, output_masks
 

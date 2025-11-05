@@ -241,12 +241,23 @@ def print_benchmark_summary(benchmark_results: Dict):
             if p95_time > 0:
                 print(f"  P95 Inference Time: {p95_time:.1f}ms")
 
+            sn34_score = results.get("sn34_score", 0.0)
+            if sn34_score != 0.0:
+                print(f"  SN34 Score: {sn34_score:.4f}")
+
             binary_mcc = results.get("binary_mcc", 0.0)
             multiclass_mcc = results.get("multiclass_mcc", 0.0)
             if binary_mcc != 0.0:
                 print(f"  Binary MCC: {binary_mcc:.4f}")
             if multiclass_mcc != 0.0:
                 print(f"  Multiclass MCC: {multiclass_mcc:.4f}")
+
+            binary_ce = results.get("binary_cross_entropy", 0.0)
+            multiclass_ce = results.get("multiclass_cross_entropy", 0.0)
+            if binary_ce != 0.0:
+                print(f"  Binary Cross-Entropy: {binary_ce:.4f}")
+            if multiclass_ce != 0.0:
+                print(f"  Multiclass Cross-Entropy: {multiclass_ce:.4f}")
 
             per_dataset = results.get("per_dataset_results", {})
             if per_dataset:

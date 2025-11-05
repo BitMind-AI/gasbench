@@ -250,7 +250,7 @@ Examples:
     run_parser.add_argument(
         "--batch-size",
         type=int,
-        help="Batch size for model inference (default: 8)",
+        help="Batch size for model inference (default: 32 for images, 4 for videos)",
     )
 
     run_parser.set_defaults(func=command_run)

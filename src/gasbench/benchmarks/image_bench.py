@@ -11,9 +11,8 @@ from ..processing.transforms import (
     apply_random_augmentations,
     compress_image_jpeg_pil,
     extract_target_size_from_input_specs,
-    DEFAULT_TARGET_SIZE,
-    DEFAULT_BATCH_SIZE,
 )
+from ..config import DEFAULT_TARGET_SIZE, DEFAULT_IMAGE_BATCH_SIZE
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_image_datasets,
@@ -100,7 +99,7 @@ async def run_image_benchmark(
     """Test model on benchmark image datasets for AI-generated content detection."""
     
     if batch_size is None:
-        batch_size = DEFAULT_BATCH_SIZE
+        batch_size = DEFAULT_IMAGE_BATCH_SIZE
 
     try:
         hf_token = os.environ.get("HF_TOKEN")

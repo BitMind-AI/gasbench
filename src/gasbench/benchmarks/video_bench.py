@@ -12,9 +12,8 @@ from ..processing.transforms import (
     apply_random_augmentations,
     compress_video_frames_jpeg_torchvision,
     extract_target_size_from_input_specs,
-    DEFAULT_TARGET_SIZE,
-    DEFAULT_BATCH_SIZE,
 )
+from ..config import DEFAULT_TARGET_SIZE, DEFAULT_VIDEO_BATCH_SIZE
 from ..dataset.config import (
     get_benchmark_size,
     discover_benchmark_video_datasets,
@@ -125,6 +124,7 @@ async def video_prefetcher(
                     )
                     aug_thwc = compress_video_frames_jpeg_torchvision(aug_thwc, quality=75)
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
+
                     video_array = np.expand_dims(aug_tchw, 0)
                 except Exception as e:
                     logger.error(f"Video augmentation failed: {e}")
@@ -160,7 +160,7 @@ async def run_video_benchmark(
     """Test model on benchmark video datasets for AI-generated content detection."""
     
     if batch_size is None:
-        batch_size = DEFAULT_BATCH_SIZE
+        batch_size = DEFAULT_VIDEO_BATCH_SIZE
 
     try:
         hf_token = os.environ.get("HF_TOKEN")

@@ -106,33 +106,75 @@ class Metrics:
         loss = -np.sum(np.log(y_probs[np.arange(n_samples), y_true])) / n_samples
         return float(loss)
     
-    def compute_sn34_score(self) -> float:
+    def compute_sn34_score(self, alpha: float = 1.0, beta: float = 1.0,
+                        agg: str = "geomean") -> float:
         """
-        Compute combined SN34 benchmark score from MCC and cross-entropy metrics.
+        Combined SN34 score from MCC and Cross-Entropy with principled normalization.
 
-        Normalizes both metrics to [0, 1] where higher is better, then combines:
-        - MCC: (mcc + 1) / 2  (maps [-1, 1] to [0, 1])
-        - CE: exp(-ce)  (maps [0, ∞] to [1, 0])
+        - MCC in [-1,1] -> mcc_score in [0,1] via (mcc+1)/2, then sharpen via alpha.
+        - CE -> exp(-CE) = 1/perplexity; rescale so random=0 and perfect=1:
+            ce_score = (exp(-CE) - 1/K) / (1 - 1/K), then sharpen via beta.
+        - Aggregate binary + multiclass with sample-count weights.
+        - Combine MCC and CE via geometric mean (default) to penalize imbalance.
+
+        Args:
+            alpha: exponent on MCC score (>=1 boosts top-end separation).
+            beta: exponent on CE score (>=1 boosts top-end separation).
+            agg: "geomean" | "harmmean" | "mean" for combining MCC vs CE.
 
         Returns:
-            float: Combined score in [0, 1], higher is better
+            float in [0,1].
         """
-        binary_mcc = self.calculate_binary_mcc()
-        multiclass_mcc = self.calculate_multiclass_mcc()
-        binary_ce = self.calculate_binary_cross_entropy()
-        multiclass_ce = self.calculate_multiclass_cross_entropy()
+        # --- metrics ---
+        bin_mcc = float(self.calculate_binary_mcc())           # [-1, 1]
+        mul_mcc = float(self.calculate_multiclass_mcc())       # [-1, 1]
+        bin_ce  = float(self.calculate_binary_cross_entropy()) # >= 0
+        mul_ce  = float(self.calculate_multiclass_cross_entropy()) # >= 0
 
-        binary_mcc_norm = (binary_mcc + 1.0) / 2.0
-        multiclass_mcc_norm = (multiclass_mcc + 1.0) / 2.0
-        mcc_score = (binary_mcc_norm + multiclass_mcc_norm) / 2.0
+        # --- sample counts for micro-weighting ---
+        n_bin = int(getattr(self, "n_binary_samples", 1))
+        n_mul = int(getattr(self, "n_multiclass_samples", 1))
+        w_bin = n_bin / max(n_bin + n_mul, 1)
+        w_mul = 1.0 - w_bin
 
-        binary_ce_norm = np.exp(-binary_ce)
-        multiclass_ce_norm = np.exp(-multiclass_ce)
-        ce_score = (binary_ce_norm + multiclass_ce_norm) / 2.0
+        # --- safe clamps ---
+        import math
+        def safe_exp_neg(x):  # clamp CE to avoid under/overflow
+            x = max(0.0, min(x, 20.0))
+            return math.exp(-x)
 
-        sn34_score = (mcc_score + ce_score) / 2.0
+        # --- MCC normalization to [0,1] ---
+        bin_mcc_s = max(0.0, min((bin_mcc + 1.0) / 2.0, 1.0))
+        mul_mcc_s = max(0.0, min((mul_mcc + 1.0) / 2.0, 1.0))
+        mcc_score = w_bin * bin_mcc_s + w_mul * mul_mcc_s
+        mcc_score = mcc_score ** alpha
 
-        return float(sn34_score)
+        # --- CE -> random=0, perfect=1 via K-aware rescale ---
+        # binary: K=2; your multiclass: K=3 (0,1,2)
+        def ce_to_score(ce: float, K: int) -> float:
+            base = 1.0 / K                # value for random predictor
+            val  = safe_exp_neg(ce)       # 1/perplexity
+            if K <= 1:                    # degenerate safeguard
+                return 1.0 if ce == 0.0 else 0.0
+            num = max(0.0, val - base)
+            den = 1.0 - base
+            return max(0.0, min(num / den, 1.0))
+
+        bin_ce_s = ce_to_score(bin_ce, K=2)
+        mul_ce_s = ce_to_score(mul_ce, K=3)
+        ce_score = (w_bin * bin_ce_s + w_mul * mul_ce_s) ** beta
+
+        # --- combine MCC vs CE ---
+        if agg == "geomean":
+            final = math.sqrt(max(1e-12, mcc_score * ce_score))
+        elif agg == "harmmean":
+            denom = max(1e-12, (mcc_score + ce_score))
+            final = 2.0 * mcc_score * ce_score / denom
+        else:  # arithmetic mean
+            final = 0.5 * (mcc_score + ce_score)
+
+        return float(max(0.0, min(final, 1.0)))
+
 
 
 def multiclass_to_binary(label: int) -> int:

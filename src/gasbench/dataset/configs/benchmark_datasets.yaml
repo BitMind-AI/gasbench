@@ -1,7 +1,7 @@
 # Benchmark Dataset Configurations
 
-image_benchmark_size: 10000
-video_benchmark_size: 5000
+image_benchmark_size: 35000
+video_benchmark_size: 15000
 
 image:
   - name: gasstation-generated-images

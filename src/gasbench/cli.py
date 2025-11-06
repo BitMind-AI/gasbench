@@ -97,6 +97,7 @@ def command_run(args):
                 download_latest_gasstation_data=args.download_latest_gasstation_data,
                 seed=args.seed,
                 batch_size=args.batch_size,
+                dataset_config=args.dataset_config,
             )
         )
 
@@ -160,6 +161,7 @@ def command_download(args):
                 cache_policy=getattr(args, 'cache_policy', None),
                 allow_eviction=not getattr(args, 'no_eviction', False),
                 unlimited_samples=getattr(args, 'unlimited_samples', False),
+                dataset_config=getattr(args, 'dataset_config', None),
             )
         )
 
@@ -252,6 +254,12 @@ Examples:
         type=int,
         help="Batch size for model inference (default: 32 for images, 4 for videos)",
     )
+    run_parser.add_argument(
+        "--dataset-config",
+        type=str,
+        metavar="PATH",
+        help="Path to custom dataset YAML config file (default: uses bundled config)",
+    )
 
     run_parser.set_defaults(func=command_run)
 
@@ -319,6 +327,12 @@ Examples:
         "--unlimited-samples",
         action="store_true",
         help="Download ALL available samples (no 10k/5k cap)",
+    )
+    download_parser.add_argument(
+        "--dataset-config",
+        type=str,
+        metavar="PATH",
+        help="Path to custom dataset YAML config file (default: uses bundled config)",
     )
 
     download_parser.set_defaults(func=command_download)

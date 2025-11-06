@@ -8,8 +8,6 @@ from typing import Dict, Optional
 from ..logger import get_logger
 from ..processing.media import process_image_sample
 from ..processing.transforms import (
-    apply_random_augmentations,
-    compress_image_jpeg_pil,
     extract_target_size_from_input_specs,
 )
 from ..config import DEFAULT_TARGET_SIZE, DEFAULT_IMAGE_BATCH_SIZE
@@ -20,6 +18,11 @@ from ..dataset.config import (
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
+from ..utils.resource_optimization import (
+    get_optimal_preprocessing_workers,
+    calculate_optimal_batch_size,
+)
+from ..utils.parallel_preprocessing import ParallelPreprocessor
 from .utils import (
     Metrics,
     multiclass_to_binary,
@@ -125,6 +128,19 @@ async def run_image_benchmark(
         else:
             logger.info(f"Using fixed target size from model: {target_size}")
 
+        # Calculate optimal batch size if not provided
+        if batch_size is None or batch_size == DEFAULT_IMAGE_BATCH_SIZE:
+            logger.info("Calculating optimal batch size based on GPU memory...")
+            batch_size = calculate_optimal_batch_size(
+                session, input_specs, 'image', target_size
+            )
+        else:
+            logger.info(f"Using user-specified batch size: {batch_size}")
+        
+        # Get optimal number of preprocessing workers
+        num_workers = get_optimal_preprocessing_workers()
+        logger.info(f"🚀 Resource optimization: batch_size={batch_size}, preprocessing_workers={num_workers}")
+
         correct = 0
         total = 0
         inference_times = []
@@ -192,57 +208,71 @@ async def run_image_benchmark(
                     seed=seed,
                 )
 
-                batch_images = []
-                batch_metadata = []
+                with ParallelPreprocessor(num_workers, 'image', target_size, apply_jpeg=True) as preprocessor:
+                    batch_images = []
+                    batch_metadata = []
+                    preprocessing_queue = []
 
-                sample_index = 0
-                for sample in dataset_iterator:
-                    sample_index += 1
-                    try:
-                        image_array, true_label_multiclass = process_image_sample(sample)
+                    # Buffer size for parallel preprocessing (process multiple batches at once)
+                    preprocess_buffer_size = batch_size * num_workers
 
-                        if image_array is None or true_label_multiclass is None:
-                            continue
-
+                    sample_index = 0
+                    for sample in dataset_iterator:
+                        sample_index += 1
                         try:
-                            chw = image_array[0]
-                            hwc = np.transpose(chw, (1, 2, 0))
-                            sample_seed = None if seed is None else (seed + sample_index)
-                            aug_hwc, _, _, _ = apply_random_augmentations(
-                                hwc, target_size, seed=sample_seed
-                            )
-                            aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
-                            aug_chw = np.transpose(aug_hwc, (2, 0, 1))
+                            image_array, true_label_multiclass = process_image_sample(sample)
+
+                            if image_array is None or true_label_multiclass is None:
+                                continue
+
+                            preprocessing_queue.append((
+                                image_array, 
+                                true_label_multiclass, 
+                                sample_index, 
+                                (sample, dataset_config.name)
+                            ))
+
+                            # When buffer is full, process in parallel
+                            if len(preprocessing_queue) >= preprocess_buffer_size:
+                                processed_samples = preprocessor.process_batch(preprocessing_queue)
+                                preprocessing_queue = []
+
+                                # Add processed samples to inference batch
+                                for aug_chw, label, idx, (samp, ds_name) in processed_samples:
+                                    batch_images.append(aug_chw)
+                                    batch_metadata.append((label, samp, idx, ds_name))
+
+                                    # Run inference when batch is full
+                                    if len(batch_images) >= batch_size:
+                                        batch_correct, batch_total, batch_times = process_batch(
+                                            session, input_specs, batch_images, batch_metadata,
+                                            metrics, generator_stats, incorrect_samples
+                                        )
+                                        correct += batch_correct
+                                        dataset_correct += batch_correct
+                                        total += batch_total
+                                        dataset_total += batch_total
+                                        inference_times.extend(batch_times)
+
+                                        batch_images = []
+                                        batch_metadata = []
+
+                                        if total % 500 == 0:
+                                            logger.info(
+                                                f"Progress: {total}/{actual_total_samples} samples, "
+                                                f"Accuracy: {correct / total:.2%}"
+                                            )
+
                         except Exception as e:
-                            logger.error(f"Augmentation failed: {e}\n{traceback.format_exc()}")
-                            continue
+                            logger.warning(f"Failed to process image sample from {dataset_config.name}: {e}")
+                            benchmark_results["errors"].append(f"Image processing error: {str(e)[:100]}")
 
-                        batch_images.append(aug_chw)
-                        batch_metadata.append((true_label_multiclass, sample, sample_index, dataset_config.name))
-
-                        if len(batch_images) >= batch_size:
-                            batch_correct, batch_total, batch_times = process_batch(
-                                session, input_specs, batch_images, batch_metadata,
-                                metrics, generator_stats, incorrect_samples
-                            )
-                            correct += batch_correct
-                            dataset_correct += batch_correct
-                            total += batch_total
-                            dataset_total += batch_total
-                            inference_times.extend(batch_times)
-                            
-                            batch_images = []
-                            batch_metadata = []
-
-                            if total % 500 == 0:
-                                logger.info(
-                                    f"Progress: {total}/{actual_total_samples} samples, "
-                                    f"Accuracy: {correct / total:.2%}"
-                                )
-
-                    except Exception as e:
-                        logger.warning(f"Failed to process image sample from {dataset_config.name}: {e}\n{traceback.format_exc()}")
-                        benchmark_results["errors"].append(f"Image processing error: {str(e)[:100]}")
+                    # Process remaining samples in queue
+                    if preprocessing_queue:
+                        processed_samples = preprocessor.process_batch(preprocessing_queue)
+                        for aug_chw, label, idx, (samp, ds_name) in processed_samples:
+                            batch_images.append(aug_chw)
+                            batch_metadata.append((label, samp, idx, ds_name))
 
                 if batch_images:
                     batch_correct, batch_total, batch_times = process_batch(

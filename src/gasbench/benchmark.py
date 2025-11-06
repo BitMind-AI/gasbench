@@ -198,7 +198,7 @@ async def execute_benchmark(
             batch_size,
         )
     elif modality == "video":
-        benchmark_score = await run_video_benchmark(
+        benchmark_score = run_video_benchmark(
             session,
             input_specs,
             benchmark_results,

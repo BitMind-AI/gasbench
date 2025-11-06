@@ -1,7 +1,6 @@
 import json
 import os
 import time
-import asyncio
 import numpy as np
 from typing import Dict, Optional
 
@@ -9,8 +8,6 @@ from ..logger import get_logger
 from ..processing.archive import video_archive_manager
 from ..processing.media import process_video_bytes_sample
 from ..processing.transforms import (
-    apply_random_augmentations,
-    compress_video_frames_jpeg_torchvision,
     extract_target_size_from_input_specs,
 )
 from ..config import DEFAULT_TARGET_SIZE, DEFAULT_VIDEO_BATCH_SIZE
@@ -21,6 +18,11 @@ from ..dataset.config import (
     build_dataset_info,
 )
 from ..dataset.iterator import DatasetIterator
+from ..utils.resource_optimization import (
+    calculate_optimal_batch_size,
+    get_optimal_preprocessing_workers,
+)
+from ..utils.parallel_preprocessing import ParallelPreprocessor
 from .utils import (
     Metrics,
     multiclass_to_binary,
@@ -84,67 +86,7 @@ def process_video_batch(
     return correct, len(batch_videos), inference_times
 
 
-async def video_prefetcher(
-    dataset_iterator,
-    dataset_config,
-    queue: asyncio.Queue,
-    max_queue_size: int = 2,
-    seed: int = None,
-    target_size=None,
-):
-    """
-    Prefetch and preprocess videos from the dataset iterator.
-    
-    Args:
-        dataset_iterator: Iterator over dataset samples
-        dataset_config: Configuration for the dataset
-        queue: Async queue to put processed videos into
-        max_queue_size: Maximum size of prefetch queue
-        seed: Optional random seed for reproducible augmentations
-        target_size: Optional (H, W) tuple for fixed target size from model specs
-    """
-    try:
-        sample_index = 0
-        for sample in dataset_iterator:
-            sample_index += 1
-            try:
-                video_array, true_label_multiclass = process_video_bytes_sample(sample)
-
-                if video_array is None or true_label_multiclass is None:
-                    # Put a skip marker in the queue
-                    await queue.put(("skip", None, None, None, None))
-                    continue
-
-                try:
-                    tchw = video_array[0]
-                    thwc = np.transpose(tchw, (0, 2, 3, 1))
-                    sample_seed = None if seed is None else (seed + sample_index)
-                    aug_thwc, _, _, _ = apply_random_augmentations(
-                        thwc, target_size, seed=sample_seed
-                    )
-                    aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
-
-                    video_array = np.expand_dims(aug_tchw, 0)
-                except Exception as e:
-                    logger.error(f"Video augmentation failed: {e}")
-                    await queue.put(("skip", None, None, None, None))
-                    continue
-
-                true_label_binary = multiclass_to_binary(true_label_multiclass)
-                await queue.put(("data", video_array, true_label_binary, true_label_multiclass, sample))
-                
-            except Exception as e:
-                logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
-                await queue.put(("error", None, None, None, None))
-                
-    except Exception as e:
-        logger.error(f"Prefetcher error for dataset {dataset_config.name}: {e}")
-    finally:
-        # Signal end of dataset
-        await queue.put(("done", None, None, None, None))
-
-
-async def run_video_benchmark(
+def run_video_benchmark(
     session,
     input_specs,
     benchmark_results: Dict,
@@ -184,6 +126,18 @@ async def run_video_benchmark(
             logger.info(f"Model has dynamic axes, using default target size: {target_size[0]}x{target_size[1]}")
         else:
             logger.info(f"Using fixed target size from model: {target_size[0]}x{target_size[1]}")
+
+        if batch_size is None or batch_size == DEFAULT_VIDEO_BATCH_SIZE:
+            logger.info("Calculating optimal batch size based on GPU memory...")
+            batch_size = calculate_optimal_batch_size(
+                session, input_specs, 'video', target_size,
+                max_batch_size=64  # Videos use more memory, cap at lower value
+            )
+        else:
+            logger.info(f"Using user-specified batch size: {batch_size}")
+
+        num_workers = get_optimal_preprocessing_workers()
+        logger.info(f"🚀 Resource optimization: batch_size={batch_size}, preprocessing_workers={num_workers}")
 
         with video_archive_manager(cache_dir=cache_dir) as video_cache:
             correct = 0
@@ -256,71 +210,76 @@ async def run_video_benchmark(
                         seed=seed,
                     )
 
-                    # Create prefetch queue with larger size to allow more parallelism
-                    prefetch_queue = asyncio.Queue(maxsize=16)
+                    with ParallelPreprocessor(num_workers, 'video', target_size, apply_jpeg=False) as preprocessor:
+                        batch_videos = []
+                        batch_metadata = []
+                        preprocessing_queue = []
 
-                    prefetch_task = asyncio.create_task(
-                        video_prefetcher(
-                            dataset_iterator,
-                            dataset_config,
-                            prefetch_queue,
-                            seed=seed,
-                            target_size=target_size,
-                        )
-                    )
+                        preprocess_buffer_size = batch_size * num_workers
 
-                    sample_index = 0
-                    batch_videos = []
-                    batch_metadata = []
+                        sample_index = 0
+                        for sample in dataset_iterator:
+                            sample_index += 1
+                            try:
+                                video_array, true_label_multiclass = process_video_bytes_sample(sample)
 
-                    while True:
-                        item = await prefetch_queue.get()
-                        item_type = item[0]
+                                if video_array is None or true_label_multiclass is None:
+                                    dataset_skipped += 1
+                                    skipped_samples += 1
+                                    continue
 
-                        if item_type == "done":
-                            break
-                        elif item_type == "skip":
-                            dataset_skipped += 1
-                            skipped_samples += 1
-                            if dataset_skipped % 10 == 0:
-                                logger.debug(
-                                    f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far"
-                                )
-                            continue
-                        elif item_type == "error":
-                            benchmark_results["errors"].append(f"Video processing error during prefetch")
-                            dataset_skipped += 1
-                            skipped_samples += 1
-                            continue
+                                preprocessing_queue.append((
+                                    video_array,
+                                    true_label_multiclass,
+                                    sample_index,
+                                    (sample, dataset_config.name)
+                                ))
 
-                        video_array, true_label_binary, true_label_multiclass, sample = item[1], item[2], item[3], item[4]
-                        sample_index += 1
-                        
-                        batch_videos.append(video_array[0])
-                        batch_metadata.append((true_label_binary, true_label_multiclass, sample, sample_index, dataset_config.name))
+                                # When buffer is full, process in parallel
+                                if len(preprocessing_queue) >= preprocess_buffer_size:
+                                    processed_samples = preprocessor.process_batch(preprocessing_queue)
+                                    preprocessing_queue = []
 
-                        if len(batch_videos) >= batch_size:
-                            batch_correct, batch_total, batch_times = process_video_batch(
-                                session, input_specs, batch_videos, batch_metadata,
-                                metrics, generator_stats, incorrect_samples
-                            )
-                            correct += batch_correct
-                            dataset_correct += batch_correct
-                            total += batch_total
-                            dataset_total += batch_total
-                            inference_times.extend(batch_times)
-                            
-                            batch_videos = []
-                            batch_metadata = []
+                                    # Add processed samples to inference batch
+                                    for aug_tchw, label_multiclass, idx, (samp, ds_name) in processed_samples:
+                                        true_label_binary = multiclass_to_binary(label_multiclass)
+                                        batch_videos.append(aug_tchw)
+                                        batch_metadata.append((true_label_binary, label_multiclass, samp, idx, ds_name))
 
-                            if total % 500 == 0:
-                                logger.info(
-                                    f"Progress: {total}/{actual_total_samples} samples, "
-                                    f"Accuracy: {correct / total:.2%}"
-                                )
-                    
-                    # Wait for prefetcher to finish
-                    await prefetch_task
+                                        # Run inference when batch is full
+                                        if len(batch_videos) >= batch_size:
+                                            batch_correct, batch_total, batch_times = process_video_batch(
+                                                session, input_specs, batch_videos, batch_metadata,
+                                                metrics, generator_stats, incorrect_samples
+                                            )
+                                            correct += batch_correct
+                                            dataset_correct += batch_correct
+                                            total += batch_total
+                                            dataset_total += batch_total
+                                            inference_times.extend(batch_times)
+
+                                            batch_videos = []
+                                            batch_metadata = []
+
+                                            if total % 500 == 0:
+                                                logger.info(
+                                                    f"Progress: {total}/{actual_total_samples} samples, "
+                                                    f"Accuracy: {correct / total:.2%}"
+                                                )
+
+                            except Exception as e:
+                                logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
+                                benchmark_results["errors"].append(f"Video processing error: {str(e)[:100]}")
+                                dataset_skipped += 1
+                                skipped_samples += 1
+
+                        # Process remaining samples in queue
+                        if preprocessing_queue:
+                            processed_samples = preprocessor.process_batch(preprocessing_queue)
+                            for aug_tchw, label_multiclass, idx, (samp, ds_name) in processed_samples:
+                                true_label_binary = multiclass_to_binary(label_multiclass)
+                                batch_videos.append(aug_tchw)
+                                batch_metadata.append((true_label_binary, label_multiclass, samp, idx, ds_name))
 
                     if batch_videos:
                         batch_correct, batch_total, batch_times = process_video_batch(

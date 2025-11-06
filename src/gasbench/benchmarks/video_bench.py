@@ -97,6 +97,7 @@ def run_video_benchmark(
     cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
+    dataset_config: Optional[str] = None,
 ) -> float:
     """Test model on benchmark video datasets for AI-generated content detection."""
     
@@ -111,7 +112,7 @@ def run_video_benchmark(
         else:
             logger.info("Loading benchmark video datasets")
         
-        available_datasets = discover_benchmark_video_datasets(mode, gasstation_only)
+        available_datasets = discover_benchmark_video_datasets(mode, gasstation_only, yaml_path=dataset_config)
 
         if not available_datasets:
             logger.error("No benchmark video datasets configured")

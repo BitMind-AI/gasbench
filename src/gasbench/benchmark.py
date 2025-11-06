@@ -27,6 +27,7 @@ async def run_benchmark(
     cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
+    dataset_config: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -39,6 +40,7 @@ async def run_benchmark(
         cache_policy: Optional path to cache policy JSON file with generator priorities
         seed: Optional random seed for non-gasstation dataset sampling (for reproducible random sampling)
         batch_size: Batch size for model inference (default: 8)
+        dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -90,6 +92,7 @@ async def run_benchmark(
             cache_policy,
             seed,
             batch_size,
+            dataset_config,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -180,6 +183,7 @@ async def execute_benchmark(
     cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
+    dataset_config: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -196,6 +200,7 @@ async def execute_benchmark(
             cache_policy,
             seed,
             batch_size,
+            dataset_config,
         )
     elif modality == "video":
         benchmark_score = run_video_benchmark(
@@ -209,6 +214,7 @@ async def execute_benchmark(
             cache_policy,
             seed,
             batch_size,
+            dataset_config,
         )
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")

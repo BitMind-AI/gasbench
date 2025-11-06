@@ -242,6 +242,7 @@ async def download_datasets(
     cache_policy: Optional[str] = None,
     allow_eviction: bool = True,
     unlimited_samples: bool = False,
+    dataset_config: Optional[str] = None,
 ):
     """Main entry point for efficient dataset downloads.
     
@@ -257,13 +258,14 @@ async def download_datasets(
         cache_policy: Path to cache policy JSON file for intelligent sample eviction
         allow_eviction: If False, disable sample eviction and accumulate all samples
         unlimited_samples: If True, download ALL available samples (no cap)
+        dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
     """
     if not cache_dir:
         cache_dir = "/.cache/gasbench"
     
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
     
-    datasets = _discover_datasets(modality, mode, gasstation_only, no_gasstation)
+    datasets = _discover_datasets(modality, mode, gasstation_only, no_gasstation, dataset_config)
     
     if not datasets:
         logger.warning("No datasets found matching criteria")
@@ -312,16 +314,17 @@ def _discover_datasets(
     mode: str,
     gasstation_only: bool,
     no_gasstation: bool = False,
+    dataset_config: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
-        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation)
+        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
-        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation)
+        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         datasets.extend(video_datasets)
     
     return datasets

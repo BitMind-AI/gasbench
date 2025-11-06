@@ -98,6 +98,7 @@ async def run_image_benchmark(
     cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
+    dataset_config: Optional[str] = None,
 ) -> float:
     """Test model on benchmark image datasets for AI-generated content detection."""
     
@@ -112,7 +113,7 @@ async def run_image_benchmark(
         else:
             logger.info("Loading benchmark image datasets")
 
-        available_datasets = discover_benchmark_image_datasets(mode, gasstation_only)
+        available_datasets = discover_benchmark_image_datasets(mode, gasstation_only, yaml_path=dataset_config)
 
         if not available_datasets:
             logger.error("No benchmark image datasets configured")

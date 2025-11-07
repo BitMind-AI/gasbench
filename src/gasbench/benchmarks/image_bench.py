@@ -18,6 +18,8 @@ from ..dataset.config import (
     discover_benchmark_image_datasets,
     calculate_weighted_dataset_sampling,
     build_dataset_info,
+    load_holdout_datasets_from_yaml,
+    apply_mode_to_datasets,
 )
 from ..dataset.iterator import DatasetIterator
 from .utils import (
@@ -96,6 +98,7 @@ async def run_image_benchmark(
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ) -> float:
     """Test model on benchmark image datasets for AI-generated content detection."""
     
@@ -111,6 +114,14 @@ async def run_image_benchmark(
             logger.info("Loading benchmark image datasets")
 
         available_datasets = discover_benchmark_image_datasets(mode, gasstation_only, yaml_path=dataset_config)
+
+        if holdout_config and not gasstation_only:
+            try:
+                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("image", [])
+                holdouts = apply_mode_to_datasets(holdouts, mode)
+                available_datasets.extend(holdouts)
+            except Exception as e:
+                logger.error(f"Failed to load holdout image datasets: {e}")
 
         if not available_datasets:
             logger.error("No benchmark image datasets configured")

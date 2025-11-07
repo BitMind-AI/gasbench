@@ -98,6 +98,7 @@ def command_run(args):
                 seed=args.seed,
                 batch_size=args.batch_size,
                 dataset_config=args.dataset_config,
+                holdout_config=getattr(args, 'holdout_config', None),
             )
         )
 
@@ -162,6 +163,7 @@ def command_download(args):
                 allow_eviction=not getattr(args, 'no_eviction', False),
                 unlimited_samples=getattr(args, 'unlimited_samples', False),
                 dataset_config=getattr(args, 'dataset_config', None),
+                holdout_config=getattr(args, 'holdout_config', None),
             )
         )
 
@@ -260,6 +262,12 @@ Examples:
         metavar="PATH",
         help="Path to custom dataset YAML config file (default: uses bundled config)",
     )
+    run_parser.add_argument(
+        "--holdout-config",
+        type=str,
+        metavar="PATH",
+        help="Path to private holdout YAML with additional datasets (names will be obfuscated)",
+    )
 
     run_parser.set_defaults(func=command_run)
 
@@ -333,6 +341,12 @@ Examples:
         type=str,
         metavar="PATH",
         help="Path to custom dataset YAML config file (default: uses bundled config)",
+    )
+    download_parser.add_argument(
+        "--holdout-config",
+        type=str,
+        metavar="PATH",
+        help="Path to private holdout YAML with additional datasets (names will be obfuscated)",
     )
 
     download_parser.set_defaults(func=command_download)

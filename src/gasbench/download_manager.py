@@ -18,6 +18,8 @@ from .dataset.config import (
     BenchmarkDatasetConfig,
     discover_benchmark_image_datasets,
     discover_benchmark_video_datasets,
+    load_holdout_datasets_from_yaml,
+    apply_mode_to_datasets,
 )
 from .dataset.iterator import DatasetIterator
 
@@ -243,6 +245,7 @@ async def download_datasets(
     allow_eviction: bool = True,
     unlimited_samples: bool = False,
     dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ):
     """Main entry point for efficient dataset downloads.
     
@@ -265,7 +268,9 @@ async def download_datasets(
     
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
     
-    datasets = _discover_datasets(modality, mode, gasstation_only, no_gasstation, dataset_config)
+    datasets = _discover_datasets(
+        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config
+    )
     
     if not datasets:
         logger.warning("No datasets found matching criteria")
@@ -315,16 +320,31 @@ def _discover_datasets(
     gasstation_only: bool,
     no_gasstation: bool = False,
     dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
         image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        if holdout_config and not gasstation_only:
+            try:
+                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("image", [])
+                holdouts = apply_mode_to_datasets(holdouts, mode)
+                image_datasets.extend(holdouts)
+            except Exception as e:
+                logger.error(f"Failed to load holdout image datasets: {e}")
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
         video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        if holdout_config and not gasstation_only:
+            try:
+                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("video", [])
+                holdouts = apply_mode_to_datasets(holdouts, mode)
+                video_datasets.extend(holdouts)
+            except Exception as e:
+                logger.error(f"Failed to load holdout video datasets: {e}")
         datasets.extend(video_datasets)
     
     return datasets

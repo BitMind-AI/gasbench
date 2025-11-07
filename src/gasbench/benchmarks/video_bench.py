@@ -19,6 +19,8 @@ from ..dataset.config import (
     discover_benchmark_video_datasets,
     calculate_weighted_dataset_sampling,
     build_dataset_info,
+    load_holdout_datasets_from_yaml,
+    apply_mode_to_datasets,
 )
 from ..dataset.iterator import DatasetIterator
 from .utils import (
@@ -156,6 +158,7 @@ async def run_video_benchmark(
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ) -> float:
     """Test model on benchmark video datasets for AI-generated content detection."""
     
@@ -171,6 +174,15 @@ async def run_video_benchmark(
             logger.info("Loading benchmark video datasets")
         
         available_datasets = discover_benchmark_video_datasets(mode, gasstation_only, yaml_path=dataset_config)
+
+        if holdout_config and not gasstation_only:
+            try:
+                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("video", [])
+                holdouts = apply_mode_to_datasets(holdouts, mode)
+                if not gasstation_only:
+                    available_datasets.extend(holdouts)
+            except Exception as e:
+                logger.error(f"Failed to load holdout video datasets: {e}")
 
         if not available_datasets:
             logger.error("No benchmark video datasets configured")

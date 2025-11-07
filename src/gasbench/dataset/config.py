@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import yaml
 from importlib.resources import files
+from collections import defaultdict
 
 from ..logger import get_logger
 
@@ -357,6 +358,37 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
         raise ValueError(error_msg)
 
     return result
+
+
+def _obfuscate_holdout_names(
+    datasets: List[BenchmarkDatasetConfig]
+) -> List[BenchmarkDatasetConfig]:
+    """
+    Obfuscate dataset names for holdout datasets based on media_type and modality.
+    Example: real-video-holdout-1
+    """
+    counters = defaultdict(int)
+    obfuscated: List[BenchmarkDatasetConfig] = []
+    for d in datasets:
+        key = (d.media_type, d.modality)
+        counters[key] += 1
+        new_name = f"{d.media_type}-{d.modality}-holdout-{counters[key]}"
+        obfuscated.append(replace(d, name=new_name))
+    return obfuscated
+
+
+def load_holdout_datasets_from_yaml(
+    yaml_path: str
+) -> Dict[str, List[BenchmarkDatasetConfig]]:
+    """
+    Load holdout datasets from YAML and return dict with obfuscated names.
+    Structure of YAML matches regular dataset configs.
+    """
+    base = load_datasets_from_yaml(yaml_path)
+    return {
+        "image": _obfuscate_holdout_names(base.get("image", [])),
+        "video": _obfuscate_holdout_names(base.get("video", [])),
+    }
 
 
 def _load_bundled_config(filename: str) -> Dict:

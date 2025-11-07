@@ -28,6 +28,7 @@ async def run_benchmark(
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -201,6 +202,7 @@ async def execute_benchmark(
             seed,
             batch_size,
             dataset_config,
+            holdout_config,
         )
     elif modality == "video":
         benchmark_score = await run_video_benchmark(
@@ -215,6 +217,7 @@ async def execute_benchmark(
             seed,
             batch_size,
             dataset_config,
+            holdout_config,
         )
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")

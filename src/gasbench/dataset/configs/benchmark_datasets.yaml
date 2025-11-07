@@ -488,3 +488,10 @@ video:
     media_per_archive: 100
     archives_per_dataset: 10
 
+  - name: physics-101
+    path: Hemgg/Physics-101-Video-dataset
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10

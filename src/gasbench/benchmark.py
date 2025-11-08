@@ -94,6 +94,7 @@ async def run_benchmark(
             seed,
             batch_size,
             dataset_config,
+            holdout_config,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -185,6 +186,7 @@ async def execute_benchmark(
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 

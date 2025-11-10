@@ -5,6 +5,7 @@ import os
 import yaml
 from importlib.resources import files
 from collections import defaultdict
+import hashlib
 
 from ..logger import get_logger
 
@@ -364,15 +365,26 @@ def _obfuscate_holdout_names(
     datasets: List[BenchmarkDatasetConfig]
 ) -> List[BenchmarkDatasetConfig]:
     """
-    Obfuscate dataset names for holdout datasets based on media_type and modality.
-    Example: real-video-holdout-1
+    Obfuscate dataset names for holdout datasets using a stable short hash so names
+    do not change when items are inserted or reordered.
+    Example: real-video-holdout-a1b2c3d4
     """
-    counters = defaultdict(int)
     obfuscated: List[BenchmarkDatasetConfig] = []
     for d in datasets:
-        key = (d.media_type, d.modality)
-        counters[key] += 1
-        new_name = f"{d.media_type}-{d.modality}-holdout-{counters[key]}"
+        # Build a deterministic fingerprint based on key dataset fields
+        include_paths = ",".join(sorted(d.include_paths)) if d.include_paths else ""
+        exclude_paths = ",".join(sorted(d.exclude_paths)) if d.exclude_paths else ""
+        fingerprint = "|".join([
+            d.path or "",
+            d.modality or "",
+            d.media_type or "",
+            (d.source_format or ""),
+            include_paths,
+            exclude_paths,
+            (d.source or ""),
+        ])
+        short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
+        new_name = f"{d.media_type}-{d.modality}-holdout-{short_hash}"
         obfuscated.append(replace(d, name=new_name))
     return obfuscated
 

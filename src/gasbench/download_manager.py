@@ -18,6 +18,8 @@ from .dataset.config import (
     BenchmarkDatasetConfig,
     discover_benchmark_image_datasets,
     discover_benchmark_video_datasets,
+    load_holdout_datasets_from_yaml,
+    apply_mode_to_datasets,
 )
 from .dataset.iterator import DatasetIterator
 
@@ -118,7 +120,7 @@ class DownloadManager:
         # Create spinner for this dataset (no percentage since we can't update from sync executor)
         task_id = progress.add_task(
             f"[cyan]⏳ {task.dataset.name[:45]}", 
-            total=None,  # Indeterminate spinner
+            total=None,
             visible=True
         )
         
@@ -180,6 +182,13 @@ class DownloadManager:
                 cache_policy=task.cache_policy,
                 allow_eviction=task.allow_eviction,
             )
+
+            sample_count = 0
+            for _ in iterator:
+                sample_count += 1
+
+            logger.debug(f"Processed {sample_count} samples from {task.dataset.name}")
+
         finally:
             # Restore original log levels
             download_logger.setLevel(old_download_level)
@@ -227,6 +236,7 @@ async def download_datasets(
     modality: Optional[str] = None,
     mode: str = "full",
     gasstation_only: bool = False,
+    no_gasstation: bool = False,
     cache_dir: Optional[str] = None,
     concurrent_downloads: Optional[int] = None,
     num_weeks: Optional[int] = None,
@@ -234,6 +244,8 @@ async def download_datasets(
     cache_policy: Optional[str] = None,
     allow_eviction: bool = True,
     unlimited_samples: bool = False,
+    dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ):
     """Main entry point for efficient dataset downloads.
     
@@ -241,6 +253,7 @@ async def download_datasets(
         modality: 'image', 'video', or None for all
         mode: 'debug', 'small', or 'full'
         gasstation_only: Only download gasstation datasets
+        no_gasstation: Skip gasstation datasets (download everything else)
         cache_dir: Cache directory path
         concurrent_downloads: Number of concurrent downloads (auto if None)
         num_weeks: Number of recent weeks for gasstation datasets
@@ -248,13 +261,16 @@ async def download_datasets(
         cache_policy: Path to cache policy JSON file for intelligent sample eviction
         allow_eviction: If False, disable sample eviction and accumulate all samples
         unlimited_samples: If True, download ALL available samples (no cap)
+        dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
     """
     if not cache_dir:
         cache_dir = "/.cache/gasbench"
     
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
     
-    datasets = _discover_datasets(modality, mode, gasstation_only)
+    datasets = _discover_datasets(
+        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config
+    )
     
     if not datasets:
         logger.warning("No datasets found matching criteria")
@@ -302,16 +318,33 @@ def _discover_datasets(
     modality: Optional[str],
     mode: str,
     gasstation_only: bool,
+    no_gasstation: bool = False,
+    dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
-        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only)
+        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        if holdout_config and not gasstation_only:
+            try:
+                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("image", [])
+                holdouts = apply_mode_to_datasets(holdouts, mode)
+                image_datasets.extend(holdouts)
+            except Exception as e:
+                logger.error(f"Failed to load holdout image datasets: {e}")
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
-        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only)
+        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        if holdout_config and not gasstation_only:
+            try:
+                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("video", [])
+                holdouts = apply_mode_to_datasets(holdouts, mode)
+                video_datasets.extend(holdouts)
+            except Exception as e:
+                logger.error(f"Failed to load holdout video datasets: {e}")
         datasets.extend(video_datasets)
     
     return datasets
@@ -348,20 +381,21 @@ def _is_week_cached(week_dir: Path) -> bool:
     if not samples_dir.exists():
         return False
     
-    samples = list(samples_dir.glob("img_*.png")) + list(samples_dir.glob("img_*.jpg"))
-    return len(samples) > 10
+    # Check for both image and video samples
+    image_samples = list(samples_dir.glob("img_*.png")) + list(samples_dir.glob("img_*.jpg"))
+    video_samples = list(samples_dir.glob("vid_*.mp4"))
+    total_samples = len(image_samples) + len(video_samples)
+    
+    return total_samples > 10
 
 
 def _get_required_samples_for_mode(dataset: BenchmarkDatasetConfig) -> int:
     """Calculate required samples based on dataset config (reflects mode)."""
-    # The dataset config already has media_per_archive and archives_per_dataset
-    # set by apply_mode_to_datasets() based on debug/small/full
     if dataset.media_per_archive == -1 or dataset.archives_per_dataset == -1:
         return 10000  # "full" download within reason
     
-    # Calculate expected samples
     expected = dataset.media_per_archive * dataset.archives_per_dataset
-    return max(expected, 10)  # At least 10 samples
+    return max(expected, 10)
 
 
 def _is_dataset_cached_for_mode(dataset_dir: Path, dataset: BenchmarkDatasetConfig) -> bool:

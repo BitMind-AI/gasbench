@@ -20,7 +20,7 @@ from .benchmarks.video_bench import run_video_benchmark
 from .benchmark import run_benchmark, print_benchmark_summary, save_results_to_json
 from .model.inference import create_inference_session
 
-__version__ = "0.1.8"
+__version__ = "0.2.0"
 __author__ = "bmbm"
 
 __all__ = [

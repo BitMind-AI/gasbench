@@ -7,17 +7,17 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
-def load_cache_policy(policy_path: Optional[str]) -> Dict:
+def load_cache_policy(policy_path: Optional[str]) -> Optional[Dict]:
     """Load cache policy from JSON file.
     
     Args:
         policy_path: Path to policy JSON file (None means no policy)
         
     Returns:
-        Policy dict with generator_priorities, or empty policy if file doesn't exist/invalid
+        Policy dict with generator_priorities, or None if no policy/invalid
     """
     if not policy_path:
-        return _empty_policy()
+        return None
     
     try:
         with open(policy_path, "r") as f:
@@ -26,7 +26,7 @@ def load_cache_policy(policy_path: Optional[str]) -> Dict:
         # Validate structure
         if "generator_priorities" not in policy:
             logger.warning(f"Invalid policy file: missing generator_priorities")
-            return _empty_policy()
+            return None
         
         num_generators = len(policy["generator_priorities"])
         logger.info(f"Loaded cache policy with {num_generators} generators")
@@ -39,32 +39,27 @@ def load_cache_policy(policy_path: Optional[str]) -> Dict:
         
     except FileNotFoundError:
         logger.debug(f"Cache policy file not found: {policy_path}")
-        return _empty_policy()
+        return None
     except json.JSONDecodeError as e:
         logger.warning(f"Invalid JSON in cache policy file: {e}")
-        return _empty_policy()
+        return None
     except Exception as e:
         logger.warning(f"Failed to load cache policy: {e}")
-        return _empty_policy()
+        return None
 
 
-def _empty_policy() -> Dict:
-    """Return empty policy structure."""
-    return {
-        "generator_priorities": {},
-    }
-
-
-def get_generator_priority(policy: Dict, hotkey: str) -> float:
+def get_generator_priority(policy: Optional[Dict], hotkey: str) -> float:
     """Get priority for a generator from the policy.
     
     Args:
-        policy: Loaded cache policy dict
+        policy: Loaded cache policy dict (or None if no policy)
         hotkey: Generator hotkey (SS58 address)
         
     Returns:
-        Priority value (0.0-1.0), or 0.5 (default) if generator not in policy
+        Priority value (0.0-1.0), or 0.5 (default) if no policy or generator not in policy
     """
+    if not policy:
+        return 0.5
     priorities = policy.get("generator_priorities", {})
     return priorities.get(hotkey, 0.5)
 

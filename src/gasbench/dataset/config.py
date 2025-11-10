@@ -4,6 +4,8 @@ from pathlib import Path
 import os
 import yaml
 from importlib.resources import files
+from collections import defaultdict
+import hashlib
 
 from ..logger import get_logger
 
@@ -132,6 +134,7 @@ def apply_mode_to_datasets(
 def discover_benchmark_image_datasets(
     mode: str = "full",
     gasstation_only: bool = False,
+    no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Return list of available benchmark image datasets.
@@ -139,6 +142,7 @@ def discover_benchmark_image_datasets(
     Args:
         mode: Benchmark mode - "debug", "small", or "full"
         gasstation_only: If True, only return gasstation datasets
+        no_gasstation: If True, exclude gasstation datasets
         yaml_path: Optional path to custom yaml config
     """
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
@@ -149,6 +153,10 @@ def discover_benchmark_image_datasets(
     if gasstation_only:
         gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
         return gasstation_datasets
+    
+    if no_gasstation:
+        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+        return non_gasstation_datasets
 
     return datasets
 
@@ -156,6 +164,7 @@ def discover_benchmark_image_datasets(
 def discover_benchmark_video_datasets(
     mode: str = "full",
     gasstation_only: bool = False,
+    no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Return list of available benchmark video datasets.
@@ -163,6 +172,7 @@ def discover_benchmark_video_datasets(
     Args:
         mode: Benchmark mode - "debug", "small", or "full"
         gasstation_only: If True, only return gasstation datasets
+        no_gasstation: If True, exclude gasstation datasets
         yaml_path: Optional path to custom yaml config
     """
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
@@ -173,6 +183,10 @@ def discover_benchmark_video_datasets(
     if gasstation_only:
         gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
         return gasstation_datasets
+    
+    if no_gasstation:
+        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+        return non_gasstation_datasets
 
     return datasets
 
@@ -345,6 +359,48 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
         raise ValueError(error_msg)
 
     return result
+
+
+def _obfuscate_holdout_names(
+    datasets: List[BenchmarkDatasetConfig]
+) -> List[BenchmarkDatasetConfig]:
+    """
+    Obfuscate dataset names for holdout datasets using a stable short hash so names
+    do not change when items are inserted or reordered.
+    Example: real-video-holdout-a1b2c3d4
+    """
+    obfuscated: List[BenchmarkDatasetConfig] = []
+    for d in datasets:
+        # Build a deterministic fingerprint based on key dataset fields
+        include_paths = ",".join(sorted(d.include_paths)) if d.include_paths else ""
+        exclude_paths = ",".join(sorted(d.exclude_paths)) if d.exclude_paths else ""
+        fingerprint = "|".join([
+            d.path or "",
+            d.modality or "",
+            d.media_type or "",
+            (d.source_format or ""),
+            include_paths,
+            exclude_paths,
+            (d.source or ""),
+        ])
+        short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
+        new_name = f"{d.media_type}-{d.modality}-holdout-{short_hash}"
+        obfuscated.append(replace(d, name=new_name))
+    return obfuscated
+
+
+def load_holdout_datasets_from_yaml(
+    yaml_path: str
+) -> Dict[str, List[BenchmarkDatasetConfig]]:
+    """
+    Load holdout datasets from YAML and return dict with obfuscated names.
+    Structure of YAML matches regular dataset configs.
+    """
+    base = load_datasets_from_yaml(yaml_path)
+    return {
+        "image": _obfuscate_holdout_names(base.get("image", [])),
+        "video": _obfuscate_holdout_names(base.get("video", [])),
+    }
 
 
 def _load_bundled_config(filename: str) -> Dict:

@@ -9,7 +9,6 @@ from ..logger import get_logger
 from ..processing.media import process_image_sample
 from ..processing.transforms import (
     apply_random_augmentations,
-    compress_image_jpeg_pil,
     extract_target_size_from_input_specs,
 )
 from ..config import DEFAULT_TARGET_SIZE, DEFAULT_IMAGE_BATCH_SIZE
@@ -49,7 +48,10 @@ def process_batch(
     if not batch_images:
         return 0, 0, []
 
-    batch_array = np.stack(batch_images, axis=0)
+    first = batch_images[0]
+    batch_array = np.empty((len(batch_images),) + first.shape, dtype=first.dtype)
+    for i, img in enumerate(batch_images):
+        batch_array[i] = img
 
     start = time.time()
     outputs = session.run(None, {input_specs[0].name: batch_array})
@@ -99,6 +101,8 @@ async def run_image_benchmark(
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    augment_level: Optional[int] = 0,
+    crop_prob: float = 0.0,
 ) -> float:
     """Test model on benchmark image datasets for AI-generated content detection."""
     
@@ -217,13 +221,10 @@ async def run_image_benchmark(
                             continue
 
                         try:
-                            chw = image_array[0]
-                            hwc = np.transpose(chw, (1, 2, 0))
                             sample_seed = None if seed is None else (seed + sample_index)
                             aug_hwc, _, _, _ = apply_random_augmentations(
-                                hwc, target_size, seed=sample_seed
+                                image_array, target_size, seed=sample_seed, level=augment_level, crop_prob=crop_prob
                             )
-                            aug_hwc = compress_image_jpeg_pil(aug_hwc, quality=75)
                             aug_chw = np.transpose(aug_hwc, (2, 0, 1))
                         except Exception as e:
                             logger.error(f"Augmentation failed: {e}\n{traceback.format_exc()}")

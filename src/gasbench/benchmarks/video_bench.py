@@ -10,7 +10,6 @@ from ..processing.archive import video_archive_manager
 from ..processing.media import process_video_bytes_sample
 from ..processing.transforms import (
     apply_random_augmentations,
-    compress_video_frames_jpeg_torchvision,
     extract_target_size_from_input_specs,
 )
 from ..config import DEFAULT_TARGET_SIZE, DEFAULT_VIDEO_BATCH_SIZE
@@ -50,7 +49,11 @@ def process_video_batch(
     if not batch_videos:
         return 0, 0, []
 
-    batch_array = np.stack(batch_videos, axis=0)
+    # Preallocate batch tensor to avoid an extra copy from np.stack
+    first = batch_videos[0]
+    batch_array = np.empty((len(batch_videos),) + first.shape, dtype=first.dtype)
+    for i, vid in enumerate(batch_videos):
+        batch_array[i] = vid
 
     start = time.time()
     outputs = session.run(None, {input_specs[0].name: batch_array})
@@ -93,6 +96,8 @@ async def video_prefetcher(
     max_queue_size: int = 2,
     seed: int = None,
     target_size=None,
+    augment_level: Optional[int] = 0,
+    crop_prob: float = 0.0,
 ):
     """
     Prefetch and preprocess videos from the dataset iterator.
@@ -118,15 +123,13 @@ async def video_prefetcher(
                     continue
 
                 try:
-                    tchw = video_array[0]
-                    thwc = np.transpose(tchw, (0, 2, 3, 1))
+                    # video_array is THWC uint8; augment in THWC and transpose once at the end
                     sample_seed = None if seed is None else (seed + sample_index)
                     aug_thwc, _, _, _ = apply_random_augmentations(
-                        thwc, target_size, seed=sample_seed
+                        video_array, target_size, seed=sample_seed, level=augment_level, crop_prob=crop_prob
                     )
                     aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
-
-                    video_array = np.expand_dims(aug_tchw, 0)
+                    video_array = np.expand_dims(aug_tchw, 0)  # 1,T,C,H,W
                 except Exception as e:
                     logger.error(f"Video augmentation failed: {e}")
                     await queue.put(("skip", None, None, None, None))
@@ -159,6 +162,8 @@ async def run_video_benchmark(
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    augment_level: Optional[int] = 0,
+    crop_prob: float = 0.0,
 ) -> float:
     """Test model on benchmark video datasets for AI-generated content detection."""
     
@@ -279,6 +284,8 @@ async def run_video_benchmark(
                             prefetch_queue,
                             seed=seed,
                             target_size=target_size,
+                            augment_level=augment_level,
+                            crop_prob=crop_prob,
                         )
                     )
 

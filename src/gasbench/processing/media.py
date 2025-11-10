@@ -81,9 +81,7 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
                     for i in range(frames_read, max_frames):
                         frames.append(last_frame)
                 
-                video_array = np.array(frames, dtype=np.uint8)
-                video_array = np.transpose(video_array, (0, 3, 1, 2))
-                video_array = np.expand_dims(video_array, axis=0)
+                video_array = np.array(frames, dtype=np.uint8)  # THWC uint8
                 
                 return video_array, label
                 
@@ -124,8 +122,6 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
 
         image = image.convert("RGB")
         image_array = np.array(image, dtype=np.uint8)
-        image_array = np.transpose(image_array, (2, 0, 1))
-        image_array = np.expand_dims(image_array, 0)
 
         return image_array, label
 

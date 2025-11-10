@@ -5,6 +5,8 @@ from typing import Dict, Tuple
 
 import numpy as np
 import cv2
+from io import BytesIO
+from PIL import Image
 
 from ..logger import get_logger
 from ..constants import MEDIA_TYPE_TO_LABEL
@@ -100,27 +102,18 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
 
 
 def process_image_sample(sample: Dict) -> Tuple[any, int]:
-    """Process an image sample for classification evaluation."""
+    """Process an image sample (bytes) for classification evaluation."""
     try:
-        image_data = sample.get("image")
-        if image_data is None:
-            logger.warning("No image data in sample")
+        image_bytes = sample.get("image") or sample.get("image_bytes")
+        if image_bytes is None:
+            logger.warning("No image bytes in sample")
             return None, None
 
         media_type = sample.get("media_type", "synthetic")
         label = MEDIA_TYPE_TO_LABEL[media_type]
 
-        if hasattr(image_data, "convert"):
-            image = image_data
-            logger.debug(f"PIL Image received: {type(image)} size={getattr(image, 'size', 'unknown')}")
-        else:
-            logger.error(f"Image data is not a PIL Image: {type(image_data)}")
-            return None, None
-
-        if image is None:
-            return None, None
-
-        image = image.convert("RGB")
+        # Decode bytes -> PIL -> numpy (HWC uint8)
+        image = Image.open(BytesIO(image_bytes)).convert("RGB")
         image_array = np.array(image, dtype=np.uint8)
 
         return image_array, label

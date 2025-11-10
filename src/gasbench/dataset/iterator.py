@@ -605,6 +605,8 @@ class DatasetIterator:
                     random.Random(self.seed).shuffle(sample_files)
                 else:
                     random.shuffle(sample_files)
+                # Limit to max needed to avoid iterating unnecessarily
+                sample_files = sample_files[: self.max_samples]
 
             for filename in sample_files:
                 file_path = os.path.join(samples_dir, filename)
@@ -612,9 +614,10 @@ class DatasetIterator:
 
                 if self.config.modality == "image":
                     try:
-                        image = Image.open(file_path)
+                        with open(file_path, "rb") as f:
+                            image_bytes = f.read()
                         sample = {
-                            "image": image,
+                            "image": image_bytes,  # bytes; decode downstream
                             "dataset_name": self.config.name,
                             "media_type": self.config.media_type,
                             **metadata,

@@ -44,6 +44,7 @@ def process_video_batch(
     metrics,
     generator_stats,
     incorrect_samples,
+    per_dataset_pred_counts,
 ):
     """push a batch of videos through the model."""
     if not batch_videos:
@@ -70,6 +71,17 @@ def process_video_batch(
             true_label_multiclass, predicted_multiclass,
             pred_probs
         )
+
+        # Track per-dataset predicted label counts (multiclass: 0=real,1=synthetic,2=semisynthetic)
+        ds_counts = per_dataset_pred_counts.get(dataset_name)
+        if ds_counts is None:
+            ds_counts = {0: 0, 1: 0, 2: 0}
+            per_dataset_pred_counts[dataset_name] = ds_counts
+        if predicted_multiclass in ds_counts:
+            ds_counts[predicted_multiclass] += 1
+        else:
+            # In case of unexpected class count, grow dict safely
+            ds_counts[predicted_multiclass] = ds_counts.get(predicted_multiclass, 0) + 1
 
         is_correct = predicted_binary == true_label_binary
         if is_correct:
@@ -208,6 +220,7 @@ async def run_video_benchmark(
             total = 0
             inference_times = []
             per_dataset_results = {}
+            per_dataset_pred_counts = {}
             metrics = Metrics()
             skipped_samples = 0
             incorrect_samples = []  # Track misclassified gasstation samples
@@ -322,7 +335,7 @@ async def run_video_benchmark(
                         if len(batch_videos) >= batch_size:
                             batch_correct, batch_total, batch_times = process_video_batch(
                                 session, input_specs, batch_videos, batch_metadata,
-                                metrics, generator_stats, incorrect_samples
+                                metrics, generator_stats, incorrect_samples, per_dataset_pred_counts
                             )
                             correct += batch_correct
                             dataset_correct += batch_correct
@@ -345,7 +358,7 @@ async def run_video_benchmark(
                     if batch_videos:
                         batch_correct, batch_total, batch_times = process_video_batch(
                             session, input_specs, batch_videos, batch_metadata,
-                            metrics, generator_stats, incorrect_samples
+                            metrics, generator_stats, incorrect_samples, per_dataset_pred_counts
                         )
                         correct += batch_correct
                         dataset_correct += batch_correct
@@ -354,11 +367,20 @@ async def run_video_benchmark(
                         inference_times.extend(batch_times)
 
                     dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
+                    # Format per-dataset prediction distribution
+                    pred_counts_raw = per_dataset_pred_counts.get(dataset_config.name, {})
+                    predictions = {
+                        "real": int(pred_counts_raw.get(0, 0)),
+                        "synthetic": int(pred_counts_raw.get(1, 0)),
+                        "semisynthetic": int(pred_counts_raw.get(2, 0)),
+                    }
+
                     per_dataset_results[dataset_config.name] = {
                         "correct": dataset_correct,
                         "total": dataset_total,
                         "accuracy": dataset_accuracy,
                         "skipped": dataset_skipped,
+                        "predictions": predictions,
                     }
 
                     if generator_stats:

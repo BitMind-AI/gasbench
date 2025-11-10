@@ -221,22 +221,25 @@ def calculate_per_source_accuracy(
     valid_datasets: List,
     per_dataset_results: Dict[str, Dict]
 ) -> Dict[str, Dict[str, Dict]]:
-    """Build per-source accuracy structure organized by media type and dataset."""
+    """Build per-source prediction distribution organized by media type and dataset.
+
+    For each dataset, returns counts of predictions by label:
+      { "real": N_real, "synthetic": N_synth, "semisynthetic": N_semi }
+    """
     per_source_accuracy = {}
     
     for dataset_config in valid_datasets:
-        results = per_dataset_results.get(
-            dataset_config.name, 
-            {"correct": 0, "total": 0, "accuracy": 0.0}
-        )
+        results = per_dataset_results.get(dataset_config.name, {})
         media_type = dataset_config.media_type
         
         if media_type not in per_source_accuracy:
             per_source_accuracy[media_type] = {}
-        
+
+        preds = results.get("predictions", {})
         per_source_accuracy[media_type][dataset_config.name] = {
-            "correct": results.get("correct", 0),
-            "incorrect": results.get("total", 0) - results.get("correct", 0),
+            "real": int(preds.get("real", 0)),
+            "synthetic": int(preds.get("synthetic", 0)),
+            "semisynthetic": int(preds.get("semisynthetic", 0)),
         }
     
     return per_source_accuracy

@@ -81,7 +81,7 @@ def process_batch(
         else:
             ds_counts[predicted_multiclass] = ds_counts.get(predicted_multiclass, 0) + 1
 
-        is_correct = predicted_binary == true_label_binary
+        is_correct = predicted_multiclass == true_label_multiclass
         if is_correct:
             correct += 1
         else:

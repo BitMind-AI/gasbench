@@ -83,7 +83,7 @@ def process_video_batch(
             # In case of unexpected class count, grow dict safely
             ds_counts[predicted_multiclass] = ds_counts.get(predicted_multiclass, 0) + 1
 
-        is_correct = predicted_binary == true_label_binary
+        is_correct = predicted_multiclass == true_label_multiclass
         if is_correct:
             correct += 1
         else:

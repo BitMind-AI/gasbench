@@ -88,7 +88,7 @@ class Metrics:
             return 0.0
 
         y_true = np.array(self.binary_y_true)
-        y_prob = np.clip(np.array(self.binary_probs), 1e-15, 1 - 1e-15)
+        y_prob = np.clip(np.array(self.binary_probs), 1e-7, 1 - 1e-7)
 
         loss = -np.mean(y_true * np.log(y_prob) + (1 - y_true) * np.log(1 - y_prob))
         return float(loss)
@@ -100,7 +100,7 @@ class Metrics:
         
         y_true = np.array(self.multiclass_y_true)
         y_probs = np.array(self.multiclass_probs)
-        y_probs = np.clip(y_probs, 1e-15, 1 - 1e-15)
+        y_probs = np.clip(y_probs, 1e-7, 1 - 1e-7)
         
         n_samples = len(y_true)
         loss = -np.sum(np.log(y_probs[np.arange(n_samples), y_true])) / n_samples

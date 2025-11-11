@@ -364,29 +364,21 @@ def _needs_download(
         target_weeks = gasstation_utils.calculate_target_weeks(num_weeks)
         for week_str in target_weeks:
             week_dir = Path(cache_dir) / "datasets" / dataset.name / week_str
-            if not _is_week_cached(week_dir):
+            # Week is considered complete only if cache exists AND there are no new upstream archives
+            is_complete = gasstation_utils.is_week_cache_complete(
+                str(week_dir),
+                dataset_path=dataset.path,
+                week_str=week_str,
+                source_format=dataset.source_format,
+                modality=dataset.modality,
+            )
+            if not is_complete:
                 return True
         return False
     else:
         dataset_dir = Path(cache_dir) / "datasets" / dataset.name
         return not _is_dataset_cached_for_mode(dataset_dir, dataset)
 
-
-def _is_week_cached(week_dir: Path) -> bool:
-    """Check if gasstation week is already cached."""
-    if not week_dir.exists():
-        return False
-    
-    samples_dir = week_dir / "samples"
-    if not samples_dir.exists():
-        return False
-    
-    # Check for both image and video samples
-    image_samples = list(samples_dir.glob("img_*.png")) + list(samples_dir.glob("img_*.jpg"))
-    video_samples = list(samples_dir.glob("vid_*.mp4"))
-    total_samples = len(image_samples) + len(video_samples)
-    
-    return total_samples > 10
 
 
 def _get_required_samples_for_mode(dataset: BenchmarkDatasetConfig) -> int:

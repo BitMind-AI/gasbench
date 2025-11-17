@@ -16,8 +16,7 @@ from rich.progress import (
 from .logger import get_logger
 from .dataset.config import (
     BenchmarkDatasetConfig,
-    discover_benchmark_image_datasets,
-    discover_benchmark_video_datasets,
+    discover_benchmark_datasets,
     load_holdout_datasets_from_yaml,
     apply_mode_to_datasets,
 )
@@ -326,7 +325,7 @@ def _discover_datasets(
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
-        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        image_datasets = discover_benchmark_datasets("image", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
                 holdouts = load_holdout_datasets_from_yaml(holdout_config).get("image", [])
@@ -337,7 +336,7 @@ def _discover_datasets(
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
-        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        video_datasets = discover_benchmark_datasets("video", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
                 holdouts = load_holdout_datasets_from_yaml(holdout_config).get("video", [])

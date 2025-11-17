@@ -106,7 +106,8 @@ def save_dataset_cache_files(
     dataset_config: BenchmarkDatasetConfig, 
     dataset_cache_dir: str, 
     dataset_samples: dict, 
-    sample_count: int
+    sample_count: int,
+    dataset_info_extras: Optional[Dict] = None,
 ):
     """Save dataset info and metadata files to local cache."""
     try:
@@ -123,6 +124,12 @@ def save_dataset_cache_files(
                 "archives_per_dataset": dataset_config.archives_per_dataset,
             },
         }
+        if dataset_info_extras:
+            try:
+                for k, v in dataset_info_extras.items():
+                    dataset_info[k] = v
+            except Exception:
+                pass
 
         dataset_info_file = os.path.join(dataset_cache_dir, "dataset_info.json")
         with open(dataset_info_file, "w") as f:

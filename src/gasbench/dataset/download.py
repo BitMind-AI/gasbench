@@ -859,8 +859,11 @@ def _process_zip_or_tar(
                         media_obj = data_bytes
 
                     sample = _create_sample(dataset, media_obj, source_path, iso_week)
-                    # Attach archive filename and row metadata if found
                     sample["archive_filename"] = source_path.name
+                    try:
+                        sample["member_path"] = get_name(entry)
+                    except Exception:
+                        pass
                     try:
                         entry_name = os.path.basename(get_name(entry))
                         meta = archive_metadata_map.get(entry_name)

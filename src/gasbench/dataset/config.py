@@ -131,64 +131,31 @@ def apply_mode_to_datasets(
         return datasets  # Full mode (or unknown): Use YAML configs as-is
 
 
-def discover_benchmark_image_datasets(
+def discover_benchmark_datasets(
+    modality: str,
     mode: str = "full",
     gasstation_only: bool = False,
     no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark image datasets.
-    
-    Args:
-        mode: Benchmark mode - "debug", "small", or "full"
-        gasstation_only: If True, only return gasstation datasets
-        no_gasstation: If True, exclude gasstation datasets
-        yaml_path: Optional path to custom yaml config
-    """
+    """Return list of available benchmark datasets for a given modality ("image" or "video")."""
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
-    datasets = dataset_source["image"]
+    if modality not in dataset_source:
+        return []
+    datasets = dataset_source[modality]
 
     datasets = apply_mode_to_datasets(datasets, mode)
 
     if gasstation_only:
-        gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
-        return gasstation_datasets
+        return [d for d in datasets if "gasstation" in d.name.lower()]
     
     if no_gasstation:
-        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
-        return non_gasstation_datasets
+        return [d for d in datasets if "gasstation" not in d.name.lower()]
 
     return datasets
 
 
-def discover_benchmark_video_datasets(
-    mode: str = "full",
-    gasstation_only: bool = False,
-    no_gasstation: bool = False,
-    yaml_path: Optional[str] = None,
-) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark video datasets.
-    
-    Args:
-        mode: Benchmark mode - "debug", "small", or "full"
-        gasstation_only: If True, only return gasstation datasets
-        no_gasstation: If True, exclude gasstation datasets
-        yaml_path: Optional path to custom yaml config
-    """
-    dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
-    datasets = dataset_source["video"]
-
-    datasets = apply_mode_to_datasets(datasets, mode)
-
-    if gasstation_only:
-        gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
-        return gasstation_datasets
-    
-    if no_gasstation:
-        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
-        return non_gasstation_datasets
-
-    return datasets
+ 
 
 
 def calculate_weighted_dataset_sampling(

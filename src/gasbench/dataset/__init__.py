@@ -17,8 +17,7 @@ from .config import (
     GASSTATION_DATASET_MAX_SAMPLES,
     GASSTATION_WEIGHT_MULTIPLIER,
     get_benchmark_size,
-    discover_benchmark_image_datasets,
-    discover_benchmark_video_datasets,
+    discover_benchmark_datasets,
 )
 from .iterator import DatasetIterator, CACHE_MAX_SAMPLES, GASSTATION_CACHE_MAX_SAMPLES
 from .cache import check_dataset_cache, save_sample_to_cache
@@ -34,8 +33,7 @@ __all__ = [
     "GASSTATION_DATASET_MAX_SAMPLES",
     "GASSTATION_WEIGHT_MULTIPLIER",
     "get_benchmark_size",
-    "discover_benchmark_image_datasets",
-    "discover_benchmark_video_datasets",
+    "discover_benchmark_datasets",
     "DatasetIterator",
     "CACHE_MAX_SAMPLES",
     "GASSTATION_CACHE_MAX_SAMPLES",

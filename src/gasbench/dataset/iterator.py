@@ -16,6 +16,7 @@ from .download import download_and_extract
 from .cache import save_sample_to_cache, save_dataset_cache_files
 from .cache_policy import load_cache_policy, get_generator_priority
 from . import gasstation_utils
+import huggingface_hub as hf_hub
 
 logger = get_logger(__name__)
 
@@ -66,6 +67,16 @@ class DatasetIterator:
             self.target_weeks = None
             self.week_dirs = None
             self.dataset_base_dir = self.dataset_dir
+
+        self.source_kind = getattr(self.config, "source", "huggingface")
+        self.hf_resolved_revision = None
+        try:
+            if self.source_kind == "huggingface":
+                api = hf_hub.HfApi()
+                info = api.repo_info(repo_id=self.config.path, repo_type="dataset", revision="main")
+                self.hf_resolved_revision = getattr(info, "sha", None)
+        except Exception:
+            self.hf_resolved_revision = None
 
         if download:
             self.ensure_cached()
@@ -185,6 +196,11 @@ class DatasetIterator:
             "source_file": sample.get("source_file", ""),
             "model_name": sample.get("model_name", ""),
             "media_type": sample.get("media_type", ""),
+            # dataset fields
+            "dataset_path": sample.get("dataset_path", self.config.path),
+            "archive_filename": sample.get("archive_filename", ""),
+            "member_path": sample.get("member_path", ""),
+            "source_kind": self.source_kind,
         }
 
         # gasstation-specific fields
@@ -361,7 +377,11 @@ class DatasetIterator:
 
                 if sample_count % 50 == 0:
                     save_dataset_cache_files(
-                        self.config, week_dir, sample_metadata, sample_count
+                        self.config, week_dir, sample_metadata, sample_count,
+                        dataset_info_extras={
+                            "source_kind": self.source_kind,
+                            "hf_resolved_revision": self.hf_resolved_revision,
+                        }
                     )
                     gasstation_utils.save_downloaded_archives(
                         week_dir, downloaded_archives
@@ -374,7 +394,11 @@ class DatasetIterator:
 
         if new_samples > 0:
             save_dataset_cache_files(
-                self.config, week_dir, sample_metadata, sample_count
+                self.config, week_dir, sample_metadata, sample_count,
+                dataset_info_extras={
+                    "source_kind": self.source_kind,
+                    "hf_resolved_revision": self.hf_resolved_revision,
+                }
             )
             gasstation_utils.save_downloaded_archives(week_dir, downloaded_archives)
 
@@ -462,7 +486,11 @@ class DatasetIterator:
                 # Save metadata incrementally every 50 samples
                 if sample_count % 50 == 0:
                     save_dataset_cache_files(
-                        self.config, self.dataset_dir, sample_metadata, sample_count
+                        self.config, self.dataset_dir, sample_metadata, sample_count,
+                        dataset_info_extras={
+                            "source_kind": self.source_kind,
+                            "hf_resolved_revision": self.hf_resolved_revision,
+                        }
                     )
                     logger.info(
                         f"Downloaded {sample_count}/{CACHE_MAX_SAMPLES} samples (checkpoint saved)"
@@ -471,7 +499,11 @@ class DatasetIterator:
         # Save final metadata
         if sample_count > 0:
             save_dataset_cache_files(
-                self.config, self.dataset_dir, sample_metadata, sample_count
+                self.config, self.dataset_dir, sample_metadata, sample_count,
+                dataset_info_extras={
+                    "source_kind": self.source_kind,
+                    "hf_resolved_revision": self.hf_resolved_revision,
+                }
             )
             logger.info(
                 f"Download complete: Saved {sample_count} samples to cache for {self.config.name}"
@@ -588,6 +620,14 @@ class DatasetIterator:
             with open(metadata_file, "r") as f:
                 metadata_map = json.load(f)
 
+            dataset_info_file = os.path.join(cache_dir, "dataset_info.json")
+            dataset_info = {}
+            try:
+                with open(dataset_info_file, "r") as f:
+                    dataset_info = json.load(f)
+            except Exception:
+                dataset_info = {}
+
             sample_files = [
                 f
                 for f in os.listdir(samples_dir)
@@ -622,6 +662,10 @@ class DatasetIterator:
                             "media_type": self.config.media_type,
                             **metadata,
                         }
+                        sample["dataset_path"] = self.config.path
+                        sample["source_kind"] = self.source_kind
+                        sample["hf_resolved_revision"] = dataset_info.get("hf_resolved_revision", self.hf_resolved_revision)
+                        sample["cache_relpath"] = filename
                         yield sample
                     except Exception as e:
                         logger.warning(f"Failed to load cached image {filename}: {e}")
@@ -637,6 +681,10 @@ class DatasetIterator:
                             "media_type": self.config.media_type,
                             **metadata,
                         }
+                        sample["dataset_path"] = self.config.path
+                        sample["source_kind"] = self.source_kind
+                        sample["hf_resolved_revision"] = dataset_info.get("hf_resolved_revision", self.hf_resolved_revision)
+                        sample["cache_relpath"] = filename
                         yield sample
                     except Exception as e:
                         logger.warning(f"Failed to load cached video {filename}: {e}")

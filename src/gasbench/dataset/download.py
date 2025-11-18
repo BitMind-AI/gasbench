@@ -1142,12 +1142,11 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
                     "dataset_name": dataset.name,
                     "dataset_path": dataset.path,
                     "source_file": f"cached_{filename}",
-                    **metadata,  # Include all original metadata
+                    **metadata,
                 }
                 yield sample
 
             elif dataset.modality == "video":
-                # Load video file as bytes
                 with open(filepath, "rb") as f:
                     video_bytes = f.read()
 
@@ -1157,7 +1156,7 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
                     "dataset_name": dataset.name,
                     "dataset_path": dataset.path,
                     "source_file": f"cached_{filename}",
-                    **metadata,  # Include all original metadata
+                    **metadata,
                 }
                 yield sample
 

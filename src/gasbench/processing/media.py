@@ -71,6 +71,9 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
                     ret, frame = cap.read()
                     if not ret:
                         break
+                    if frame is None or frame.size == 0 or frame.shape[0] == 0 or frame.shape[1] == 0:
+                        logger.warning(f"Skipping frame with invalid dimensions: {frame.shape if frame is not None else 'None'}")
+                        continue
                     frames.append(frame)
                     frames_read += 1
                 

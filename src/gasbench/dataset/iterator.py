@@ -71,7 +71,7 @@ class DatasetIterator:
         self.source_kind = getattr(self.config, "source", "huggingface")
         self.hf_resolved_revision = None
         try:
-            if self.source_kind == "huggingface":
+            if self.source_kind == "huggingface" and download and not self._has_cached_dataset():
                 api = hf_hub.HfApi()
                 info = api.repo_info(repo_id=self.config.path, repo_type="dataset", revision="main")
                 self.hf_resolved_revision = getattr(info, "sha", None)

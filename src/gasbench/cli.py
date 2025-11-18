@@ -81,6 +81,8 @@ def command_run(args):
     }
     if args.cache_dir:
         config["cache_directory"] = args.cache_dir
+    if getattr(args, 'parquet_output_path', None):
+        config["parquet_output_path"] = args.parquet_output_path
 
     print("\n🎯 Starting gasbench evaluation")
     print(json.dumps(config, indent=2))
@@ -99,14 +101,18 @@ def command_run(args):
                 batch_size=args.batch_size,
                 dataset_config=args.dataset_config,
                 holdout_config=getattr(args, 'holdout_config', None),
+                records_parquet_path=getattr(args, 'parquet_output_path', None),
             )
         )
 
         print_benchmark_summary(results)
 
-        # Save results to JSON file
         output_path = save_results_to_json(results, output_dir=args.output_dir)
-        print(f"\nResults saved to: {output_path}")
+        print(f"\nResults summary saved to: {output_path}")
+        res_key = f"{modality}_results"
+        ppath = results.get(res_key, {}).get("parquet_path")
+        if ppath:
+            print(f"Benchmark run recorded at: {ppath}")
 
         if results.get("benchmark_completed"):
             print("\n✅ Benchmark completed successfully")
@@ -267,6 +273,12 @@ Examples:
         type=str,
         metavar="PATH",
         help="Path to private holdout YAML with additional datasets (names will be obfuscated)",
+    )
+    run_parser.add_argument(
+        "--parquet-output-path",
+        type=str,
+        metavar="PATH",
+        help="Write per-sample records to a Parquet file at this path",
     )
 
     run_parser.set_defaults(func=command_run)

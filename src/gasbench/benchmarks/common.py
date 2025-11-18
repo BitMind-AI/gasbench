@@ -13,7 +13,7 @@ from ..dataset.config import (
 )
 from ..processing.transforms import extract_target_size_from_input_specs
 from .recording import (
-    ResultTracker,
+    BenchmarkRunRecorder,
     compute_metrics_from_df,
     compute_per_dataset_from_df,
     compute_generator_stats_from_df,
@@ -60,7 +60,6 @@ class BenchmarkPlan:
     sampling_summary: SamplingSummary
 
 
-@dataclass
 def build_plan(
     logger, config: BenchmarkRunConfig, input_specs
 ) -> Optional[BenchmarkPlan]:
@@ -151,8 +150,8 @@ def build_plan(
 
 def create_tracker(
     config: BenchmarkRunConfig, plan: BenchmarkPlan, input_specs
-) -> ResultTracker:
-    return ResultTracker(
+) -> BenchmarkRunRecorder:
+    return BenchmarkRunRecorder(
         mode=config.mode,
         modality=config.modality,
         target_size=plan.target_size,
@@ -166,7 +165,7 @@ def finalize_run(
     *,
     config: BenchmarkRunConfig,
     plan: BenchmarkPlan,
-    tracker: ResultTracker,
+    tracker: BenchmarkRunRecorder,
     benchmark_results: Dict,
     results_key: str,
     extra_fields: Optional[Dict] = None,
@@ -205,6 +204,7 @@ def finalize_run(
         results["generator_stats"] = generator_stats
     if parquet_path:
         results["parquet_path"] = parquet_path
+        logger.info(f"Benchmark run recorded at: {parquet_path}")
     if extra_fields:
         results.update(extra_fields)
 
@@ -220,6 +220,4 @@ def finalize_run(
             logger.warning(
                 f"Failed to update cache policy at {config.cache_policy_path}: {e}"
             )
-
-    logger.info(f"✅ Benchmark complete: {metric_pack['benchmark_score']:.2%}")
     return df

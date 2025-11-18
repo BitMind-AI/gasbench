@@ -14,7 +14,7 @@ from ..config import DEFAULT_VIDEO_BATCH_SIZE
 from ..dataset.iterator import DatasetIterator
  
 from ..model.inference import process_model_output
-from .recording import ResultTracker, log_dataset_summary
+from .recording import BenchmarkRunRecorder, log_dataset_summary
 from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
 import pandas as pd
 
@@ -26,7 +26,7 @@ def process_video_batch(
     input_specs,
     batch_videos,
     batch_metadata,
-    tracker: ResultTracker,
+    tracker: BenchmarkRunRecorder,
     batch_id: int,
 ):
     """push a batch of videos through the model and record rows in tracker."""
@@ -39,7 +39,18 @@ def process_video_batch(
         batch_array[i] = vid
 
     start = time.time()
-    outputs = session.run(None, {input_specs[0].name: batch_array})
+    outputs = None
+    try:
+        outputs = session.run(None, {input_specs[0].name: batch_array})
+    except Exception as e:
+        for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(batch_metadata):
+            tracker.add_error(
+                dataset_name=dataset_name,
+                sample_index=sample_index,
+                sample=sample,
+                error_message=f"inference-failed: {str(e)[:160]}",
+            )
+        return
     batch_inference_time = (time.time() - start) * 1000
     per_sample_time = batch_inference_time / len(batch_videos)
 
@@ -58,65 +69,6 @@ def process_video_batch(
             batch_size=len(batch_videos),
             sample_seed=sample_seed,
         )
-
-
-async def video_prefetcher(
-    dataset_iterator,
-    dataset_config,
-    queue: asyncio.Queue,
-    max_queue_size: int = 2,
-    seed: int = None,
-    target_size=None,
-    augment_level: Optional[int] = 0,
-    crop_prob: float = 0.0,
-):
-    """
-    Prefetch and preprocess videos from the dataset iterator.
-    
-    Args:
-        dataset_iterator: Iterator over dataset samples
-        dataset_config: Configuration for the dataset
-        queue: Async queue to put processed videos into
-        max_queue_size: Maximum size of prefetch queue
-        seed: Optional random seed for reproducible augmentations
-        target_size: Optional (H, W) tuple for fixed target size from model specs
-    """
-    try:
-        sample_index = 0
-        for sample in dataset_iterator:
-            sample_index += 1
-            try:
-                video_array, label = process_video_bytes_sample(sample)
-
-                if video_array is None or label is None:
-                    # Put a skip marker in the queue
-                    await queue.put(("skip", None, None, None, None))
-                    continue
-
-                try:
-                    # video_array is THWC uint8; augment in THWC and transpose once at the end
-                    sample_seed = None if seed is None else (seed + sample_index)
-                    aug_thwc, _, _, _ = apply_random_augmentations(
-                        video_array, target_size, seed=sample_seed, level=augment_level, crop_prob=crop_prob
-                    )
-                    aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
-                    video_array = np.expand_dims(aug_tchw, 0)  # 1,T,C,H,W
-                except Exception as e:
-                    logger.error(f"Video augmentation failed: {e}")
-                    await queue.put(("skip", None, None, None, None))
-                    continue
-
-                await queue.put(("data", video_array, label, sample))
-                
-            except Exception as e:
-                logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
-                await queue.put(("error", None, None, None, None))
-                
-    except Exception as e:
-        logger.error(f"Prefetcher error for dataset {dataset_config.name}: {e}")
-    finally:
-        # Signal end of dataset
-        await queue.put(("done", None, None, None, None))
 
 
 async def run_video_benchmark(
@@ -200,75 +152,50 @@ async def run_video_benchmark(
                         seed=seed,
                     )
 
-                    prefetch_queue = asyncio.Queue(maxsize=16)
-                    prefetch_task = asyncio.create_task(
-                        video_prefetcher(
-                            dataset_iterator,
-                            dataset_config,
-                            prefetch_queue,
-                            seed=seed,
-                            target_size=plan.target_size,
-                            augment_level=augment_level,
-                            crop_prob=crop_prob,
-                        )
-                    )
-
                     sample_index = 0
                     batch_videos = []
                     batch_metadata = []
                     batch_id = 0
 
-                    while True:
-                        item = await prefetch_queue.get()
-                        item_type = item[0]
-
-                        if item_type == "done":
-                            break
-                        elif item_type == "skip":
-                            dataset_skipped += 1
-                            skipped_samples += 1
-                            tracker.add_skip(dataset_name=dataset_config.name, sample_index=sample_index + 1, sample={}, reason="prefetch-skip")
-                            if dataset_skipped % 10 == 0:
-                                logger.debug(
-                                    f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far"
+                    for sample in dataset_iterator:
+                        try:
+                            sample_index += 1
+                            video_array, label = process_video_bytes_sample(sample)
+                            if video_array is None or label is None:
+                                dataset_skipped += 1
+                                skipped_samples += 1
+                                tracker.add_skip(dataset_name=dataset_config.name, sample_index=sample_index, sample={}, reason="decode-or-label-missing")
+                                continue
+                            sample_seed = None if seed is None else (seed + sample_index)
+                            try:
+                                aug_thwc, _, _, _ = apply_random_augmentations(
+                                    video_array, plan.target_size, seed=sample_seed, level=augment_level, crop_prob=crop_prob
                                 )
-                            continue
-                        elif item_type == "error":
-                            benchmark_results["errors"].append(f"Video processing error during prefetch")
-                            dataset_skipped += 1
-                            skipped_samples += 1
-                            tracker.add_error(dataset_name=dataset_config.name, sample_index=sample_index + 1, sample={}, error_message="prefetch-error")
-                            continue
-
-                        video_array, label, sample = item[1], item[2], item[3]
-                        sample_index += 1
-                        
-                        batch_videos.append(video_array[0])
-                        sample_seed = None if seed is None else (seed + sample_index)
-                        batch_metadata.append((label, sample, sample_index, dataset_config.name, sample_seed))
-
-                        if len(batch_videos) >= batch_size:
-                            batch_id += 1
-                            process_video_batch(
-                                session, input_specs, batch_videos, batch_metadata, tracker, batch_id
-                            )
+                            except Exception as e:
+                                logger.error(f"Video augmentation failed: {e}")
+                                dataset_skipped += 1
+                                skipped_samples += 1
+                                tracker.add_skip(dataset_name=dataset_config.name, sample_index=sample_index, sample={}, reason="augment-failed")
+                                continue
                             
-                            batch_videos = []
-                            batch_metadata = []
-
-                            if tracker.count % 500 == 0:
-                                logger.info(
-                                    f"Progress: {tracker.count} samples"
-                                )
-                    
-                    # Wait for prefetcher to finish
-                    await prefetch_task
+                            aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
+                            batch_videos.append(aug_tchw)
+                            batch_metadata.append((label, sample, sample_index, dataset_config.name, sample_seed))
+                            if len(batch_videos) >= batch_size:
+                                batch_id += 1
+                                process_video_batch(session, input_specs, batch_videos, batch_metadata, tracker, batch_id)
+                                batch_videos = []
+                                batch_metadata = []
+                                if tracker.count % 500 == 0:
+                                    logger.info(f"Progress: {tracker.count} samples")
+                        except Exception as e:
+                            logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
+                            benchmark_results["errors"].append(f"Video processing error: {str(e)[:200]}")
+                            continue
 
                     if batch_videos:
                         batch_id += 1
-                        process_video_batch(
-                            session, input_specs, batch_videos, batch_metadata, tracker, batch_id
-                        )
+                        process_video_batch(session, input_specs, batch_videos, batch_metadata, tracker, batch_id)
 
                     log_dataset_summary(logger, tracker, dataset_config.name, include_skipped=True)
 

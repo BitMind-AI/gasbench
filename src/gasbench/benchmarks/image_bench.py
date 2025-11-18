@@ -16,7 +16,7 @@ from ..config import (
 from ..dataset.iterator import DatasetIterator
  
 from ..model.inference import process_model_output
-from .recording import ResultTracker, log_dataset_summary
+from .recording import BenchmarkRunRecorder, log_dataset_summary
 from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
 import pandas as pd
 
@@ -28,7 +28,7 @@ def process_batch(
     input_specs,
     batch_images,
     batch_metadata,
-    tracker: ResultTracker,
+    tracker: BenchmarkRunRecorder,
     batch_id: int,
 ):
     """push a batch of images through the model and record rows in tracker."""

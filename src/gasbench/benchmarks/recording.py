@@ -10,7 +10,7 @@ import numpy as np
 from .utils import Metrics, multiclass_to_binary
 
 
-class ResultTracker:
+class BenchmarkRunRecorder:
     def __init__(
         self,
         run_id: Optional[str] = None,
@@ -124,7 +124,7 @@ class ResultTracker:
             "run_id": self.run_id,
             "run_started_at": self.run_started_at,
             "mode": self.mode,
-            "media_type": self.media_type,
+            "media_type": sample.get("media_type"),
             "dataset_name": dataset_name,
             "iteration_index": int(sample_index),
             "status": "skipped",
@@ -157,7 +157,7 @@ class ResultTracker:
             "run_id": self.run_id,
             "run_started_at": self.run_started_at,
             "mode": self.mode,
-            "media_type": self.media_type,
+            "media_type": sample.get("media_type"),
             "dataset_name": dataset_name,
             "iteration_index": int(sample_index),
             "status": "error",
@@ -187,6 +187,12 @@ class ResultTracker:
         df = self.to_dataframe()
         if df.empty:
             return path
+        try:
+            dirpath = os.path.dirname(path)
+            if dirpath and not os.path.exists(dirpath):
+                os.makedirs(dirpath, exist_ok=True)
+        except Exception:
+            pass
         df.to_parquet(path, index=False)
         return path
 
@@ -377,7 +383,7 @@ def compute_generator_stats_from_df(df: pd.DataFrame) -> Dict[str, Any]:
 
 
 def summarize_dataset_from_tracker(
-    tracker: ResultTracker,
+    tracker: BenchmarkRunRecorder,
     dataset_name: str,
     include_skipped: bool = False,
 ) -> Dict[str, Any]:
@@ -417,7 +423,7 @@ def summarize_dataset_from_tracker(
 
 def log_dataset_summary(
     logger,
-    tracker: ResultTracker,
+    tracker: BenchmarkRunRecorder,
     dataset_name: str,
     include_skipped: bool = False,
 ):

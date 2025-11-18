@@ -72,13 +72,11 @@ def command_run(args):
         return 1
 
     # Print configuration as JSON for clarity
-    results_dir = getattr(args, 'results_dir', None)
-    parquet_path = None
-    if results_dir:
-        results_path = Path(results_dir)
-        results_path.mkdir(parents=True, exist_ok=True)
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        parquet_path = str(results_path / f"records_{modality}_{timestamp}.parquet")
+    results_dir = getattr(args, 'results_dir', 'results')
+    results_path = Path(results_dir)
+    results_path.mkdir(parents=True, exist_ok=True)
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    parquet_path = str(results_path / f"records_{modality}_{timestamp}.parquet")
     
     config = {
         "model": str(model_path),
@@ -86,11 +84,10 @@ def command_run(args):
         "mode": mode.upper(),
         "gasstation_only": args.gasstation_only,
         "download_latest_gasstation_data": args.download_latest_gasstation_data,
+        "results_directory": results_dir,
     }
     if args.cache_dir:
         config["cache_directory"] = args.cache_dir
-    if results_dir:
-        config["results_directory"] = results_dir
 
     print("\n🎯 Starting gasbench evaluation")
     print(json.dumps(config, indent=2))
@@ -115,17 +112,13 @@ def command_run(args):
 
         print_benchmark_summary(results)
 
-        if results_dir:
-            output_path = save_results_to_json(results, output_dir=results_dir)
-            print(f"\n📊 Results saved to: {results_dir}")
-            print(f"  - JSON summary: {output_path}")
-            res_key = f"{modality}_results"
-            ppath = results.get(res_key, {}).get("parquet_path")
-            if ppath:
-                print(f"  - Parquet records: {ppath}")
-        else:
-            output_path = save_results_to_json(results, output_dir=None)
-            print(f"\nResults summary saved to: {output_path}")
+        output_path = save_results_to_json(results, output_dir=results_dir)
+        print(f"\n📊 Results saved to: {results_dir}")
+        print(f"  - JSON summary: {output_path}")
+        res_key = f"{modality}_results"
+        ppath = results.get(res_key, {}).get("parquet_path")
+        if ppath:
+            print(f"  - Parquet records: {ppath}")
 
         if results.get("benchmark_completed"):
             print("\n✅ Benchmark completed successfully")
@@ -265,7 +258,7 @@ Examples:
         "--results-dir",
         type=str,
         metavar="PATH",
-        help="Directory to save results (JSON summary and parquet records)",
+        help="Directory to save results (default: results/)",
     )
     run_parser.add_argument(
         "--seed",

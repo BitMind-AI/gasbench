@@ -22,6 +22,13 @@ from PIL import Image
 from modelscope.hub.api import HubApi as MSHubApi
 
 from ..logger import get_logger
+from .utils.s3_utils import list_s3_files, download_s3_file, _get_s3_urls
+from .utils.metadata_utils import create_sample, extract_row_metadata
+from .utils.gasstation_utils import (
+    extract_iso_week_from_path,
+    filter_files_by_current_week,
+    filter_files_by_recent_weeks,
+)
 
 logger = get_logger(__name__)
 
@@ -89,9 +96,7 @@ def download_and_extract(
     """
     try:
         if not force_download and _is_dataset_cached(dataset, cache_dir):
-            logger.info(
-                f"Dataset {dataset.name} found in cache, loading from volume"
-            )
+            logger.info(f"Dataset {dataset.name} found in cache, loading from volume")
             try:
                 cached_samples_count = 0
                 for sample in _load_dataset_from_cache(dataset, cache_dir):
@@ -122,8 +127,15 @@ def download_and_extract(
             source = getattr(dataset, "source", "huggingface")
 
             filenames = _list_remote_dataset_files(
-                dataset.path, dataset.source_format, current_week_only, num_weeks, target_week,
-                include_paths, exclude_paths, source, hf_token
+                dataset.path,
+                dataset.source_format,
+                current_week_only,
+                num_weeks,
+                target_week,
+                include_paths,
+                exclude_paths,
+                source,
+                hf_token,
             )
             if not filenames:
                 logger.warning(
@@ -138,8 +150,15 @@ def download_and_extract(
                             f"Trying fallback format {fallback_format} for {dataset.path}"
                         )
                         filenames = _list_remote_dataset_files(
-                            dataset.path, fallback_format, current_week_only, num_weeks, target_week,
-                            include_paths, exclude_paths, source, hf_token
+                            dataset.path,
+                            fallback_format,
+                            current_week_only,
+                            num_weeks,
+                            target_week,
+                            include_paths,
+                            exclude_paths,
+                            source,
+                            hf_token,
                         )
                         if filenames:
                             logger.info(
@@ -164,11 +183,12 @@ def download_and_extract(
             to_download = _select_files_to_download(
                 remote_paths, n_files, prioritize_recent=is_gasstation, seed=seed
             )
-            
+
             if is_gasstation and downloaded_archives is not None:
                 original_count = len(to_download)
                 to_download = [
-                    url for url in to_download 
+                    url
+                    for url in to_download
                     if os.path.basename(url) not in downloaded_archives
                 ]
                 filtered_count = original_count - len(to_download)
@@ -189,18 +209,26 @@ def download_and_extract(
             if dataset.modality == "video":
                 try:
                     if source == "modelscope":
-                        parquet_files_cache = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
+                        parquet_files_cache = list_modelscope_files(
+                            repo_id=dataset.path, extension=".parquet"
+                        )
                     else:
-                        parquet_files_cache = list_hf_files(repo_id=dataset.path, extension=".parquet", token=hf_token)
-                    logger.info(f"Cached {len(parquet_files_cache)} parquet files for metadata lookup")
+                        parquet_files_cache = list_hf_files(
+                            repo_id=dataset.path, extension=".parquet", token=hf_token
+                        )
+                    logger.info(
+                        f"Cached {len(parquet_files_cache)} parquet files for metadata lookup"
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to cache parquet file list: {e}")
                     parquet_files_cache = []
 
             successfully_processed = 0
             for url in to_download:
-                iso_week = _extract_iso_week_from_path(url)
-                downloaded_file = download_single_file(url, temp_dir_root, 8192, hf_token)
+                iso_week = extract_iso_week_from_path(url)
+                downloaded_file = download_single_file(
+                    url, temp_dir_root, 8192, hf_token
+                )
                 if not downloaded_file:
                     continue
 
@@ -213,7 +241,7 @@ def download_and_extract(
                         iso_week,
                         hf_token,
                         seed,
-                        parquet_files_cache
+                        parquet_files_cache,
                     ):
                         yield sample
                 finally:
@@ -246,12 +274,17 @@ def yield_media_from_source(
     parquet_files_cache: Optional[List[str]] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
-    Unified media extractor for parquet, zip, and tar sources.
+    Unified media extractor for parquet, zip, tar sources, and frame directories.
 
     Returns complete sample dictionaries ready for processing functions.
     Samples include: image/video_bytes, media_type, dataset_name, dataset_path, etc.
     """
     try:
+        # Check if it's a directory (frame directory)
+        if source_path.is_dir():
+            yield from _process_frame_directory(source_path, dataset, iso_week)
+            return
+
         filename = str(source_path.name).lower()
 
         if _is_parquet_file(filename):
@@ -259,7 +292,15 @@ def yield_media_from_source(
             return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
-            yield from _process_zip_or_tar(source_path, dataset, num_items, iso_week, hf_token, seed, parquet_files_cache)
+            yield from _process_zip_or_tar(
+                source_path,
+                dataset,
+                num_items,
+                iso_week,
+                hf_token,
+                seed,
+                parquet_files_cache,
+            )
             return
 
         if any(
@@ -276,26 +317,12 @@ def yield_media_from_source(
         return
 
 
-def _extract_iso_week_from_path(file_path: str) -> Optional[str]:
-    """Extract ISO week string from file path (e.g., '2025W40' from 'data_2025W40/file.parquet').
-
-    Gasstation datasets are organized in weekly subdirectories like:
-    - data_2025W38/
-    - data_2025W40/
-    - archives/2025W39/
-
-    Returns:
-        ISO week string like '2025W40', or None if not found
-    """
-    # Pattern to match ISO week format: YYYYWWW (e.g., 2025W40)
-    pattern = r'(\d{4}W\d{2})'
-    match = re.search(pattern, file_path)
-    if match:
-        return match.group(1)
-    return None
-
-
-def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bool = False, seed: Optional[int] = None) -> List[str]:
+def _select_files_to_download(
+    urls: List[str],
+    count: int,
+    prioritize_recent: bool = False,
+    seed: Optional[int] = None,
+) -> List[str]:
     """Select files to download.
 
     Args:
@@ -312,11 +339,11 @@ def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bo
         return urls
     if count <= 0:
         return []
-    
+
     if prioritize_recent:
         sorted_urls = sorted(urls, reverse=True)
-        return sorted_urls[:min(count, len(urls))]
-    
+        return sorted_urls[: min(count, len(urls))]
+
     if seed is not None:
         rng = random.Random(seed)
         return rng.sample(urls, min(count, len(urls)))
@@ -324,7 +351,7 @@ def _select_files_to_download(urls: List[str], count: int, prioritize_recent: bo
 
 
 def _list_remote_dataset_files(
-    dataset_path: str, 
+    dataset_path: str,
     source_format: str = ".parquet",
     current_week_only: bool = False,
     num_weeks: int = None,
@@ -339,7 +366,7 @@ def _list_remote_dataset_files(
     Supports single extensions (e.g., .parquet, .zip) and tar variants (.tar, .tar.gz, .tgz).
     For gasstation datasets with current_week_only=True, filters to only current ISO week's data.
     For gasstation datasets with num_weeks set, filters to only the N most recent weeks.
-    
+
     Args:
         dataset_path: Dataset repository path (org/dataset-name)
         source_format: File extension to filter by
@@ -358,118 +385,58 @@ def _list_remote_dataset_files(
 
     if source == "modelscope":
         files = list_modelscope_files(repo_id=dataset_path, extension=source_format)
+    elif source == "s3":
+        files = list_s3_files(path=dataset_path, extension=source_format)
     else:  # hf
-        files = list_hf_files(repo_id=dataset_path, extension=source_format, token=hf_token)
+        files = list_hf_files(
+            repo_id=dataset_path, extension=source_format, token=hf_token
+        )
 
     if include_paths:
         files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
 
     if exclude_paths:
-        files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
+        files = [
+            f for f in files if not any(path_seg in f for path_seg in exclude_paths)
+        ]
 
     if "gasstation" in dataset_path.lower():
         if target_week:
             files = [f for f in files if target_week in f]
-            logger.info(f"Filtered to week {target_week} for {dataset_path}: {len(files)} files")
+            logger.info(
+                f"Filtered to week {target_week} for {dataset_path}: {len(files)} files"
+            )
         elif num_weeks:
-            files = _filter_files_by_recent_weeks(files, num_weeks)
-            logger.info(f"Filtered to last {num_weeks} weeks for {dataset_path}: {len(files)} files")
+            files = filter_files_by_recent_weeks(files, num_weeks)
+            logger.info(
+                f"Filtered to last {num_weeks} weeks for {dataset_path}: {len(files)} files"
+            )
         elif current_week_only:
-            files = _filter_files_by_current_week(files)
-            logger.info(f"Filtered to current week files for {dataset_path}: {len(files)} files")
+            files = filter_files_by_current_week(files)
+            logger.info(
+                f"Filtered to current week files for {dataset_path}: {len(files)} files"
+            )
 
     return files
 
 
-def _filter_files_by_current_week(files: List[str]) -> List[str]:
-    """Filter files to only include current ISO week's data for gasstation datasets.
-    
-    Gasstation datasets are organized in weekly subdirectories like:
-    - data_2025W38/
-    - data_2025W39/
-    - data_2025W40/
-    - archives/2025W38/
-    - archives/2025W39/
-    
-    This function filters to only include files from the current ISO week.
-    """
-    from datetime import datetime
-    
-    now = datetime.now()
-    current_year, current_week, _ = now.isocalendar()
-    current_week_str = f"{current_year}W{current_week:02d}"
-    logger.info(f"Current ISO week: {current_week_str}")
-    
-    current_week_files = []
-    for file_path in files:
-        # Check for patterns like data_2025W40/ or archives/2025W40/ or 2025W40 anywhere in path
-        if current_week_str in file_path:
-            current_week_files.append(file_path)
-    
-    logger.info(f"Found {len(current_week_files)} files for current week {current_week_str}")
-    return current_week_files
-
-
-def _filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]:
-    """Filter files to only include the N most recent ISO weeks for gasstation datasets.
-    
-    Gasstation datasets are organized in weekly subdirectories like:
-    - data_2025W38/
-    - data_2025W39/
-    - data_2025W40/
-    - archives/2025W38/
-    - archives/2025W39/
-    
-    This function filters to only include files from the N most recent ISO weeks.
-    
-    Args:
-        files: List of file paths
-        num_weeks: Number of most recent weeks to include
-    
-    Returns:
-        Filtered list of files
-    """
-    from datetime import datetime, timedelta
-    
-    now = datetime.now()
-    
-    recent_weeks = []
-    for i in range(num_weeks):
-        date_offset = now - timedelta(weeks=i)
-        year, week, _ = date_offset.isocalendar()
-        week_str = f"{year}W{week:02d}"
-        recent_weeks.append(week_str)
-    
-    logger.info(f"Filtering to last {num_weeks} weeks: {', '.join(recent_weeks)}")
-    
-    recent_week_files = []
-    for file_path in files:
-        for week_str in recent_weeks:
-            if week_str in file_path:
-                recent_week_files.append(file_path)
-                break  # Only add file once even if it matches multiple weeks
-    
-    logger.info(f"Found {len(recent_week_files)} files for last {num_weeks} weeks")
-    return recent_week_files
-
-
 def _get_download_urls(
-    dataset_path: str, 
-    filenames: List[str], 
-    source: str = "huggingface"
+    dataset_path: str, filenames: List[str], source: str = "huggingface"
 ) -> List[str]:
     """Get download URLs for data files from the specified source.
 
     Args:
-        dataset_path: Repository path (org/dataset-name)
+        dataset_path: Repository path (org/dataset-name) or S3 path (bucket/prefix)
         filenames: List of files to download
-        source: Source platform ("huggingface" or "modelscope")
+        source: Source platform ("huggingface", "modelscope", or "s3")
 
     Returns:
         List of download URLs
     """
     if source == "modelscope":
         return _get_modelscope_urls(dataset_path, filenames)
+    elif source == "s3":
+        return _get_s3_urls(dataset_path, filenames)
     else:
         return _get_huggingface_urls(dataset_path, filenames)
 
@@ -488,7 +455,13 @@ def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
     ]
 
 
-def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[str] = None, hf_token: Optional[str] = None, parquet_files_cache: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
+def _load_archive_metadata_map(
+    dataset,
+    archive_path: Path,
+    iso_week: Optional[str] = None,
+    hf_token: Optional[str] = None,
+    parquet_files_cache: Optional[List[str]] = None,
+) -> Dict[str, Dict[str, Any]]:
     """Build a filename->metadata map for a given video archive using matching parquet shards.
 
     Matching strategy:
@@ -504,7 +477,7 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
     try:
         if not iso_week:
             return {}
-        
+
         archive_stem = archive_path.name
         for suf in [".tar.gz", ".tgz", ".zip", ".tar"]:
             if archive_stem.endswith(suf):
@@ -523,17 +496,22 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
             parquet_files = parquet_files_cache
         else:
             if source == "modelscope":
-                parquet_files = list_modelscope_files(repo_id=dataset.path, extension=".parquet")
+                parquet_files = list_modelscope_files(
+                    repo_id=dataset.path, extension=".parquet"
+                )
             else:
-                parquet_files = list_hf_files(repo_id=dataset.path, extension=".parquet", token=hf_token)
+                parquet_files = list_hf_files(
+                    repo_id=dataset.path, extension=".parquet", token=hf_token
+                )
 
         # Match on week, UID, timestamp, 'archive'
         matching = [
-            p for p in parquet_files 
-            if iso_week in p 
-            and alt_uid_prefix in p 
+            p
+            for p in parquet_files
+            if iso_week in p
+            and alt_uid_prefix in p
             and (timestamp in p if timestamp else True)
-            and "archive" in p 
+            and "archive" in p
             and p.endswith(".parquet")
         ]
 
@@ -553,13 +531,20 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
                     df = table.to_pandas()
                     # Try to find a filename column (prioritize video_path, then more specific matches)
                     name_col = None
-                    for keyword in ["video_path_in_archive", "video_path", "video_filename", "filename", "filepath", "file_path"]:
+                    for keyword in [
+                        "video_path_in_archive",
+                        "video_path",
+                        "video_filename",
+                        "filename",
+                        "filepath",
+                        "file_path",
+                    ]:
                         matching = [c for c in df.columns if keyword in str(c).lower()]
                         if matching:
                             name_col = matching[0]
                             break
                     for _, row in df.iterrows():
-                        clean_meta = _extract_row_metadata(row, name_col or "")
+                        clean_meta = extract_row_metadata(row, name_col or "")
                         if name_col:
                             key_name = str(row[name_col])
                             if key_name:
@@ -577,116 +562,12 @@ def _load_archive_metadata_map(dataset, archive_path: Path, iso_week: Optional[s
         return {}
 
 
-def _create_sample(
-    dataset, media_obj, source_path: Path, iso_week: Optional[str] = None
-) -> Dict[str, Any]:
-    """Create a complete sample in the format expected by processing functions."""
-    base_sample = {
-        "media_type": dataset.media_type,
-        "dataset_name": dataset.name,
-        "dataset_path": dataset.path,
-        "source_file": source_path.name,
-    }
-
-    # Add ISO week if available (for gasstation datasets)
-    if iso_week:
-        base_sample["iso_week"] = iso_week
-
-    if dataset.modality == "image":
-        base_sample["image"] = media_obj  # PIL Image
-    else:
-        base_sample["video_bytes"] = media_obj  # Raw video bytes
-
-    return base_sample
-
-
-def _clean_to_json_serializable(value: Any) -> Any:
-    """Convert arbitrary values to JSON-serializable equivalents.
-
-    - numpy scalars -> native python
-    - numpy arrays / lists / tuples / sets -> list of cleaned values
-    - bytes -> base64 string
-    - datetime -> isoformat string
-    - dict -> recursively cleaned
-    - NaN/Inf -> None
-    - fallback -> str(value) if still not JSON-serializable
-    """
-    try:
-        if value is None or isinstance(value, (str, int, bool)):
-            return value
-
-        if isinstance(value, float):
-            if np.isnan(value) or np.isinf(value):
-                return None
-            return value
-
-        # numpy scalar types
-        if isinstance(value, (np.integer,)):
-            return int(value)
-        if isinstance(value, (np.floating,)):
-            f = float(value)
-            if np.isnan(f) or np.isinf(f):
-                return None
-            return f
-        if isinstance(value, (np.bool_,)):
-            return bool(value)
-
-        # bytes -> base64
-        if isinstance(value, (bytes, bytearray)):
-            try:
-                return base64.b64encode(bytes(value)).decode("ascii")
-            except Exception:
-                return None
-
-        # datetime -> isoformat
-        if isinstance(value, datetime):
-            return value.isoformat()
-
-        # numpy arrays and iterables
-        if isinstance(value, (np.ndarray, list, tuple, set)):
-            return [
-                _clean_to_json_serializable(v) for v in (value.tolist() if isinstance(value, np.ndarray) else list(value))
-            ]
-
-        # dict-like
-        if isinstance(value, dict):
-            return {str(k): _clean_to_json_serializable(v) for k, v in value.items()}
-
-        # Fallback: ensure JSON-serializable; else stringify
-        try:
-            json.dumps(value)
-            return value
-        except Exception:
-            return str(value)
-    except Exception:
-        return None
-
-
-def _extract_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
-    """Extract non-media columns from a pandas Series row and clean to JSON-serializable dict."""
-    metadata: Dict[str, Any] = {}
-    try:
-        for col, val in row.items():
-            if str(col) == str(media_col):
-                continue
-            cleaned = _clean_to_json_serializable(val)
-            col_str = str(col)
-            metadata[col_str] = cleaned
-            
-            # Map common variations to standard field names for gasstation datasets
-            col_lower = col_str.lower()
-            if "hotkey" in col_lower and "generator" not in metadata:
-                metadata["generator_hotkey"] = cleaned
-            if "uid" in col_lower and "generator_uid" not in metadata:
-                metadata["generator_uid"] = cleaned
-    except Exception:
-        # Best-effort extraction
-        pass
-    return metadata
-
-
 def _process_parquet(
-    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, seed: Optional[int] = None
+    source_path: Path,
+    dataset,
+    num_items: int,
+    iso_week: Optional[str] = None,
+    seed: Optional[int] = None,
 ):  # BenchmarkDatasetConfig
     table = pq.read_table(source_path)
     df = table.to_pandas()
@@ -699,7 +580,14 @@ def _process_parquet(
         # First try exact match, then exclude _id columns, then any column with "image"
         media_col = (
             next((c for c in sample_df.columns if c.lower() == "image"), None)
-            or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
+            or next(
+                (
+                    c
+                    for c in sample_df.columns
+                    if "image" in c.lower() and "_id" not in c.lower()
+                ),
+                None,
+            )
             or next((c for c in sample_df.columns if "image" in c.lower()), None)
         )
     else:
@@ -707,8 +595,23 @@ def _process_parquet(
         # First try exact matches, then exclude _id columns, then fallback
         media_col = (
             next((c for c in sample_df.columns if c.lower() in candidates), None)
-            or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)
-            or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates)), None)
+            or next(
+                (
+                    c
+                    for c in sample_df.columns
+                    if any(k in c.lower() for k in candidates)
+                    and "_id" not in c.lower()
+                ),
+                None,
+            )
+            or next(
+                (
+                    c
+                    for c in sample_df.columns
+                    if any(k in c.lower() for k in candidates)
+                ),
+                None,
+            )
         )
 
     if not media_col:
@@ -716,15 +619,16 @@ def _process_parquet(
             f"No media column found in {source_path} for modality {dataset.modality}"
         )
         return
-    
+
     if "gasstation" in dataset.name.lower():
         cols = list(sample_df.columns)
         has_generator = any(
-            "hotkey" in str(c).lower() or "generator" in str(c).lower()
-            for c in cols
+            "hotkey" in str(c).lower() or "generator" in str(c).lower() for c in cols
         )
         if not has_generator:
-            logger.warning(f"Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
+            logger.warning(
+                f"Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}"
+            )
 
     for _, row in sample_df.iterrows():
         try:
@@ -754,7 +658,7 @@ def _process_parquet(
                     if isinstance(media_data, str):
                         media_data = base64.b64decode(media_data)
                     img = Image.open(BytesIO(media_data))
-                sample = _create_sample(dataset, img, source_path, iso_week)
+                sample = create_sample(dataset, img, source_path, iso_week)
             else:
                 if media_data is None or isinstance(media_data, (int, float)):
                     continue
@@ -764,20 +668,24 @@ def _process_parquet(
                         media_data = base64.b64decode(media_data)
                     else:
                         continue
-                sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
+                sample = create_sample(
+                    dataset, bytes(media_data), source_path, iso_week
+                )
 
             # Merge parquet row metadata without overwriting base fields
-            row_metadata = _extract_row_metadata(row, media_col)
+            row_metadata = extract_row_metadata(row, media_col)
             for k, v in row_metadata.items():
                 if k not in sample:
                     sample[k] = v
-            
+
             # Debug: Log extracted generator metadata for first few samples
             if "gasstation" in dataset.name.lower():
                 gen_hotkey = sample.get("generator_hotkey")
                 gen_uid = sample.get("generator_uid")
                 if gen_hotkey and gen_hotkey != "unknown":
-                    logger.debug(f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}")
+                    logger.debug(
+                        f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}"
+                    )
 
             yield sample
         except Exception as e:
@@ -786,7 +694,13 @@ def _process_parquet(
 
 
 def _process_zip_or_tar(
-    source_path: Path, dataset, num_items: int, iso_week: Optional[str] = None, hf_token: Optional[str] = None, seed: Optional[int] = None, parquet_files_cache: Optional[List[str]] = None
+    source_path: Path,
+    dataset,
+    num_items: int,
+    iso_week: Optional[str] = None,
+    hf_token: Optional[str] = None,
+    seed: Optional[int] = None,
+    parquet_files_cache: Optional[List[str]] = None,
 ):  # BenchmarkDatasetConfig
     filename = str(source_path.name).lower()
     is_zip = _is_zip_file(filename)
@@ -830,11 +744,15 @@ def _process_zip_or_tar(
                     rng = random.Random(seed)
                     selected = rng.sample(candidates, min(num_items, len(candidates)))
                 else:
-                    selected = random.sample(candidates, min(num_items, len(candidates)))
+                    selected = random.sample(
+                        candidates, min(num_items, len(candidates))
+                    )
 
             # Load associated metadata parquet(s) for video archives if available
             archive_metadata_map: Dict[str, Dict[str, Any]] = (
-                _load_archive_metadata_map(dataset, source_path, iso_week, hf_token, parquet_files_cache)
+                _load_archive_metadata_map(
+                    dataset, source_path, iso_week, hf_token, parquet_files_cache
+                )
                 if dataset.modality == "video"
                 else {}
             )
@@ -858,7 +776,7 @@ def _process_zip_or_tar(
                     else:
                         media_obj = data_bytes
 
-                    sample = _create_sample(dataset, media_obj, source_path, iso_week)
+                    sample = create_sample(dataset, media_obj, source_path, iso_week)
                     sample["archive_filename"] = source_path.name
                     try:
                         sample["member_path"] = get_name(entry)
@@ -903,9 +821,69 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
             )
             return
 
-        yield _create_sample(dataset, media_obj, source_path, iso_week)
+        yield create_sample(dataset, media_obj, source_path, iso_week)
     except Exception as e:
         logger.warning(f"Error reading direct file {source_path}: {e}")
+        return
+
+
+def _process_frame_directory(
+    frame_dir: Path, dataset, iso_week: Optional[str] = None
+) -> Generator[Dict[str, Any], None, None]:
+    """Process a directory containing pre-extracted video frames.
+
+    Args:
+        frame_dir: Directory containing frame files (e.g., bm-videos/dfb/DFDC/test/frames/amwhgrjvkw/)
+        dataset: BenchmarkDatasetConfig
+        iso_week: Optional ISO week string
+
+    Yields:
+        Sample dict with 'video_frames' key containing list of frame paths
+    """
+    try:
+        if not frame_dir.is_dir():
+            logger.warning(f"{frame_dir} is not a directory")
+            return
+
+        # Get all image files in the directory
+        frame_files = []
+        for ext in IMAGE_FILE_EXTENSIONS:
+            frame_files.extend(sorted(frame_dir.glob(f"*{ext}")))
+            frame_files.extend(sorted(frame_dir.glob(f"*{ext.upper()}")))
+
+        # Sort frames numerically if they have numeric names
+        def extract_number(filepath):
+            """Extract numeric part from filename for sorting (e.g., '000.png' -> 0)"""
+            name = filepath.stem
+            match = re.match(r"(\d+)", name)
+            if match:
+                return int(match.group(1))
+            return name
+
+        frame_files = sorted(set(frame_files), key=extract_number)
+
+        if not frame_files:
+            logger.warning(f"No frame files found in {frame_dir}")
+            return
+
+        logger.debug(f"Found {len(frame_files)} frames in {frame_dir.name}")
+
+        # Create sample with frame paths
+        sample = {
+            "video_frames": frame_files,
+            "media_type": dataset.media_type,
+            "dataset_name": dataset.name,
+            "dataset_path": dataset.path,
+            "source_file": frame_dir.name,
+        }
+
+        if iso_week:
+            sample["iso_week"] = iso_week
+
+        yield sample
+
+    except Exception as e:
+        logger.warning(f"Error processing frame directory {frame_dir}: {e}")
         return
 
 
@@ -923,7 +901,9 @@ def list_hf_files(repo_id, repo_type="dataset", extension=None, token=None):
     """
     files = []
     try:
-        files = list(hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type, token=token))
+        files = list(
+            hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type, token=token)
+        )
         if extension:
             if isinstance(extension, (list, tuple, set)):
                 exts = tuple(extension)
@@ -948,11 +928,14 @@ def list_modelscope_files(repo_id, extension=None):
     files = []
     try:
         api = MSHubApi()
-        file_info = api.get_dataset_files(repo_id, revision='master', recursive=True)
-        
+        file_info = api.get_dataset_files(repo_id, revision="master", recursive=True)
+
         # Extract file paths
         if isinstance(file_info, list):
-            files = [f['Path'] if isinstance(f, dict) and 'Path' in f else str(f) for f in file_info]
+            files = [
+                f["Path"] if isinstance(f, dict) and "Path" in f else str(f)
+                for f in file_info
+            ]
         elif isinstance(file_info, dict):
             files = [f for f in file_info.keys()] if file_info else []
 
@@ -964,9 +947,13 @@ def list_modelscope_files(repo_id, extension=None):
                 files = [f for f in files if f.endswith(extension)]
 
     except Exception as e:
-        logger.error(f"Failed to list files of type {extension} in ModelScope repo {repo_id}: {e}")
-        logger.error(f"Make sure 'modelscope' package is installed: pip install modelscope")
-    
+        logger.error(
+            f"Failed to list files of type {extension} in ModelScope repo {repo_id}: {e}"
+        )
+        logger.error(
+            f"Make sure 'modelscope' package is installed: pip install modelscope"
+        )
+
     return files
 
 
@@ -1017,15 +1004,12 @@ def download_files(
 
 
 def download_single_file(
-    url: str, 
-    output_dir: Path, 
-    chunk_size: int, 
-    hf_token: Optional[str] = None
+    url: str, output_dir: Path, chunk_size: int, hf_token: Optional[str] = None
 ) -> Optional[Path]:
     """Download a single file synchronously
 
     Args:
-        url: URL to download
+        url: URL to download (supports http/https and s3: schemes)
         output_dir: Directory to save the file
         chunk_size: Size of chunks to download at a time
         hf_token: Hugging Face API token for private datasets
@@ -1034,6 +1018,24 @@ def download_single_file(
         Path to the downloaded file, or None if failed
     """
     try:
+        # Handle S3 URLs (format: s3:bucket-name/key/path)
+        if url.startswith("s3:"):
+            s3_path = url[3:]  # Remove "s3:" prefix
+            parts = s3_path.split("/", 1)
+            if len(parts) != 2:
+                logger.error(
+                    f"Invalid S3 URL format: {url}. Expected: s3:bucket/key/path"
+                )
+                return None
+
+            bucket = parts[0]
+            key = parts[1]
+            filename = os.path.basename(key)
+            filepath = output_dir / filename
+
+            return download_s3_file(bucket, key, filepath)
+
+        # Handle regular HTTP/HTTPS URLs
         filename = os.path.basename(url)
         filepath = output_dir / filename
 
@@ -1047,13 +1049,15 @@ def download_single_file(
             logger.error(f"Failed to download {url}: Status {response.status_code}")
             return None
 
-        total_size = int(response.headers.get('content-length', 0))
+        total_size = int(response.headers.get("content-length", 0))
         logger.info(f"Writing to {filepath} (size: {total_size/(1024*1024):.1f} MB)")
 
         downloaded = 0
         last_log_mb = 0
         with open(filepath, "wb") as f:
-            for chunk in response.iter_content(chunk_size=max(chunk_size, 1024*1024)):  # Use at least 1MB chunks
+            for chunk in response.iter_content(
+                chunk_size=max(chunk_size, 1024 * 1024)
+            ):  # Use at least 1MB chunks
                 if chunk:
                     f.write(chunk)
                     downloaded += len(chunk)
@@ -1061,7 +1065,9 @@ def download_single_file(
                     if current_mb - last_log_mb >= 100:
                         if total_size > 0:
                             pct = (downloaded / total_size) * 100
-                            logger.info(f"Progress: {current_mb:.0f}MB / {total_size/(1024*1024):.0f}MB ({pct:.1f}%)")
+                            logger.info(
+                                f"Progress: {current_mb:.0f}MB / {total_size/(1024*1024):.0f}MB ({pct:.1f}%)"
+                            )
                         else:
                             logger.info(f"Downloaded: {current_mb:.0f}MB")
                         last_log_mb = current_mb
@@ -1070,9 +1076,13 @@ def download_single_file(
         if total_size > 0:
             actual_size = filepath.stat().st_size
             if actual_size != total_size:
-                logger.error(f"❌ Download incomplete: expected {total_size} bytes, got {actual_size} bytes")
+                logger.error(
+                    f"❌ Download incomplete: expected {total_size} bytes, got {actual_size} bytes"
+                )
                 return None
-            logger.info(f"✅ Download verified: {filename} ({actual_size/(1024*1024):.1f} MB)")
+            logger.info(
+                f"✅ Download verified: {filename} ({actual_size/(1024*1024):.1f} MB)"
+            )
         else:
             logger.info(f"✅ Downloaded: {filename}")
 

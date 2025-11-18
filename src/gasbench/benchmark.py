@@ -12,7 +12,7 @@ from .logger import get_logger
 from .processing.media import configure_huggingface_cache
 from .benchmarks.image_bench import run_image_benchmark
 from .benchmarks.video_bench import run_video_benchmark
-from .model.inference import create_inference_session
+from .benchmarks.utils import create_inference_session
 
 logger = get_logger(__name__)
 

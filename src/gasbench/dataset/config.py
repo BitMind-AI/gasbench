@@ -51,7 +51,7 @@ class BenchmarkDatasetConfig:
     media_per_archive: int = 100
     archives_per_dataset: int = 5
     source_format: str = ""  # Auto-detected if empty
-    source: str = "huggingface"  # "huggingface" or "modelscope"
+    source: str = "huggingface"  # "huggingface", "modelscope", or "s3"
 
     include_paths: Optional[List[str]] = None 
     exclude_paths: Optional[List[str]] = None
@@ -251,6 +251,14 @@ def validate_dataset_config(
             errors.append(
                 f"Dataset '{dataset_name}': Invalid media_type '{config_dict['media_type']}'. "
                 f"Must be one of {valid_media_types}"
+            )
+
+    if "source" in config_dict:
+        valid_sources = ["huggingface", "modelscope", "s3"]
+        if config_dict["source"] not in valid_sources:
+            errors.append(
+                f"Dataset '{dataset_name}': Invalid source '{config_dict['source']}'. "
+                f"Must be one of {valid_sources}"
             )
 
     numeric_fields = [

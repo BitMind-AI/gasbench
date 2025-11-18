@@ -13,7 +13,7 @@ from ..processing.transforms import (
 from ..config import DEFAULT_VIDEO_BATCH_SIZE
 from ..dataset.iterator import DatasetIterator
  
-from ..model.inference import process_model_output
+from .utils.inference import process_model_output
 from .recording import BenchmarkRunRecorder, log_dataset_summary
 from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
 import pandas as pd

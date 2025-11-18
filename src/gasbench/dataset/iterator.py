@@ -15,7 +15,7 @@ from .config import BenchmarkDatasetConfig
 from .download import download_and_extract
 from .cache import save_sample_to_cache, save_dataset_cache_files
 from .cache_policy import load_cache_policy, get_generator_priority
-from . import gasstation_utils
+from .utils import gasstation_utils
 import huggingface_hub as hf_hub
 
 logger = get_logger(__name__)

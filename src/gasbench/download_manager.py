@@ -355,7 +355,7 @@ def _needs_download(
     num_weeks: Optional[int],
 ) -> bool:
     """Check if dataset needs to be downloaded based on mode requirements."""
-    from .dataset import gasstation_utils
+    from .dataset.utils import gasstation_utils
     
     is_gasstation = "gasstation" in dataset.name.lower()
     

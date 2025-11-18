@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Command-line interface for GASBench."""
 
 import argparse
 import asyncio
 import json
 import sys
+import time
 from pathlib import Path
 
 from . import __version__
@@ -72,6 +72,14 @@ def command_run(args):
         return 1
 
     # Print configuration as JSON for clarity
+    results_dir = getattr(args, 'results_dir', None)
+    parquet_path = None
+    if results_dir:
+        results_path = Path(results_dir)
+        results_path.mkdir(parents=True, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        parquet_path = str(results_path / f"records_{modality}_{timestamp}.parquet")
+    
     config = {
         "model": str(model_path),
         "modality": modality.upper(),
@@ -81,8 +89,8 @@ def command_run(args):
     }
     if args.cache_dir:
         config["cache_directory"] = args.cache_dir
-    if getattr(args, 'parquet_output_path', None):
-        config["parquet_output_path"] = args.parquet_output_path
+    if results_dir:
+        config["results_directory"] = results_dir
 
     print("\n🎯 Starting gasbench evaluation")
     print(json.dumps(config, indent=2))
@@ -101,18 +109,23 @@ def command_run(args):
                 batch_size=args.batch_size,
                 dataset_config=args.dataset_config,
                 holdout_config=getattr(args, 'holdout_config', None),
-                records_parquet_path=getattr(args, 'parquet_output_path', None),
+                records_parquet_path=parquet_path,
             )
         )
 
         print_benchmark_summary(results)
 
-        output_path = save_results_to_json(results, output_dir=args.output_dir)
-        print(f"\nResults summary saved to: {output_path}")
-        res_key = f"{modality}_results"
-        ppath = results.get(res_key, {}).get("parquet_path")
-        if ppath:
-            print(f"Benchmark run recorded at: {ppath}")
+        if results_dir:
+            output_path = save_results_to_json(results, output_dir=results_dir)
+            print(f"\n📊 Results saved to: {results_dir}")
+            print(f"  - JSON summary: {output_path}")
+            res_key = f"{modality}_results"
+            ppath = results.get(res_key, {}).get("parquet_path")
+            if ppath:
+                print(f"  - Parquet records: {ppath}")
+        else:
+            output_path = save_results_to_json(results, output_dir=None)
+            print(f"\nResults summary saved to: {output_path}")
 
         if results.get("benchmark_completed"):
             print("\n✅ Benchmark completed successfully")
@@ -212,8 +225,8 @@ Examples:
   # Run image benchmark in debug mode
   gasbench run --image-model model.onnx --debug
   
-  # Run video benchmark with custom cache directory
-  gasbench run --video-model model.onnx --cache-dir /tmp/my_cache
+  # Run video benchmark with custom cache directory and save results
+  gasbench run --video-model model.onnx --cache-dir /tmp/my_cache --results-dir ./results
   
   # Run only gasstation datasets
   gasbench run --image-model model.onnx --gasstation-only
@@ -249,8 +262,10 @@ Examples:
         help="Download latest gasstation data before benchmarking (default: False, uses cached data)",
     )
     run_parser.add_argument(
-        "--output-dir",
-        help="Directory to save JSON results file (default: current directory)",
+        "--results-dir",
+        type=str,
+        metavar="PATH",
+        help="Directory to save results (JSON summary and parquet records)",
     )
     run_parser.add_argument(
         "--seed",
@@ -273,12 +288,6 @@ Examples:
         type=str,
         metavar="PATH",
         help="Path to private holdout YAML with additional datasets (names will be obfuscated)",
-    )
-    run_parser.add_argument(
-        "--parquet-output-path",
-        type=str,
-        metavar="PATH",
-        help="Write per-sample records to a Parquet file at this path",
     )
 
     run_parser.set_defaults(func=command_run)

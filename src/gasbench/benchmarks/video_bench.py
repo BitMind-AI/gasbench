@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.archive import video_archive_manager
-from ..processing.media import process_video_bytes_sample
+from ..processing.media import process_video_bytes_sample, process_video_frames_sample
 from ..processing.transforms import (
     apply_random_augmentations,
 )
@@ -160,7 +160,12 @@ async def run_video_benchmark(
                     for sample in dataset_iterator:
                         try:
                             sample_index += 1
-                            video_array, label = process_video_bytes_sample(sample)
+
+                            if "video_frames" in sample:
+                                video_array, label = process_video_frames_sample(sample)
+                            else:
+                                video_array, label = process_video_bytes_sample(sample)
+
                             if video_array is None or label is None:
                                 dataset_skipped += 1
                                 skipped_samples += 1

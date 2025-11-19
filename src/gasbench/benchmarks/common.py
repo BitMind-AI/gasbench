@@ -72,9 +72,10 @@ def build_plan(
 
     if config.holdout_config_path and not config.gasstation_only:
         try:
-            holdouts = load_holdout_datasets_from_yaml(config.holdout_config_path).get(
-                config.modality, []
-            )
+            holdouts = load_holdout_datasets_from_yaml(
+                config.holdout_config_path,
+                cache_dir=config.cache_dir
+            ).get(config.modality, [])
             holdouts = apply_mode_to_datasets(holdouts, config.mode)
             available_datasets.extend(holdouts)
         except Exception as e:

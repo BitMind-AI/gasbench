@@ -377,7 +377,8 @@ def _list_remote_dataset_files(
         exclude_paths: Exclude files containing any of these path segments
         source: Source platform ("huggingface" or "modelscope")
     """
-    if not source_format.startswith("."):
+    # Don't add "." prefix for special formats like "frames"
+    if source_format != "frames" and not source_format.startswith("."):
         source_format = "." + source_format
 
     if source_format in [".tar", ".tar.gz", ".tgz"]:
@@ -977,28 +978,49 @@ def _is_parquet_file(filename_lower: str) -> bool:
 
 
 def download_files(
-    urls: List[str], output_dir: Path, chunk_size: int = 8192
+    urls: List[str], output_dir: Path, chunk_size: int = 8192, max_workers: int = 10
 ) -> List[Path]:
-    """Download multiple files synchronously.
+    """Download multiple files in parallel.
 
     Args:
         urls: List of URLs to download
         output_dir: Directory to save the files
         chunk_size: Size of chunks to download at a time
+        max_workers: Maximum number of parallel downloads (default: 10)
 
     Returns:
         List of successfully downloaded file paths
     """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     output_dir.mkdir(parents=True, exist_ok=True)
     downloaded_files = []
 
-    for url in urls:
+    def download_url(url):
         try:
-            downloaded_file = download_single_file(url, output_dir, chunk_size)
-            if downloaded_file:
-                downloaded_files.append(downloaded_file)
+            return download_single_file(url, output_dir, chunk_size)
         except Exception as e:
             logger.error(f"Error downloading {url}: {e}")
+            return None
+
+    max_workers = min(max_workers, len(urls)) if urls else 1
+
+    if len(urls) > 1:
+        logger.info(
+            f"Downloading {len(urls)} files with {max_workers} parallel workers..."
+        )
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(download_url, url): url for url in urls}
+
+        completed = 0
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                downloaded_files.append(result)
+            completed += 1
+            if len(urls) > 10 and completed % 10 == 0:
+                logger.info(f"  Progress: {completed}/{len(urls)} files downloaded")
 
     return downloaded_files
 
@@ -1018,8 +1040,10 @@ def download_single_file(
         Path to the downloaded file, or None if failed
     """
     try:
-        # Handle S3 URLs (format: s3:bucket-name/key/path)
+        # Handle S3 URLs (format: s3:bucket-name/key/path or s3:bucket-name/frame/directory/)
         if url.startswith("s3:"):
+            from .utils.s3_utils import download_s3_frame_directory
+
             s3_path = url[3:]  # Remove "s3:" prefix
             parts = s3_path.split("/", 1)
             if len(parts) != 2:
@@ -1030,10 +1054,16 @@ def download_single_file(
 
             bucket = parts[0]
             key = parts[1]
-            filename = os.path.basename(key)
-            filepath = output_dir / filename
 
-            return download_s3_file(bucket, key, filepath)
+            # Check if this is a frame directory (no file extension or ends with /)
+            if key.endswith("/") or ("." not in os.path.basename(key)):
+                # This is a frame directory - download all frames
+                return download_s3_frame_directory(bucket, key, output_dir)
+            else:
+                # This is a single file
+                filename = os.path.basename(key)
+                filepath = output_dir / filename
+                return download_s3_file(bucket, key, filepath)
 
         # Handle regular HTTP/HTTPS URLs
         filename = os.path.basename(url)
@@ -1157,18 +1187,41 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
                 yield sample
 
             elif dataset.modality == "video":
-                with open(filepath, "rb") as f:
-                    video_bytes = f.read()
+                # Check if it's a frame directory or a video file
+                if os.path.isdir(filepath):
+                    # Frame directory - load all frames
+                    frame_files = []
+                    for ext in IMAGE_FILE_EXTENSIONS:
+                        frame_files.extend(sorted(Path(filepath).glob(f"*{ext}")))
+                        frame_files.extend(
+                            sorted(Path(filepath).glob(f"*{ext.upper()}"))
+                        )
 
-                sample = {
-                    "video_bytes": video_bytes,
-                    "media_type": dataset.media_type,
-                    "dataset_name": dataset.name,
-                    "dataset_path": dataset.path,
-                    "source_file": f"cached_{filename}",
-                    **metadata,
-                }
-                yield sample
+                    frame_files = sorted(set(frame_files), key=lambda p: p.name)
+
+                    sample = {
+                        "video_frames": frame_files,
+                        "media_type": dataset.media_type,
+                        "dataset_name": dataset.name,
+                        "dataset_path": dataset.path,
+                        "source_file": f"cached_{filename}",
+                        **metadata,
+                    }
+                    yield sample
+                else:
+                    # Regular video file
+                    with open(filepath, "rb") as f:
+                        video_bytes = f.read()
+
+                    sample = {
+                        "video_bytes": video_bytes,
+                        "media_type": dataset.media_type,
+                        "dataset_name": dataset.name,
+                        "dataset_path": dataset.path,
+                        "source_file": f"cached_{filename}",
+                        **metadata,
+                    }
+                    yield sample
 
         except Exception as e:
             logger.warning(

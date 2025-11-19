@@ -18,6 +18,7 @@ Environment variables:
 
 import os
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -38,11 +39,15 @@ logger = get_logger(__name__)
 # File extensions for frame detection
 IMAGE_FILE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
 
+# Global S3 client cache to reuse connection pool
+_s3_client_cache = None
+
 
 def _get_s3_client():
     """Initialize boto3 S3 client using environment credentials.
     
     Supports any S3-compatible service (AWS S3, MinIO, DigitalOcean Spaces, etc.)
+    Caches the client to reuse connection pool across calls.
     
     Environment variables:
         S3_ACCESS_KEY: S3 access key ID
@@ -56,6 +61,12 @@ def _get_s3_client():
     Raises:
         RuntimeError: If boto3 is not available or credentials are missing
     """
+    global _s3_client_cache
+    
+    # Return cached client if available
+    if _s3_client_cache is not None:
+        return _s3_client_cache
+    
     if not BOTO3_AVAILABLE:
         raise RuntimeError(
             "boto3 is not installed. Install it with: pip install boto3"
@@ -73,16 +84,24 @@ def _get_s3_client():
         )
     
     try:
+        from botocore.config import Config
+        # With 4 concurrent datasets and 10 workers each, we need ~40 connections
+        config = Config(
+            max_pool_connections=50,
+            retries={'max_attempts': 3, 'mode': 'adaptive'}
+        )
+        
         kwargs = {
             "aws_access_key_id": access_key,
             "aws_secret_access_key": secret_key,
             "region_name": region,
+            "config": config,
         }
         if endpoint_url:
             kwargs["endpoint_url"] = endpoint_url
         
-        client = boto3.client("s3", **kwargs)
-        return client
+        _s3_client_cache = boto3.client("s3", **kwargs)
+        return _s3_client_cache
     except Exception as e:
         raise RuntimeError(f"Failed to create S3 client: {e}")
 
@@ -272,19 +291,31 @@ def download_s3_frame_directory(
             logger.warning(f"No frame files found in s3:{bucket}/{frame_dir_key}/")
             return None
         
-        logger.info(f"Downloading {len(frame_files)} frames...")
+        logger.info(f"Downloading {len(frame_files)} frames (using parallel downloads)...")
         
-        downloaded_count = 0
-        for frame_key in frame_files:
+        def download_frame(frame_key):
+            """Download a single frame."""
             frame_name = os.path.basename(frame_key)
             frame_path = frame_output_dir / frame_name
-            
             try:
                 client.download_file(bucket, frame_key, str(frame_path))
-                downloaded_count += 1
+                return True
             except Exception as e:
                 logger.warning(f"Failed to download frame {frame_key}: {e}")
-                continue
+                return False
+        
+        downloaded_count = 0
+        # When multiple datasets download in parallel, too many workers causes connection pool exhaustion
+        max_workers = min(10, len(frame_files))
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(download_frame, frame_key): frame_key for frame_key in frame_files}
+            
+            for future in as_completed(futures):
+                if future.result():
+                    downloaded_count += 1
+                    if downloaded_count % 50 == 0:
+                        logger.info(f"  Downloaded {downloaded_count}/{len(frame_files)} frames...")
         
         if downloaded_count == 0:
             logger.error(f"Failed to download any frames from {frame_dir_key}")

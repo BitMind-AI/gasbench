@@ -50,8 +50,8 @@ class DatasetIterator:
         self.seed = seed
 
         self.is_gasstation = "gasstation" in dataset_config.name.lower()
-        
-        self.cache_policy = None 
+
+        self.cache_policy = None
         if self.is_gasstation:
             self.cache_policy = load_cache_policy(cache_policy)
 
@@ -71,9 +71,15 @@ class DatasetIterator:
         self.source_kind = getattr(self.config, "source", "huggingface")
         self.hf_resolved_revision = None
         try:
-            if self.source_kind == "huggingface" and download and not self._has_cached_dataset():
+            if (
+                self.source_kind == "huggingface"
+                and download
+                and not self._has_cached_dataset()
+            ):
                 api = hf_hub.HfApi()
-                info = api.repo_info(repo_id=self.config.path, repo_type="dataset", revision="main")
+                info = api.repo_info(
+                    repo_id=self.config.path, repo_type="dataset", revision="main"
+                )
                 self.hf_resolved_revision = getattr(info, "sha", None)
         except Exception:
             self.hf_resolved_revision = None
@@ -231,7 +237,9 @@ class DatasetIterator:
             return None
 
         # If no policy loaded, fall back to pure age-based eviction
-        has_policy = bool(self.cache_policy and self.cache_policy.get("generator_priorities"))
+        has_policy = bool(
+            self.cache_policy and self.cache_policy.get("generator_priorities")
+        )
 
         best_file = None
         best_score = -1.0
@@ -324,12 +332,13 @@ class DatasetIterator:
                 sample_count = 0
                 next_index = 0
 
-
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
 
         initial_sample_count = sample_count
-        
-        replacing_samples = self.allow_eviction and sample_count >= GASSTATION_CACHE_MAX_SAMPLES
+
+        replacing_samples = (
+            self.allow_eviction and sample_count >= GASSTATION_CACHE_MAX_SAMPLES
+        )
 
         for sample in download_and_extract(
             self.config,
@@ -377,11 +386,14 @@ class DatasetIterator:
 
                 if sample_count % 50 == 0:
                     save_dataset_cache_files(
-                        self.config, week_dir, sample_metadata, sample_count,
+                        self.config,
+                        week_dir,
+                        sample_metadata,
+                        sample_count,
                         dataset_info_extras={
                             "source_kind": self.source_kind,
                             "hf_resolved_revision": self.hf_resolved_revision,
-                        }
+                        },
                     )
                     gasstation_utils.save_downloaded_archives(
                         week_dir, downloaded_archives
@@ -394,11 +406,14 @@ class DatasetIterator:
 
         if new_samples > 0:
             save_dataset_cache_files(
-                self.config, week_dir, sample_metadata, sample_count,
+                self.config,
+                week_dir,
+                sample_metadata,
+                sample_count,
                 dataset_info_extras={
                     "source_kind": self.source_kind,
                     "hf_resolved_revision": self.hf_resolved_revision,
-                }
+                },
             )
             gasstation_utils.save_downloaded_archives(week_dir, downloaded_archives)
 
@@ -486,11 +501,14 @@ class DatasetIterator:
                 # Save metadata incrementally every 50 samples
                 if sample_count % 50 == 0:
                     save_dataset_cache_files(
-                        self.config, self.dataset_dir, sample_metadata, sample_count,
+                        self.config,
+                        self.dataset_dir,
+                        sample_metadata,
+                        sample_count,
                         dataset_info_extras={
                             "source_kind": self.source_kind,
                             "hf_resolved_revision": self.hf_resolved_revision,
-                        }
+                        },
                     )
                     logger.info(
                         f"Downloaded {sample_count}/{CACHE_MAX_SAMPLES} samples (checkpoint saved)"
@@ -499,11 +517,14 @@ class DatasetIterator:
         # Save final metadata
         if sample_count > 0:
             save_dataset_cache_files(
-                self.config, self.dataset_dir, sample_metadata, sample_count,
+                self.config,
+                self.dataset_dir,
+                sample_metadata,
+                sample_count,
                 dataset_info_extras={
                     "source_kind": self.source_kind,
                     "hf_resolved_revision": self.hf_resolved_revision,
-                }
+                },
             )
             logger.info(
                 f"Download complete: Saved {sample_count} samples to cache for {self.config.name}"
@@ -628,27 +649,23 @@ class DatasetIterator:
             except Exception:
                 dataset_info = {}
 
-            sample_files = [
-                f
-                for f in os.listdir(samples_dir)
-                if os.path.isfile(os.path.join(samples_dir, f))
-            ]
+            sample_items = [f for f in os.listdir(samples_dir) if not f.startswith(".")]
 
             if self.is_gasstation:
+
                 def extract_index(filename):
                     match = re.search(r"_(\d+)", filename)
                     return int(match.group(1)) if match else -1
 
-                sample_files.sort(key=extract_index, reverse=True)
+                sample_items.sort(key=extract_index, reverse=True)
             else:
                 if self.seed is not None:
-                    random.Random(self.seed).shuffle(sample_files)
+                    random.Random(self.seed).shuffle(sample_items)
                 else:
-                    random.shuffle(sample_files)
-                # Limit to max needed to avoid iterating unnecessarily
-                sample_files = sample_files[: self.max_samples]
+                    random.shuffle(sample_items)
+                sample_items = sample_items[: self.max_samples]
 
-            for filename in sample_files:
+            for filename in sample_items:
                 file_path = os.path.join(samples_dir, filename)
                 metadata = metadata_map.get(filename, {})
 
@@ -664,7 +681,9 @@ class DatasetIterator:
                         }
                         sample["dataset_path"] = self.config.path
                         sample["source_kind"] = self.source_kind
-                        sample["hf_resolved_revision"] = dataset_info.get("hf_resolved_revision", self.hf_resolved_revision)
+                        sample["hf_resolved_revision"] = dataset_info.get(
+                            "hf_resolved_revision", self.hf_resolved_revision
+                        )
                         sample["cache_relpath"] = filename
                         yield sample
                     except Exception as e:
@@ -673,19 +692,49 @@ class DatasetIterator:
 
                 elif self.config.modality == "video":
                     try:
-                        with open(file_path, "rb") as f:
-                            video_bytes = f.read()
-                        sample = {
-                            "video_bytes": video_bytes,
-                            "dataset_name": self.config.name,
-                            "media_type": self.config.media_type,
-                            **metadata,
-                        }
-                        sample["dataset_path"] = self.config.path
-                        sample["source_kind"] = self.source_kind
-                        sample["hf_resolved_revision"] = dataset_info.get("hf_resolved_revision", self.hf_resolved_revision)
-                        sample["cache_relpath"] = filename
-                        yield sample
+                        if os.path.isdir(file_path):
+                            from ..dataset.download import IMAGE_FILE_EXTENSIONS
+
+                            frame_files = []
+                            for ext in IMAGE_FILE_EXTENSIONS:
+                                frame_files.extend(
+                                    sorted(Path(file_path).glob(f"*{ext}"))
+                                )
+                                frame_files.extend(
+                                    sorted(Path(file_path).glob(f"*{ext.upper()}"))
+                                )
+
+                            frame_files = sorted(set(frame_files), key=lambda p: p.name)
+
+                            sample = {
+                                "video_frames": frame_files,
+                                "dataset_name": self.config.name,
+                                "media_type": self.config.media_type,
+                                **metadata,
+                            }
+                            sample["dataset_path"] = self.config.path
+                            sample["source_kind"] = self.source_kind
+                            sample["hf_resolved_revision"] = dataset_info.get(
+                                "hf_resolved_revision", self.hf_resolved_revision
+                            )
+                            sample["cache_relpath"] = filename
+                            yield sample
+                        else:
+                            with open(file_path, "rb") as f:
+                                video_bytes = f.read()
+                            sample = {
+                                "video_bytes": video_bytes,
+                                "dataset_name": self.config.name,
+                                "media_type": self.config.media_type,
+                                **metadata,
+                            }
+                            sample["dataset_path"] = self.config.path
+                            sample["source_kind"] = self.source_kind
+                            sample["hf_resolved_revision"] = dataset_info.get(
+                                "hf_resolved_revision", self.hf_resolved_revision
+                            )
+                            sample["cache_relpath"] = filename
+                            yield sample
                     except Exception as e:
                         logger.warning(f"Failed to load cached video {filename}: {e}")
                         continue

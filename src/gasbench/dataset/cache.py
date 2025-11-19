@@ -3,7 +3,8 @@
 import os
 import json
 import shutil
-from typing import Dict, Optional
+from collections import defaultdict
+from typing import Dict, Optional, List, Tuple
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +14,9 @@ from .config import BenchmarkDatasetConfig
 logger = get_logger(__name__)
 
 
-def check_dataset_cache(dataset_config: BenchmarkDatasetConfig, base_dir: str = "/.cache/gasbench") -> Dict:
+def check_dataset_cache(
+    dataset_config: BenchmarkDatasetConfig, base_dir: str = "/.cache/gasbench"
+) -> Dict:
     """Check if a dataset is already cached locally."""
     try:
         dataset_dir = os.path.join(base_dir, "datasets", dataset_config.name)
@@ -56,10 +59,10 @@ def check_dataset_cache(dataset_config: BenchmarkDatasetConfig, base_dir: str = 
 
 
 def save_sample_to_cache(
-    sample: dict, 
-    dataset_config: BenchmarkDatasetConfig, 
-    samples_dir: str, 
-    sample_count: int
+    sample: dict,
+    dataset_config: BenchmarkDatasetConfig,
+    samples_dir: str,
+    sample_count: int,
 ) -> Optional[str]:
     """Save individual sample to local cache in original format."""
     try:
@@ -80,20 +83,51 @@ def save_sample_to_cache(
             return filename
 
         elif dataset_config.modality == "video":
+            # Check if sample has video_bytes (regular video) or video_frames (pre-extracted frames)
             video_bytes = sample.get("video_bytes")
-            if video_bytes is None:
+            video_frames = sample.get("video_frames")
+
+            if video_bytes:
+                # Regular video file
+                source_name = str(sample.get("source_file", ""))
+                ext = Path(source_name).suffix.lower() if source_name else ".mp4"
+                if not ext or ext not in {
+                    ".mp4",
+                    ".avi",
+                    ".mov",
+                    ".mkv",
+                    ".wmv",
+                    ".webm",
+                    ".m4v",
+                }:
+                    ext = ".mp4"
+                filename = f"vid_{sample_count:06d}{ext}"
+                file_path = os.path.join(samples_dir, filename)
+
+                with open(file_path, "wb") as f:
+                    f.write(video_bytes)
+                return filename
+
+            elif video_frames:
+                # Frame directory - save as a directory
+                source_name = str(sample.get("source_file", "frame_dir"))
+                dirname = f"vid_{sample_count:06d}_frames"
+                dir_path = os.path.join(samples_dir, dirname)
+                os.makedirs(dir_path, exist_ok=True)
+
+                # Copy/link frames to cache directory
+                import shutil
+
+                for i, frame_path in enumerate(video_frames):
+                    ext = Path(frame_path).suffix
+                    dest_path = os.path.join(dir_path, f"{i:06d}{ext}")
+                    shutil.copy2(frame_path, dest_path)
+
+                return dirname
+
+            else:
+                # No video data found
                 return None
-
-            source_name = str(sample.get("source_file", ""))
-            ext = Path(source_name).suffix.lower() if source_name else ".mp4"
-            if not ext or ext not in {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v"}:
-                ext = ".mp4"
-            filename = f"vid_{sample_count:06d}{ext}"
-            file_path = os.path.join(samples_dir, filename)
-
-            with open(file_path, "wb") as f:
-                f.write(video_bytes)
-            return filename
 
     except Exception as e:
         logger.warning(
@@ -103,9 +137,9 @@ def save_sample_to_cache(
 
 
 def save_dataset_cache_files(
-    dataset_config: BenchmarkDatasetConfig, 
-    dataset_cache_dir: str, 
-    dataset_samples: dict, 
+    dataset_config: BenchmarkDatasetConfig,
+    dataset_cache_dir: str,
+    dataset_samples: dict,
     sample_count: int,
     dataset_info_extras: Optional[Dict] = None,
 ):
@@ -172,3 +206,127 @@ def cleanup_temp_directory_full(temp_dir: str):
             logger.info("🧹 Cleaned up consolidated temporary directory")
         except Exception as e:
             logger.warning(f"Failed to clean temp directory: {e}")
+
+
+def format_size_bytes(size_bytes: int) -> str:
+    """Format byte size to human readable string."""
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if size_bytes < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} PB"
+
+
+def scan_cache_directory(cache_dir: str = "/.cache/gasbench") -> List[Dict]:
+    """Scan cache directory and return list of dataset information.
+
+    Returns:
+        List of dicts containing dataset metadata including name, modality,
+        media_type, sample_count, size_bytes, etc.
+    """
+    datasets_dir = Path(cache_dir) / "datasets"
+
+    if not datasets_dir.exists():
+        return []
+
+    datasets = []
+
+    for dataset_dir in sorted(datasets_dir.iterdir()):
+        if not dataset_dir.is_dir():
+            continue
+
+        info_file = dataset_dir / "dataset_info.json"
+        samples_dir = dataset_dir / "samples"
+
+        if not info_file.exists():
+            continue
+
+        try:
+            with open(info_file) as f:
+                info = json.load(f)
+
+            sample_count = info.get("sample_count", 0)
+
+            size_bytes = 0
+            if samples_dir.exists():
+                for item in samples_dir.rglob("*"):
+                    if item.is_file():
+                        size_bytes += item.stat().st_size
+
+            datasets.append(
+                {
+                    "name": info.get("name", dataset_dir.name),
+                    "modality": info.get("modality", "unknown"),
+                    "media_type": info.get("media_type", "unknown"),
+                    "source_format": info.get("source_format", "unknown"),
+                    "sample_count": sample_count,
+                    "size_bytes": size_bytes,
+                    "cached_at": info.get("cached_at", "unknown"),
+                }
+            )
+
+        except Exception as e:
+            logger.warning(f"Error reading {dataset_dir.name}: {e}")
+            continue
+
+    return datasets
+
+
+def compute_cache_statistics(datasets: List[Dict]) -> Tuple[Dict, Dict]:
+    """Compute statistics from cached datasets.
+
+    Returns:
+        Tuple of (by_modality, by_media_type) dictionaries with counts, samples, and sizes
+    """
+    by_modality = defaultdict(lambda: {"count": 0, "samples": 0, "size": 0})
+    by_media_type = defaultdict(lambda: {"count": 0, "samples": 0, "size": 0})
+
+    for ds in datasets:
+        mod = ds["modality"]
+        mtype = ds["media_type"]
+
+        by_modality[mod]["count"] += 1
+        by_modality[mod]["samples"] += ds["sample_count"]
+        by_modality[mod]["size"] += ds["size_bytes"]
+
+        by_media_type[mtype]["count"] += 1
+        by_media_type[mtype]["samples"] += ds["sample_count"]
+        by_media_type[mtype]["size"] += ds["size_bytes"]
+
+    return by_modality, by_media_type
+
+
+def verify_cache_against_configs(
+    cached_names: set,
+    dataset_config: Optional[str] = None,
+    holdout_config: Optional[str] = None,
+    cache_dir: str = "/.cache/gasbench",
+) -> Tuple[set, set, List]:
+    """Verify cache completeness against config files.
+
+    Returns:
+        Tuple of (present_names, missing_names, expected_datasets)
+    """
+    from .config import load_datasets_from_yaml, load_holdout_datasets_from_yaml
+
+    expected_datasets = []
+
+    if dataset_config:
+        for modality in ["image", "video"]:
+            datasets = load_datasets_from_yaml(
+                modality=modality, yaml_path=dataset_config
+            )
+            expected_datasets.extend(datasets)
+
+    if holdout_config:
+        datasets_dict = load_holdout_datasets_from_yaml(
+            yaml_path=holdout_config, cache_dir=cache_dir
+        )
+        for modality in ["image", "video"]:
+            expected_datasets.extend(datasets_dict.get(modality, []))
+
+    expected_names = {ds.name for ds in expected_datasets}
+    present = expected_names & cached_names
+    missing = expected_names - cached_names
+
+    return present, missing, expected_datasets

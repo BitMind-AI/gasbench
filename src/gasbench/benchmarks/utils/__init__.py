@@ -1,5 +1,3 @@
-"""Utilities for benchmark processing."""
-
 from .metrics import (
     Metrics,
     multiclass_to_binary,
@@ -12,6 +10,7 @@ from .misclassifications import (
     create_misclassification_record,
     aggregate_misclassification_stats,
 )
+from .inference import create_inference_session, process_model_output
 
 __all__ = [
     "Metrics",
@@ -22,5 +21,7 @@ __all__ = [
     "should_track_sample",
     "create_misclassification_record",
     "aggregate_misclassification_stats",
+    "create_inference_session",
+    "process_model_output",
 ]
 

@@ -95,6 +95,22 @@ def save_sample_to_cache(
                 f.write(video_bytes)
             return filename
 
+        elif dataset_config.modality == "audio":
+            audio_bytes = sample.get("audio_bytes")
+            if audio_bytes is None:
+                return None
+
+            source_name = str(sample.get("source_file", ""))
+            ext = Path(source_name).suffix.lower() if source_name else ".wav"
+            if not ext or ext not in {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}:
+                ext = ".wav"
+            filename = f"aud_{sample_count:06d}{ext}"
+            file_path = os.path.join(samples_dir, filename)
+
+            with open(file_path, "wb") as f:
+                f.write(audio_bytes)
+            return filename
+
     except Exception as e:
         logger.warning(
             f"Failed to save sample {sample_count} for {dataset_config.name}: {e}"

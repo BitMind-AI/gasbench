@@ -748,12 +748,16 @@ def _process_parquet(
                         for k in media_data
                         if any(
                             s in k.lower()
-                            for s in ["bytes", "image", "video", "data", "content"]
+                            for s in ["bytes", "image", "video", "audio", "data", "content"]
                         )
                     ),
                     None,
                 )
-                media_data = media_data[key]
+                if key:
+                    media_data = media_data[key]
+                else:
+                    logger.warning(f"No valid key found in dict media_data for {source_path}: {list(media_data.keys())}")
+                    continue
 
             if dataset.modality == "image":
                 # Skip invalid media_data

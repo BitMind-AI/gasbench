@@ -146,16 +146,51 @@ def process_audio_sample(sample: Dict, target_sr: int = 16000) -> Tuple[any, int
         media_type = sample.get("media_type", "synthetic")
         label = MEDIA_TYPE_TO_LABEL.get(media_type, 1)  # Default to synthetic/1 if unknown
 
-        # Load audio from bytes
-        # torchaudio.load accepts a file-like object
-        waveform, sample_rate = torchaudio.load(BytesIO(audio_bytes))
+        # Determine format from source_file or cached_filename if available
+        source_file = sample.get("cached_filename") or sample.get("source_file", "")
+        audio_format = ".wav"  # default
+        if source_file:
+            # Extract extension from filename
+            ext = Path(source_file).suffix.lower()
+            if ext in [".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"]:
+                audio_format = ext
 
-        # Resample if necessary
-        if sample_rate != target_sr:
-            resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=target_sr)
-            waveform = resampler(waveform)
+        # torchaudio requires a file path, so write to a temporary file
+        temp_audio = tempfile.NamedTemporaryFile(suffix=audio_format, delete=False)
+        temp_audio_path = temp_audio.name
+        
+        try:
+            temp_audio.write(audio_bytes)
+            temp_audio.flush()
+            temp_audio.close()
 
-        return waveform, label
+            # Load audio from temporary file
+            waveform, sample_rate = torchaudio.load(temp_audio_path)
+
+            # Resample if necessary
+            if sample_rate != target_sr:
+                resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=target_sr)
+                waveform = resampler(waveform)
+            
+            # Trim or pad to fixed length (3 seconds at target_sr)
+            target_length = target_sr * 3  # 3 seconds
+            current_length = waveform.shape[1]
+            
+            if current_length > target_length:
+                # Trim to first 3 seconds
+                waveform = waveform[:, :target_length]
+            elif current_length < target_length:
+                # Pad with zeros
+                padding = target_length - current_length
+                waveform = torch.nn.functional.pad(waveform, (0, padding))
+
+            return waveform, label
+            
+        finally:
+            try:
+                os.unlink(temp_audio_path)
+            except:
+                pass
 
     except Exception as e:
         logger.warning(f"Failed to process audio sample: {e}")

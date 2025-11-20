@@ -650,6 +650,7 @@ class DatasetIterator:
                             "audio_bytes": audio_bytes,
                             "dataset_name": self.config.name,
                             "media_type": self.config.media_type,
+                            "cached_filename": filename,  # Include filename for format detection
                             **metadata,
                         }
                         yield sample

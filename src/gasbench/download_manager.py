@@ -18,6 +18,7 @@ from .dataset.config import (
     BenchmarkDatasetConfig,
     discover_benchmark_image_datasets,
     discover_benchmark_video_datasets,
+    discover_benchmark_audio_datasets,
     load_holdout_datasets_from_yaml,
     apply_mode_to_datasets,
 )
@@ -346,6 +347,17 @@ def _discover_datasets(
             except Exception as e:
                 logger.error(f"Failed to load holdout video datasets: {e}")
         datasets.extend(video_datasets)
+    
+    if not modality or modality == "all" or modality == "audio":
+        audio_datasets = discover_benchmark_audio_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        if holdout_config and not gasstation_only:
+            try:
+                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("audio", [])
+                holdouts = apply_mode_to_datasets(holdouts, mode)
+                audio_datasets.extend(holdouts)
+            except Exception as e:
+                logger.error(f"Failed to load holdout audio datasets: {e}")
+        datasets.extend(audio_datasets)
     
     return datasets
 

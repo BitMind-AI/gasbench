@@ -2,6 +2,7 @@
 
 image_benchmark_size: 35000
 video_benchmark_size: 15000
+audio_benchmark_size: 15000
 
 image:
   - name: gasstation-generated-images
@@ -69,7 +70,7 @@ image:
     media_type: synthetic
     media_per_archive: 250
     archives_per_dataset: 4
-    
+
   - name: fashionpedia
     path: detection-datasets/fashionpedia
     modality: image
@@ -361,7 +362,7 @@ video:
     source_format: zip
     media_per_archive: 100
     archives_per_dataset: 10
- 
+
   - name: fakeparts-t2v
     path: hi-paris/FakeParts
     modality: video
@@ -370,7 +371,7 @@ video:
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["t2v/"]
- 
+
   - name: fakeparts-faceswap
     path: hi-paris/FakeParts
     modality: video
@@ -379,7 +380,7 @@ video:
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["faceswap/"]
- 
+
   - name: fakeparts-inpainting
     path: hi-paris/FakeParts
     modality: video
@@ -388,7 +389,7 @@ video:
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["inpainting/"]
- 
+
   - name: fakeparts-outpainting
     path: hi-paris/FakeParts
     modality: video
@@ -397,7 +398,7 @@ video:
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["outpainting/"]
- 
+
   - name: fakeparts-stylechange
     path: hi-paris/FakeParts
     modality: video
@@ -406,7 +407,7 @@ video:
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["stylechange/"]
- 
+
   # DeepAction v1 dataset - split by subdirectory and media type.
   # 2600 total videos, so just take all from each subdir
   - name: deepaction-pexels
@@ -417,7 +418,7 @@ video:
     media_per_archive: -1
     archives_per_dataset: -1
     include_paths: ["Pexels/"]
- 
+
   - name: deepaction-bdanimate
     path: faridlab/deepaction_v1
     modality: video
@@ -426,7 +427,7 @@ video:
     media_per_archive: -1
     archives_per_dataset: -1
     include_paths: ["BDAnimateDiffLightning/"]
- 
+
   - name: deepaction-cogvideox5b
     path: faridlab/deepaction_v1
     modality: video
@@ -435,7 +436,7 @@ video:
     media_per_archive: -1
     archives_per_dataset: -1
     include_paths: ["CogVideoX5B/"]
- 
+
   - name: deepaction-runwayml
     path: faridlab/deepaction_v1
     modality: video
@@ -444,7 +445,7 @@ video:
     media_per_archive: -1
     archives_per_dataset: -1
     include_paths: ["RunwayML/"]
- 
+
   - name: deepaction-stablediffusion
     path: faridlab/deepaction_v1
     modality: video
@@ -453,7 +454,7 @@ video:
     media_per_archive: -1
     archives_per_dataset: -1
     include_paths: ["StableDiffusion/"]
- 
+
   - name: deepaction-veo
     path: faridlab/deepaction_v1
     modality: video
@@ -462,7 +463,7 @@ video:
     media_per_archive: -1
     archives_per_dataset: -1
     include_paths: ["Veo/"]
- 
+
   - name: deepaction-videopoet
     path: faridlab/deepaction_v1
     modality: video
@@ -495,3 +496,20 @@ video:
     source_format: mp4
     media_per_archive: 100
     archives_per_dataset: 10
+
+audio:
+  - name: deepfake-audio-dataset
+    path: Hemg/Deepfake-Audio-Dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: english-dialects
+    path: ylacombe/english_dialects
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 2

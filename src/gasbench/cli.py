@@ -56,8 +56,11 @@ def command_run(args):
     elif args.video_model:
         model_path = Path(args.video_model)
         modality = "video"
+    elif args.audio_model:
+        model_path = Path(args.audio_model)
+        modality = "audio"
     else:
-        print("Error: Must specify either --image-model or --video-model")
+        print("Error: Must specify either --image-model, --video-model, or --audio-model")
         return 1
 
     # Validate model path
@@ -228,6 +231,12 @@ Examples:
         metavar="PATH",
         help="Path to ONNX video detection model"
     )
+    model_group.add_argument(
+        "--audio-model",
+        type=str,
+        metavar="PATH",
+        help="Path to ONNX audio detection model"
+    )
 
     add_mode_args(run_parser)
     add_common_args(run_parser)
@@ -294,7 +303,7 @@ Examples:
 
     download_parser.add_argument(
         "--modality",
-        choices=["image", "video", "all"],
+        choices=["image", "video", "audio", "all"],
         help="Download datasets for specific modality (default: all)",
     )
 

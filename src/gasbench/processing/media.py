@@ -7,6 +7,8 @@ import numpy as np
 import cv2
 from io import BytesIO
 from PIL import Image
+import torchaudio
+import torch
 
 from ..logger import get_logger
 from ..constants import MEDIA_TYPE_TO_LABEL
@@ -120,6 +122,43 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
 
     except Exception as e:
         logger.warning(f"Failed to process image sample: {e}")
+        return None, None
+
+
+def process_audio_sample(sample: Dict, target_sr: int = 16000) -> Tuple[any, int]:
+    """Process an audio sample (bytes) for classification evaluation.
+    
+    Args:
+        sample: Dictionary containing 'audio_bytes' and metadata
+        target_sr: Target sample rate to resample to (default 16000 Hz)
+        
+    Returns:
+        Tuple of (audio_tensor, label)
+        - audio_tensor: torch.Tensor of shape (channels, time)
+        - label: int (0 for real, 1 for synthetic)
+    """
+    try:
+        audio_bytes = sample.get("audio_bytes")
+        if audio_bytes is None:
+            logger.warning("No audio bytes in sample")
+            return None, None
+
+        media_type = sample.get("media_type", "synthetic")
+        label = MEDIA_TYPE_TO_LABEL.get(media_type, 1)  # Default to synthetic/1 if unknown
+
+        # Load audio from bytes
+        # torchaudio.load accepts a file-like object
+        waveform, sample_rate = torchaudio.load(BytesIO(audio_bytes))
+
+        # Resample if necessary
+        if sample_rate != target_sr:
+            resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=target_sr)
+            waveform = resampler(waveform)
+
+        return waveform, label
+
+    except Exception as e:
+        logger.warning(f"Failed to process audio sample: {e}")
         return None, None
 
 

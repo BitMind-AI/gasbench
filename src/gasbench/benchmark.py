@@ -12,6 +12,7 @@ from .logger import get_logger
 from .processing.media import configure_huggingface_cache
 from .benchmarks.image_bench import run_image_benchmark
 from .benchmarks.video_bench import run_video_benchmark
+from .benchmarks.audio_bench import run_audio_benchmark
 from .model.inference import create_inference_session
 
 logger = get_logger(__name__)
@@ -117,6 +118,8 @@ async def run_benchmark(
             benchmark_results["image_results"] = {"error": str(e)}
         elif modality == "video" and "video_results" not in benchmark_results:
             benchmark_results["video_results"] = {"error": str(e)}
+        elif modality == "audio" and "audio_results" not in benchmark_results:
+            benchmark_results["audio_results"] = {"error": str(e)}
 
         raise e
 
@@ -221,8 +224,23 @@ async def execute_benchmark(
             dataset_config,
             holdout_config,
         )
+    elif modality == "audio":
+        benchmark_score = await run_audio_benchmark(
+            session,
+            input_specs,
+            benchmark_results,
+            mode,
+            gasstation_only,
+            cache_dir,
+            download_latest_gasstation_data,
+            cache_policy,
+            seed,
+            batch_size,
+            dataset_config,
+            holdout_config,
+        )
     else:
-        raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")
+        raise ValueError(f"Invalid modality: {modality}. Must be 'image', 'video' or 'audio'")
 
     return benchmark_score
 

@@ -642,6 +642,21 @@ class DatasetIterator:
                         logger.warning(f"Failed to load cached video {filename}: {e}")
                         continue
 
+                elif self.config.modality == "audio":
+                    try:
+                        with open(file_path, "rb") as f:
+                            audio_bytes = f.read()
+                        sample = {
+                            "audio_bytes": audio_bytes,
+                            "dataset_name": self.config.name,
+                            "media_type": self.config.media_type,
+                            **metadata,
+                        }
+                        yield sample
+                    except Exception as e:
+                        logger.warning(f"Failed to load cached audio {filename}: {e}")
+                        continue
+
         except Exception as e:
             logger.error(f"Failed to load cached dataset from {cache_dir}: {e}")
             raise

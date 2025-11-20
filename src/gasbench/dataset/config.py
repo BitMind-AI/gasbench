@@ -23,8 +23,8 @@ UNIFORM_SAMPLING_MULTIPLIER = 3  # Allow up to 3x the base allocation per datase
 # Total sample overrides for debug/small modes (for faster testing)
 # In "full" mode, values are loaded from YAML (image_benchmark_size, video_benchmark_size)
 BENCHMARK_TOTAL_OVERRIDES = {
-    "debug": {"image": 100, "video": 50},
-    "small": {"image": 1800, "video": 600},
+    "debug": {"image": 100, "video": 50, "audio": 50},
+    "small": {"image": 1800, "video": 600, "audio": 600},
 }
 
 # Per-dataset download limits (only applied in debug/small modes for faster testing)
@@ -84,11 +84,21 @@ def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[st
             return data[size_key]
 
         logger.warning(f"'{size_key}' not found in YAML, using default")
-        return 10000 if modality == "image" else 5000
+        if modality == "image":
+            return 10000
+        elif modality == "video":
+            return 5000
+        else:  # audio
+            return 5000
 
     except Exception as e:
         logger.warning(f"Failed to load benchmark size from YAML: {e}, using default")
-        return 10000 if modality == "image" else 5000
+        if modality == "image":
+            return 10000
+        elif modality == "video":
+            return 5000
+        else:  # audio
+            return 5000
 
 
 def apply_mode_to_datasets(
@@ -191,6 +201,36 @@ def discover_benchmark_video_datasets(
     return datasets
 
 
+def discover_benchmark_audio_datasets(
+    mode: str = "full",
+    gasstation_only: bool = False,
+    no_gasstation: bool = False,
+    yaml_path: Optional[str] = None,
+) -> List[BenchmarkDatasetConfig]:
+    """Return list of available benchmark audio datasets.
+    
+    Args:
+        mode: Benchmark mode - "debug", "small", or "full"
+        gasstation_only: If True, only return gasstation datasets
+        no_gasstation: If True, exclude gasstation datasets
+        yaml_path: Optional path to custom yaml config
+    """
+    dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
+    datasets = dataset_source["audio"]
+
+    datasets = apply_mode_to_datasets(datasets, mode)
+
+    if gasstation_only:
+        gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
+        return gasstation_datasets
+    
+    if no_gasstation:
+        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+        return non_gasstation_datasets
+
+    return datasets
+
+
 def calculate_weighted_dataset_sampling(
     datasets: List[BenchmarkDatasetConfig], 
     target_total_samples: int, 
@@ -271,7 +311,7 @@ def validate_dataset_config(
             errors.append(f"Dataset '{dataset_name}': Missing required field '{field}'")
 
     if "modality" in config_dict:
-        valid_modalities = ["image", "video"]
+        valid_modalities = ["image", "video", "audio"]
         if config_dict["modality"] not in valid_modalities:
             errors.append(
                 f"Dataset '{dataset_name}': Invalid modality '{config_dict['modality']}'. "
@@ -319,8 +359,8 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
 
     # Validate
     all_errors = []
-    result = {"image": [], "video": []}
-    for modality in ["image", "video"]:
+    result = {"image": [], "video": [], "audio": []}
+    for modality in ["image", "video", "audio"]:
         if modality not in data:
             continue
 
@@ -400,6 +440,7 @@ def load_holdout_datasets_from_yaml(
     return {
         "image": _obfuscate_holdout_names(base.get("image", [])),
         "video": _obfuscate_holdout_names(base.get("video", [])),
+        "audio": _obfuscate_holdout_names(base.get("audio", [])),
     }
 
 
@@ -434,6 +475,7 @@ def load_benchmark_datasets_from_yaml(
         return {
             "image": [],
             "video": [],
+            "audio": [],
         }
 
     try:
@@ -444,9 +486,10 @@ def load_benchmark_datasets_from_yaml(
         result = {
             "image": [],
             "video": [],
+            "audio": [],
         }
 
-        for modality in ["image", "video"]:
+        for modality in ["image", "video", "audio"]:
             if modality not in data:
                 continue
 
@@ -489,6 +532,7 @@ def load_benchmark_datasets_from_yaml(
         return {
             "image": [],
             "video": [],
+            "audio": [],
         }
 
 
@@ -497,6 +541,7 @@ def get_benchmark_dataset_summary() -> Dict:
     datasets = load_benchmark_datasets_from_yaml()
     image_datasets = datasets["image"]
     video_datasets = datasets["video"]
+    audio_datasets = datasets["audio"]
 
     summary = {
         "image": {
@@ -525,6 +570,20 @@ def get_benchmark_dataset_summary() -> Dict:
             "datasets": [
                 {"name": d.name, "path": d.path, "media_type": d.media_type}
                 for d in video_datasets
+            ],
+        },
+        "audio": {
+            "total": len(audio_datasets),
+            "active": len(
+                [d for d in audio_datasets if d.media_type in ["real", "synthetic"]]
+            ),
+            "synthetic": len(
+                [d for d in audio_datasets if d.media_type == "synthetic"]
+            ),
+            "real": len([d for d in audio_datasets if d.media_type == "real"]),
+            "datasets": [
+                {"name": d.name, "path": d.path, "media_type": d.media_type}
+                for d in audio_datasets
             ],
         },
     }

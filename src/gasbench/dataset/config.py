@@ -55,6 +55,10 @@ class BenchmarkDatasetConfig:
 
     include_paths: Optional[List[str]] = None 
     exclude_paths: Optional[List[str]] = None
+    
+    # For datasets with multiple media columns (e.g., PICA-100K with src_img and tgt_img)
+    image_columns: Optional[List[str]] = None
+    notes: Optional[str] = None  # Optional documentation field
 
 
 def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[str] = None) -> int:
@@ -537,6 +541,8 @@ def load_benchmark_datasets_from_yaml(
                                 source=dataset_dict.get("source", "huggingface"),
                                 include_paths=dataset_dict.get("include_paths"),
                                 exclude_paths=dataset_dict.get("exclude_paths"),
+                                image_columns=dataset_dict.get("image_columns"),
+                                notes=dataset_dict.get("notes"),
                             )
                             result[modality].append(config)
                 
@@ -565,6 +571,8 @@ def load_benchmark_datasets_from_yaml(
                                 source=dataset_dict.get("source", "huggingface"),
                                 include_paths=dataset_dict.get("include_paths"),
                                 exclude_paths=dataset_dict.get("exclude_paths"),
+                                image_columns=dataset_dict.get("image_columns"),
+                                notes=dataset_dict.get("notes"),
                             )
                             result[modality].append(config)
                 return result
@@ -598,6 +606,8 @@ def load_benchmark_datasets_from_yaml(
                             source=dataset_dict.get("source", "huggingface"),
                             include_paths=dataset_dict.get("include_paths"),
                             exclude_paths=dataset_dict.get("exclude_paths"),
+                            image_columns=dataset_dict.get("image_columns"),
+                            notes=dataset_dict.get("notes"),
                         )
                         result[modality].append(config)
             except Exception as e:

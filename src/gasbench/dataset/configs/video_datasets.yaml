@@ -209,3 +209,35 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
 
+  - name: vidprom
+    path: bitmind/VidProM
+    modality: video
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 200
+    archives_per_dataset: 5
+
+  - name: moments-in-time
+    path: Pai3dot14/Moments_in_Time_Raw_50k
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: ucf101-fullvideo
+    path: bitmind/UCF101Fullvideo
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: vap-data
+    path: BianYx/VAP-Data
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+

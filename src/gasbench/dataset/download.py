@@ -701,12 +701,23 @@ def _process_parquet(
         sample_df = df.sample(n=min(num_items, len(df)), random_state=seed)
 
     if dataset.modality == "image":
-        # First try exact match, then exclude _id columns, then any column with "image"
-        media_col = (
-            next((c for c in sample_df.columns if c.lower() == "image"), None)
-            or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
-            or next((c for c in sample_df.columns if "image" in c.lower()), None)
-        )
+        # Check if dataset config specifies multiple image columns (e.g., PICA-100K)
+        image_columns = getattr(dataset, 'image_columns', None)
+        if image_columns:
+            # Use all specified columns (will concatenate data from each)
+            media_col = [c for c in image_columns if c in sample_df.columns]
+            if not media_col:
+                logger.warning(
+                    f"Specified image columns {image_columns} not found in {source_path}"
+                )
+                return
+        else:
+            # First try exact match, then exclude _id columns, then any column with "image"
+            media_col = (
+                next((c for c in sample_df.columns if c.lower() == "image"), None)
+                or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
+                or next((c for c in sample_df.columns if "image" in c.lower()), None)
+            )
     elif dataset.modality == "audio":
         candidates = ["audio", "bytes", "content", "data", "wav", "mp3", "input_audio", "output_audio"]
         media_col = (
@@ -738,67 +749,76 @@ def _process_parquet(
         if not has_generator:
             logger.warning(f"Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
 
+    # Handle both single column (string) and multiple columns (list)
+    media_cols = media_col if isinstance(media_col, list) else [media_col]
+
     for _, row in sample_df.iterrows():
-        try:
-            media_data = row[media_col]
-            if isinstance(media_data, dict):
-                key = next(
-                    (
-                        k
-                        for k in media_data
-                        if any(
-                            s in k.lower()
-                            for s in ["bytes", "image", "video", "audio", "data", "content"]
-                        )
-                    ),
-                    None,
-                )
-                if key:
-                    media_data = media_data[key]
-                else:
-                    logger.warning(f"No valid key found in dict media_data for {source_path}: {list(media_data.keys())}")
-                    continue
-
-            if dataset.modality == "image":
-                # Skip invalid media_data
-                if media_data is None or isinstance(media_data, (int, float)):
-                    continue
-
-                try:
-                    img = Image.open(BytesIO(media_data))
-                except Exception:
-                    if isinstance(media_data, str):
-                        media_data = base64.b64decode(media_data)
-                    img = Image.open(BytesIO(media_data))
-                sample = _create_sample(dataset, img, source_path, iso_week)
-            else:
-                if media_data is None or isinstance(media_data, (int, float)):
-                    continue
-
-                if not isinstance(media_data, (bytes, bytearray)):
-                    if isinstance(media_data, str):
-                        media_data = base64.b64decode(media_data)
+        # For datasets with multiple media columns (e.g., PICA-100K), yield one sample per column
+        for col in media_cols:
+            try:
+                media_data = row[col]
+                if isinstance(media_data, dict):
+                    key = next(
+                        (
+                            k
+                            for k in media_data
+                            if any(
+                                s in k.lower()
+                                for s in ["bytes", "image", "video", "audio", "data", "content"]
+                            )
+                        ),
+                        None,
+                    )
+                    if key:
+                        media_data = media_data[key]
                     else:
+                        logger.warning(f"No valid key found in dict media_data for {source_path}: {list(media_data.keys())}")
                         continue
-                sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
 
-            # Merge parquet row metadata without overwriting base fields
-            row_metadata = _extract_row_metadata(row, media_col)
-            for k, v in row_metadata.items():
-                if k not in sample:
-                    sample[k] = v
-            
-            # Debug: Log extracted generator metadata for first few samples
-            if "gasstation" in dataset.name.lower():
-                gen_hotkey = sample.get("generator_hotkey")
-                gen_uid = sample.get("generator_uid")
-                if gen_hotkey and gen_hotkey != "unknown":
-                    logger.debug(f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}")
+                if dataset.modality == "image":
+                    # Skip invalid media_data
+                    if media_data is None or isinstance(media_data, (int, float)):
+                        continue
 
-            yield sample
-        except Exception as e:
-            logger.warning(f"Failed to extract row from {source_path}: {e}")
-            continue
+                    try:
+                        img = Image.open(BytesIO(media_data))
+                    except Exception:
+                        if isinstance(media_data, str):
+                            media_data = base64.b64decode(media_data)
+                        img = Image.open(BytesIO(media_data))
+                    sample = _create_sample(dataset, img, source_path, iso_week)
+                else:
+                    if media_data is None or isinstance(media_data, (int, float)):
+                        continue
+
+                    if not isinstance(media_data, (bytes, bytearray)):
+                        if isinstance(media_data, str):
+                            media_data = base64.b64decode(media_data)
+                        else:
+                            continue
+                    sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
+
+                # Merge parquet row metadata without overwriting base fields
+                row_metadata = _extract_row_metadata(row, col)
+                for k, v in row_metadata.items():
+                    if k not in sample:
+                        sample[k] = v
+                
+                # Add source column info for multi-column datasets
+                if len(media_cols) > 1:
+                    sample["source_column"] = col
+                
+                # Debug: Log extracted generator metadata for first few samples
+                if "gasstation" in dataset.name.lower():
+                    gen_hotkey = sample.get("generator_hotkey")
+                    gen_uid = sample.get("generator_uid")
+                    if gen_hotkey and gen_hotkey != "unknown":
+                        logger.debug(f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}")
+
+                yield sample
+            except Exception as e:
+                logger.warning(f"Failed to extract row from {source_path} (column {col}): {e}")
+                continue
 
 
 def _process_zip_or_tar(

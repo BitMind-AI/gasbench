@@ -61,7 +61,7 @@ def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[st
     """Get the target benchmark size for a given modality and mode.
     
     Args:
-        modality: "image" or "video"
+        modality: "image", "video", or "audio"
         mode: "debug", "small", or "full"
         yaml_path: Optional path to custom yaml config (for full mode)
         
@@ -76,14 +76,23 @@ def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[st
         if yaml_path is not None:
             with open(yaml_path, "r") as f:
                 data = yaml.safe_load(f)
+            
+            # Check if legacy format
+            if "image_benchmark_size" in data or "video_benchmark_size" in data:
+                size_key = f"{modality}_benchmark_size"
+                if size_key in data:
+                    return data[size_key]
+            # New format
+            elif "benchmark_size" in data:
+                return data["benchmark_size"]
         else:
-            data = _load_bundled_config("benchmark_datasets.yaml")
+            # Load from separate modality file
+            filename = f"{modality}_datasets.yaml"
+            data = _load_bundled_config(filename)
+            if "benchmark_size" in data:
+                return data["benchmark_size"]
 
-        size_key = f"{modality}_benchmark_size"
-        if size_key in data:
-            return data[size_key]
-
-        logger.warning(f"'{size_key}' not found in YAML, using default")
+        logger.warning(f"'benchmark_size' not found in config for {modality}, using default")
         if modality == "image":
             return 10000
         elif modality == "video":
@@ -454,81 +463,153 @@ def _load_bundled_config(filename: str) -> Dict:
         raise FileNotFoundError(f"Could not load bundled config {filename}: {e}")
 
 
+def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> tuple:
+    """Load configuration for a specific modality.
+    
+    Args:
+        modality: 'image', 'video', or 'audio'
+        custom_path: Optional custom YAML file path
+    
+    Returns:
+        Tuple of (benchmark_size, datasets_list)
+    """
+    if custom_path:
+        with open(custom_path, "r") as f:
+            data = yaml.safe_load(f)
+    else:
+        filename = f"{modality}_datasets.yaml"
+        data = _load_bundled_config(filename)
+    
+    benchmark_size = data.get("benchmark_size", 10000)
+    datasets = data.get("datasets", [])
+    return benchmark_size, datasets
+
+
 def load_benchmark_datasets_from_yaml(
     yaml_path: Optional[str] = None
 ) -> Dict[str, List[BenchmarkDatasetConfig]]:
-    """Load benchmark datasets from YAML file.
+    """Load benchmark datasets from YAML files.
     
     Args:
-        yaml_path: Optional path to custom yaml config. If None, loads bundled config.
+        yaml_path: Optional path to custom yaml config. If None, loads bundled configs.
+                   Custom path can be legacy single file or new modality-specific file.
     """
-    filename = "benchmark_datasets.yaml"
-
+    result = {
+        "image": [],
+        "video": [],
+        "audio": [],
+    }
+    
     try:
+        # If custom yaml_path is provided, try to load it
         if yaml_path is not None:
             with open(yaml_path, "r") as f:
                 data = yaml.safe_load(f)
-        else:
-            data = _load_bundled_config(filename)
-    except Exception as e:
-        logger.error(f"Failed to load YAML config: {e}. Cannot load datasets.")
-        return {
-            "image": [],
-            "video": [],
-            "audio": [],
-        }
-
-    try:
-        if not isinstance(data, dict):
-            raise ValueError("YAML must contain a dictionary at root")
-
+            
+            # Check if it's the old single-file format (has 'image'/'video'/'audio' keys at root)
+            if "image" in data or "video" in data or "audio" in data:
+                # Legacy single-file format
+                all_errors = []
+                for modality in ["image", "video", "audio"]:
+                    if modality not in data:
+                        continue
+                    if not isinstance(data[modality], list):
+                        raise ValueError(f"'{modality}' must be a list")
+                    
+                    for idx, dataset_dict in enumerate(data[modality]):
+                        if not isinstance(dataset_dict, dict):
+                            all_errors.append(f"{modality}[{idx}]: Must be a dictionary")
+                            continue
+                        
+                        dataset_name = dataset_dict.get("name", f"{modality}_dataset_{idx}")
+                        validation_errors = validate_dataset_config(dataset_dict, dataset_name)
+                        all_errors.extend(validation_errors)
+                        
+                        if not validation_errors:
+                            config = BenchmarkDatasetConfig(
+                                name=dataset_dict["name"],
+                                path=dataset_dict["path"],
+                                modality=dataset_dict["modality"],
+                                media_type=dataset_dict["media_type"],
+                                media_per_archive=dataset_dict.get("media_per_archive", 100),
+                                archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
+                                source_format=dataset_dict.get("source_format", ""),
+                                source=dataset_dict.get("source", "huggingface"),
+                                include_paths=dataset_dict.get("include_paths"),
+                                exclude_paths=dataset_dict.get("exclude_paths"),
+                            )
+                            result[modality].append(config)
+                
+                if all_errors:
+                    raise ValueError("Validation errors:\n" + "\n".join(f"  - {e}" for e in all_errors))
+                return result
+            
+            # New single-modality format (has 'datasets' key)
+            elif "datasets" in data:
+                datasets_list = data.get("datasets", [])
+                # Infer modality from first dataset or fail
+                if datasets_list:
+                    modality = datasets_list[0].get("modality", "unknown")
+                    for dataset_dict in datasets_list:
+                        dataset_name = dataset_dict.get("name", "unknown")
+                        validation_errors = validate_dataset_config(dataset_dict, dataset_name)
+                        if not validation_errors:
+                            config = BenchmarkDatasetConfig(
+                                name=dataset_dict["name"],
+                                path=dataset_dict["path"],
+                                modality=dataset_dict["modality"],
+                                media_type=dataset_dict["media_type"],
+                                media_per_archive=dataset_dict.get("media_per_archive", 100),
+                                archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
+                                source_format=dataset_dict.get("source_format", ""),
+                                source=dataset_dict.get("source", "huggingface"),
+                                include_paths=dataset_dict.get("include_paths"),
+                                exclude_paths=dataset_dict.get("exclude_paths"),
+                            )
+                            result[modality].append(config)
+                return result
+        
+        # Load from separate bundled config files (new default)
         all_errors = []
-        result = {
-            "image": [],
-            "video": [],
-            "audio": [],
-        }
-
         for modality in ["image", "video", "audio"]:
-            if modality not in data:
-                continue
-
-            if not isinstance(data[modality], list):
-                raise ValueError(f"'{modality}' must be a list")
-
-            for idx, dataset_dict in enumerate(data[modality]):
-                if not isinstance(dataset_dict, dict):
-                    all_errors.append(f"{modality}[{idx}]: Must be a dictionary")
-                    continue
-
-                dataset_name = dataset_dict.get("name", f"{modality}_dataset_{idx}")
-                validation_errors = validate_dataset_config(dataset_dict, dataset_name)
-                all_errors.extend(validation_errors)
-
-                if not validation_errors:
-                    config = BenchmarkDatasetConfig(
-                        name=dataset_dict["name"],
-                        path=dataset_dict["path"],
-                        modality=dataset_dict["modality"],
-                        media_type=dataset_dict["media_type"],
-                        media_per_archive=dataset_dict.get("media_per_archive", 100),
-                        archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
-                        source_format=dataset_dict.get("source_format", ""),
-                        source=dataset_dict.get("source", "huggingface"),
-                        include_paths=dataset_dict.get("include_paths"),
-                        exclude_paths=dataset_dict.get("exclude_paths"),
-                    )
-                    result[modality].append(config)
-
+            try:
+                filename = f"{modality}_datasets.yaml"
+                data = _load_bundled_config(filename)
+                datasets_list = data.get("datasets", [])
+                
+                for idx, dataset_dict in enumerate(datasets_list):
+                    if not isinstance(dataset_dict, dict):
+                        all_errors.append(f"{modality}[{idx}]: Must be a dictionary")
+                        continue
+                    
+                    dataset_name = dataset_dict.get("name", f"{modality}_dataset_{idx}")
+                    validation_errors = validate_dataset_config(dataset_dict, dataset_name)
+                    all_errors.extend(validation_errors)
+                    
+                    if not validation_errors:
+                        config = BenchmarkDatasetConfig(
+                            name=dataset_dict["name"],
+                            path=dataset_dict["path"],
+                            modality=dataset_dict["modality"],
+                            media_type=dataset_dict["media_type"],
+                            media_per_archive=dataset_dict.get("media_per_archive", 100),
+                            archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
+                            source_format=dataset_dict.get("source_format", ""),
+                            source=dataset_dict.get("source", "huggingface"),
+                            include_paths=dataset_dict.get("include_paths"),
+                            exclude_paths=dataset_dict.get("exclude_paths"),
+                        )
+                        result[modality].append(config)
+            except Exception as e:
+                logger.warning(f"Failed to load {modality} datasets: {e}")
+        
         if all_errors:
-            raise ValueError(
-                "Validation errors:\n" + "\n".join(f"  - {e}" for e in all_errors)
-            )
-
+            raise ValueError("Validation errors:\n" + "\n".join(f"  - {e}" for e in all_errors))
+        
         return result
-
+        
     except Exception as e:
-        logger.error(f"Failed to parse YAML: {e}. Cannot load datasets.")
+        logger.error(f"Failed to load datasets: {e}. Cannot load datasets.")
         return {
             "image": [],
             "video": [],

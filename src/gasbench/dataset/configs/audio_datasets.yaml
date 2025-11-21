@@ -1,0 +1,161 @@
+# Audio Dataset Configurations
+
+benchmark_size: 15000
+
+datasets:
+  - name: deepfake-audio-dataset
+    path: Hemg/Deepfake-Audio-Dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: english-dialects
+    path: ylacombe/english_dialects
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 2
+
+  # REAL Audio Datasets
+  - name: omnilingual-asr-corpus
+    path: facebook/omnilingual-asr-corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: gigaspeech
+    path: speechcolab/gigaspeech
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: peoples-speech
+    path: MLCommons/peoples_speech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: gigaspeech-fixie
+    path: fixie-ai/gigaspeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: mls-eng-10k
+    path: parler-tts/mls_eng_10k
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 2
+
+  # AI Generated Audio Datasets
+  - name: fake-voices
+    path: unfake/fake_voices
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: deepfake-urdu
+    path: CSALT/deepfake_detection_dataset_urdu
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  # NOTE: soda_tts has special columns - uses 'input_audio' and 'output_audio' instead of 'audio'
+  # May require special handling in the audio processing pipeline
+  # - name: soda-tts
+  #   path: robinysh/soda_tts
+  #   modality: audio
+  #   media_type: synthetic
+  #   source_format: parquet
+  #   media_per_archive: 100
+  #   archives_per_dataset: 5
+
+  - name: elevenlabs-dataset
+    path: skypro1111/elevenlabs_dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: elevenlabs-velocity
+    path: velocity-engg/eleven_labs_dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: elevenlabs-sh1man
+    path: Sh1man/elevenlabs
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  - name: elevenlabs-neoboy
+    path: NeoBoy/elevenlabsSpeechTest
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 2
+
+  - name: elevenlabs-latin
+    path: velocity-engg/eleven_labs_datase_latin
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 5
+
+  # Mixed Real/Fake Datasets (commented out - need label column mapping)
+  # - name: real-fake-voices-dataset2
+  #   path: WpythonW/real-fake-voices-dataset2
+  #   modality: audio
+  #   media_type: mixed
+  #   source_format: parquet
+  #   media_per_archive: 100
+  #   archives_per_dataset: 5
+
+  # - name: fake-or-real
+  #   path: adarsh09singh/fake-or-real
+  #   modality: audio
+  #   media_type: mixed
+  #   source_format: parquet
+  #   media_per_archive: 100
+  #   archives_per_dataset: 5
+
+  # - name: speech-deepfake-detection-40k
+  #   path: adarsh09singh/speech-deepfake-detection-40k
+  #   modality: audio
+  #   media_type: mixed
+  #   source_format: parquet
+  #   media_per_archive: 100
+  #   archives_per_dataset: 5
+
+  # - name: deepfake-mfcc-iitm
+  #   path: Shaibalini/deepfake_mfcc_iitm
+  #   modality: audio
+  #   media_type: mixed
+  #   source_format: parquet
+  #   media_per_archive: 100
+  #   archives_per_dataset: 5

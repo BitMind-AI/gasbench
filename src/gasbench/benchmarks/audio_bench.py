@@ -237,16 +237,30 @@ async def run_audio_benchmark(
                 for sample in dataset_iterator:
                     sample_index += 1
                     try:
-                        audio_array, true_label_multiclass = process_audio_sample(sample, target_sr=target_sr)
+                        # Check if sample is already preprocessed
+                        if sample.get("is_preprocessed", False):
+                            # Use cached preprocessed tensor (fast path!)
+                            audio_array = sample.get("preprocessed_waveform")
+                            true_label_multiclass = sample.get("label")
+                            
+                            if audio_array is None or true_label_multiclass is None:
+                                continue
+                                
+                            # Convert to numpy for inference
+                            if hasattr(audio_array, "numpy"):
+                                audio_array = audio_array.numpy()
+                        else:
+                            # Process raw audio bytes (slower path)
+                            audio_array, true_label_multiclass = process_audio_sample(sample, target_sr=target_sr)
 
-                        if audio_array is None or true_label_multiclass is None:
-                            continue
+                            if audio_array is None or true_label_multiclass is None:
+                                continue
 
-                        # Ensure audio is in correct format (e.g. 1D or 2D numpy array)
-                        # torchaudio returns tensor (Channels, Time)
-                        # For inference we usually want numpy array
-                        if hasattr(audio_array, "numpy"):
-                            audio_array = audio_array.numpy()
+                            # Ensure audio is in correct format (e.g. 1D or 2D numpy array)
+                            # torchaudio returns tensor (Channels, Time)
+                            # For inference we usually want numpy array
+                            if hasattr(audio_array, "numpy"):
+                                audio_array = audio_array.numpy()
 
                         batch_audio.append(audio_array)
                         batch_metadata.append((true_label_multiclass, sample, sample_index, dataset_config.name))

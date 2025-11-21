@@ -644,16 +644,35 @@ class DatasetIterator:
 
                 elif self.config.modality == "audio":
                     try:
-                        with open(file_path, "rb") as f:
-                            audio_bytes = f.read()
-                        sample = {
-                            "audio_bytes": audio_bytes,
-                            "dataset_name": self.config.name,
-                            "media_type": self.config.media_type,
-                            "cached_filename": filename,  # Include filename for format detection
-                            **metadata,
-                        }
-                        yield sample
+                        # Check if this is a preprocessed tensor (.pt file)
+                        if filename.endswith('.pt'):
+                            # Load preprocessed tensor directly (much faster!)
+                            import torch
+                            data = torch.load(file_path, map_location='cpu')
+                            sample = {
+                                "preprocessed_waveform": data['waveform'],
+                                "label": data['label'],
+                                "dataset_name": self.config.name,
+                                "media_type": self.config.media_type,
+                                "cached_filename": filename,
+                                "is_preprocessed": True,
+                                **data.get('metadata', {}),
+                                **metadata,
+                            }
+                            yield sample
+                        else:
+                            # Load raw audio bytes (legacy/fallback)
+                            with open(file_path, "rb") as f:
+                                audio_bytes = f.read()
+                            sample = {
+                                "audio_bytes": audio_bytes,
+                                "dataset_name": self.config.name,
+                                "media_type": self.config.media_type,
+                                "cached_filename": filename,  # Include filename for format detection
+                                "is_preprocessed": False,
+                                **metadata,
+                            }
+                            yield sample
                     except Exception as e:
                         logger.warning(f"Failed to load cached audio {filename}: {e}")
                         continue

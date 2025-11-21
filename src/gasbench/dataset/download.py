@@ -708,7 +708,7 @@ def _process_parquet(
             or next((c for c in sample_df.columns if "image" in c.lower()), None)
         )
     elif dataset.modality == "audio":
-        candidates = ["audio", "bytes", "content", "data", "wav", "mp3"]
+        candidates = ["audio", "bytes", "content", "data", "wav", "mp3", "input_audio", "output_audio"]
         media_col = (
             next((c for c in sample_df.columns if c.lower() == "audio"), None)
             or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)

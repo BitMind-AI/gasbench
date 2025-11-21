@@ -28,6 +28,7 @@ logger = get_logger(__name__)
 
 IMAGE_FILE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
 VIDEO_FILE_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v"}
+AUDIO_FILE_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}
 
 
 def _calculate_files_to_download(
@@ -44,6 +45,8 @@ def _calculate_files_to_download(
     # Direct media files (jpg, png, mp4, etc.) - download equivalent to archive extraction
     if dataset.modality == "image":
         is_direct_media = src_fmt in {ext.lstrip(".") for ext in IMAGE_FILE_EXTENSIONS}
+    elif dataset.modality == "audio":
+        is_direct_media = src_fmt in {ext.lstrip(".") for ext in AUDIO_FILE_EXTENSIONS}
     else:
         is_direct_media = src_fmt == "mp4"
 
@@ -264,7 +267,7 @@ def yield_media_from_source(
 
         if any(
             filename.endswith(ext)
-            for ext in (IMAGE_FILE_EXTENSIONS | VIDEO_FILE_EXTENSIONS)
+            for ext in (IMAGE_FILE_EXTENSIONS | VIDEO_FILE_EXTENSIONS | AUDIO_FILE_EXTENSIONS)
         ):
             yield from _process_raw(source_path, dataset, iso_week)
             return
@@ -594,6 +597,8 @@ def _create_sample(
 
     if dataset.modality == "image":
         base_sample["image"] = media_obj  # PIL Image
+    elif dataset.modality == "audio":
+        base_sample["audio_bytes"] = media_obj  # Raw audio bytes
     else:
         base_sample["video_bytes"] = media_obj  # Raw video bytes
 
@@ -696,11 +701,29 @@ def _process_parquet(
         sample_df = df.sample(n=min(num_items, len(df)), random_state=seed)
 
     if dataset.modality == "image":
-        # First try exact match, then exclude _id columns, then any column with "image"
+        # Check if dataset config specifies multiple image columns (e.g., PICA-100K)
+        image_columns = getattr(dataset, 'image_columns', None)
+        if image_columns:
+            # Use all specified columns (will concatenate data from each)
+            media_col = [c for c in image_columns if c in sample_df.columns]
+            if not media_col:
+                logger.warning(
+                    f"Specified image columns {image_columns} not found in {source_path}"
+                )
+                return
+        else:
+            # First try exact match, then exclude _id columns, then any column with "image"
+            media_col = (
+                next((c for c in sample_df.columns if c.lower() == "image"), None)
+                or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
+                or next((c for c in sample_df.columns if "image" in c.lower()), None)
+            )
+    elif dataset.modality == "audio":
+        candidates = ["audio", "bytes", "content", "data", "wav", "mp3", "input_audio", "output_audio"]
         media_col = (
-            next((c for c in sample_df.columns if c.lower() == "image"), None)
-            or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
-            or next((c for c in sample_df.columns if "image" in c.lower()), None)
+            next((c for c in sample_df.columns if c.lower() == "audio"), None)
+            or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)
+            or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates)), None)
         )
     else:
         candidates = ["video", "bytes", "content", "data"]
@@ -726,63 +749,76 @@ def _process_parquet(
         if not has_generator:
             logger.warning(f"Gasstation parquet {source_path.name} missing generator columns. Columns: {cols}")
 
+    # Handle both single column (string) and multiple columns (list)
+    media_cols = media_col if isinstance(media_col, list) else [media_col]
+
     for _, row in sample_df.iterrows():
-        try:
-            media_data = row[media_col]
-            if isinstance(media_data, dict):
-                key = next(
-                    (
-                        k
-                        for k in media_data
-                        if any(
-                            s in k.lower()
-                            for s in ["bytes", "image", "video", "data", "content"]
-                        )
-                    ),
-                    None,
-                )
-                media_data = media_data[key]
-
-            if dataset.modality == "image":
-                # Skip invalid media_data
-                if media_data is None or isinstance(media_data, (int, float)):
-                    continue
-
-                try:
-                    img = Image.open(BytesIO(media_data))
-                except Exception:
-                    if isinstance(media_data, str):
-                        media_data = base64.b64decode(media_data)
-                    img = Image.open(BytesIO(media_data))
-                sample = _create_sample(dataset, img, source_path, iso_week)
-            else:
-                if media_data is None or isinstance(media_data, (int, float)):
-                    continue
-
-                if not isinstance(media_data, (bytes, bytearray)):
-                    if isinstance(media_data, str):
-                        media_data = base64.b64decode(media_data)
+        # For datasets with multiple media columns (e.g., PICA-100K), yield one sample per column
+        for col in media_cols:
+            try:
+                media_data = row[col]
+                if isinstance(media_data, dict):
+                    key = next(
+                        (
+                            k
+                            for k in media_data
+                            if any(
+                                s in k.lower()
+                                for s in ["bytes", "image", "video", "audio", "data", "content"]
+                            )
+                        ),
+                        None,
+                    )
+                    if key:
+                        media_data = media_data[key]
                     else:
+                        logger.warning(f"No valid key found in dict media_data for {source_path}: {list(media_data.keys())}")
                         continue
-                sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
 
-            # Merge parquet row metadata without overwriting base fields
-            row_metadata = _extract_row_metadata(row, media_col)
-            for k, v in row_metadata.items():
-                if k not in sample:
-                    sample[k] = v
-            
-            # Debug: Log extracted generator metadata for first few samples
-            if "gasstation" in dataset.name.lower():
-                gen_hotkey = sample.get("generator_hotkey")
-                gen_uid = sample.get("generator_uid")
-                if gen_hotkey and gen_hotkey != "unknown":
-                    logger.debug(f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}")
+                if dataset.modality == "image":
+                    # Skip invalid media_data
+                    if media_data is None or isinstance(media_data, (int, float)):
+                        continue
 
-            yield sample
-        except Exception as e:
-            logger.warning(f"Failed to extract row from {source_path}: {e}")
-            continue
+                    try:
+                        img = Image.open(BytesIO(media_data))
+                    except Exception:
+                        if isinstance(media_data, str):
+                            media_data = base64.b64decode(media_data)
+                        img = Image.open(BytesIO(media_data))
+                    sample = _create_sample(dataset, img, source_path, iso_week)
+                else:
+                    if media_data is None or isinstance(media_data, (int, float)):
+                        continue
+
+                    if not isinstance(media_data, (bytes, bytearray)):
+                        if isinstance(media_data, str):
+                            media_data = base64.b64decode(media_data)
+                        else:
+                            continue
+                    sample = _create_sample(dataset, bytes(media_data), source_path, iso_week)
+
+                # Merge parquet row metadata without overwriting base fields
+                row_metadata = _extract_row_metadata(row, col)
+                for k, v in row_metadata.items():
+                    if k not in sample:
+                        sample[k] = v
+                
+                # Add source column info for multi-column datasets
+                if len(media_cols) > 1:
+                    sample["source_column"] = col
+                
+                # Debug: Log extracted generator metadata for first few samples
+                if "gasstation" in dataset.name.lower():
+                    gen_hotkey = sample.get("generator_hotkey")
+                    gen_uid = sample.get("generator_uid")
+                    if gen_hotkey and gen_hotkey != "unknown":
+                        logger.debug(f"✅ Extracted generator metadata: hotkey={gen_hotkey[:8] if isinstance(gen_hotkey, str) else gen_hotkey}..., uid={gen_uid}")
+
+                yield sample
+            except Exception as e:
+                logger.warning(f"Failed to extract row from {source_path} (column {col}): {e}")
+                continue
 
 
 def _process_zip_or_tar(
@@ -793,11 +829,12 @@ def _process_zip_or_tar(
     try:
         cm = ZipFile(source_path) if is_zip else tarfile.open(source_path, mode="r:*")
         with cm as archive:
-            valid_exts = (
-                IMAGE_FILE_EXTENSIONS
-                if dataset.modality == "image"
-                else VIDEO_FILE_EXTENSIONS
-            )
+            if dataset.modality == "image":
+                valid_exts = IMAGE_FILE_EXTENSIONS
+            elif dataset.modality == "audio":
+                valid_exts = AUDIO_FILE_EXTENSIONS
+            else:
+                valid_exts = VIDEO_FILE_EXTENSIONS
 
             if is_zip:
                 list_entries = archive.namelist()
@@ -890,6 +927,10 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
             filename.endswith(ext) for ext in IMAGE_FILE_EXTENSIONS
         ):
             media_obj = Image.open(BytesIO(data_bytes))
+        elif dataset.modality == "audio" and any(
+            filename.endswith(ext) for ext in AUDIO_FILE_EXTENSIONS
+        ):
+            media_obj = data_bytes
         elif dataset.modality == "video" and any(
             filename.endswith(ext) for ext in VIDEO_FILE_EXTENSIONS
         ):
@@ -1135,6 +1176,20 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
                 img = Image.open(filepath)
                 sample = {
                     "image": img,
+                    "media_type": dataset.media_type,
+                    "dataset_name": dataset.name,
+                    "dataset_path": dataset.path,
+                    "source_file": f"cached_{filename}",
+                    **metadata,  # Include all original metadata
+                }
+                yield sample
+
+            elif dataset.modality == "audio":
+                # Load audio file as bytes
+                with open(filepath, "rb") as f:
+                    audio_bytes = f.read()
+                sample = {
+                    "audio_bytes": audio_bytes,
                     "media_type": dataset.media_type,
                     "dataset_name": dataset.name,
                     "dataset_path": dataset.path,

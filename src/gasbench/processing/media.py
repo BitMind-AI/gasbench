@@ -250,7 +250,11 @@ def process_audio_sample(
                 waveform = waveform.cpu()
             
             assert waveform.shape == (1, target_length), f"Expected shape (1, {target_length}), got {waveform.shape}"
-
+            
+            # Squeeze channel dimension for compatibility with most audio models
+            # Output: (96000,) instead of (1, 96000)
+            waveform = waveform.squeeze(0)
+            
             return waveform, label
             
         finally:

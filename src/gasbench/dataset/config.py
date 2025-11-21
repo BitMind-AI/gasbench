@@ -46,7 +46,7 @@ DOWNLOAD_SIZE_OVERRIDES = {
 class BenchmarkDatasetConfig:
     name: str
     path: str
-    modality: str  # "image" or "video"
+    modality: str  # "image", "video", or "audio"
     media_type: str  # "real", "synthetic", or "semisynthetic"
 
     # Download parameters
@@ -65,7 +65,7 @@ def get_benchmark_size(
     """Get the target benchmark size for a given modality and mode.
 
     Args:
-        modality: "image" or "video"
+        modality: "image", "video", or "audio"
         mode: "debug", "small", or "full"
         yaml_path: Optional path to custom yaml config (for full mode)
 
@@ -81,7 +81,7 @@ def get_benchmark_size(
             with open(yaml_path, "r") as f:
                 data = yaml.safe_load(f)
         else:
-            data = _load_bundled_config("benchmark_datasets.yaml")
+            data = _load_all_bundled_configs()
 
         size_key = f"{modality}_benchmark_size"
         if size_key in data:
@@ -150,7 +150,7 @@ def discover_benchmark_datasets(
     no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark datasets for a given modality ("image" or "video")."""
+    """Return list of available benchmark datasets for a given modality ("image", "video", or "audio")."""
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
     if modality not in dataset_source:
         return []
@@ -257,7 +257,7 @@ def validate_dataset_config(
             errors.append(f"Dataset '{dataset_name}': Missing required field '{field}'")
 
     if "modality" in config_dict:
-        valid_modalities = ["image", "video"]
+        valid_modalities = ["image", "video", "audio"]
         if config_dict["modality"] not in valid_modalities:
             errors.append(
                 f"Dataset '{dataset_name}': Invalid modality '{config_dict['modality']}'. "
@@ -447,22 +447,50 @@ def _load_bundled_config(filename: str) -> Dict:
         raise FileNotFoundError(f"Could not load bundled config {filename}: {e}")
 
 
+def _load_all_bundled_configs() -> Dict:
+    """Load and merge all modality-specific config files (image, video)."""
+    config_files = {
+        "image": "image_datasets.yaml", 
+        "video": "video_datasets.yaml",
+    }
+    
+    merged_data = {}
+    
+    for modality, filename in config_files.items():
+        try:
+            data = _load_bundled_config(filename)
+            
+            if isinstance(data, dict):
+                if "benchmark_size" in data:
+                    merged_data[f"{modality}_benchmark_size"] = data["benchmark_size"]
+                
+                if "datasets" in data and isinstance(data["datasets"], list):
+                    merged_data[modality] = data["datasets"]
+                    
+        except FileNotFoundError:
+            logger.warning(f"Config file {filename} not found, skipping {modality}")
+            continue
+        except Exception as e:
+            logger.warning(f"Failed to load {filename}: {e}, skipping {modality}")
+            continue
+    
+    return merged_data
+
+
 def load_benchmark_datasets_from_yaml(
     yaml_path: Optional[str] = None,
 ) -> Dict[str, List[BenchmarkDatasetConfig]]:
     """Load benchmark datasets from YAML file.
 
     Args:
-        yaml_path: Optional path to custom yaml config. If None, loads bundled config.
+        yaml_path: Optional path to custom yaml config. If None, loads bundled configs.
     """
-    filename = "benchmark_datasets.yaml"
-
     try:
         if yaml_path is not None:
             with open(yaml_path, "r") as f:
                 data = yaml.safe_load(f)
         else:
-            data = _load_bundled_config(filename)
+            data = _load_all_bundled_configs()
     except Exception as e:
         logger.error(f"Failed to load YAML config: {e}. Cannot load datasets.")
         return {

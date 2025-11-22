@@ -222,16 +222,16 @@ datasets:
     modality: video
     media_type: real
     source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: ucf101-fullvideo
     path: bitmind/UCF101Fullvideo
     modality: video
     media_type: real
     source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: vap-data
     path: BianYx/VAP-Data

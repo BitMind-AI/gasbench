@@ -794,8 +794,8 @@ class RandomCropWithParams:
         """
         if crop_params is None:
             height, width = img.shape[:2]
-            h = int(height * self.crop_scale[0])
-            w = int(width * self.crop_scale[1])
+            h = max(1, int(height * self.crop_scale[0]))
+            w = max(1, int(width * self.crop_scale[1]))
 
             h = min(h, height)
             w = min(w, width)

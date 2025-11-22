@@ -16,8 +16,7 @@ from rich.progress import (
 from .logger import get_logger
 from .dataset.config import (
     BenchmarkDatasetConfig,
-    discover_benchmark_image_datasets,
-    discover_benchmark_video_datasets,
+    discover_benchmark_datasets,
     load_holdout_datasets_from_yaml,
     apply_mode_to_datasets,
 )
@@ -269,7 +268,7 @@ async def download_datasets(
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
     
     datasets = _discover_datasets(
-        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config
+        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config, cache_dir
     )
     
     if not datasets:
@@ -321,30 +320,39 @@ def _discover_datasets(
     no_gasstation: bool = False,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    cache_dir: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
-        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        image_datasets = discover_benchmark_datasets("image", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
-                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("image", [])
+                logger.info(f"Loading holdout datasets from: {holdout_config}")
+                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("image", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
+                logger.info(f"Loaded {len(holdouts)} holdout image datasets")
                 image_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout image datasets: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
-        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        video_datasets = discover_benchmark_datasets("video", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
-                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("video", [])
+                logger.info(f"Loading holdout video datasets from: {holdout_config}")
+                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("video", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
+                logger.info(f"Loaded {len(holdouts)} holdout video datasets")
                 video_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout video datasets: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
         datasets.extend(video_datasets)
     
     return datasets
@@ -356,7 +364,7 @@ def _needs_download(
     num_weeks: Optional[int],
 ) -> bool:
     """Check if dataset needs to be downloaded based on mode requirements."""
-    from .dataset import gasstation_utils
+    from .dataset.utils import gasstation_utils
     
     is_gasstation = "gasstation" in dataset.name.lower()
     

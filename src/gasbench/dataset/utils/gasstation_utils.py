@@ -12,7 +12,7 @@ from typing import List, Set, Optional, Dict, Tuple
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from ..logger import get_logger
+from ...logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -119,7 +119,7 @@ def check_for_new_archives(
         Tuple of (has_new_archives, num_new_archives)
     """
     try:
-        from .download import list_hf_files
+        from ..download import list_hf_files
         
         # Determine source format
         src_fmt = str(source_format).lower().lstrip(".")
@@ -221,3 +221,99 @@ def get_total_cached_samples(week_dirs: List[str]) -> int:
     for week_dir in week_dirs:
         total += get_week_sample_count(week_dir)
     return total
+
+
+def extract_iso_week_from_path(file_path: str) -> Optional[str]:
+    """Extract ISO week string from file path (e.g., '2025W40' from 'data_2025W40/file.parquet').
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W40/
+    - archives/2025W39/
+    
+    Args:
+        file_path: Path containing ISO week pattern
+    
+    Returns:
+        ISO week string like '2025W40', or None if not found
+    """
+    import re
+    
+    pattern = r'(\d{4}W\d{2})'
+    match = re.search(pattern, file_path)
+    if match:
+        return match.group(1)
+    return None
+
+
+def filter_files_by_current_week(files: List[str]) -> List[str]:
+    """Filter files to only include current ISO week's data for gasstation datasets.
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W39/
+    - data_2025W40/
+    - archives/2025W38/
+    - archives/2025W39/
+    
+    This function filters to only include files from the current ISO week.
+    
+    Args:
+        files: List of file paths to filter
+        
+    Returns:
+        Filtered list of files from current week
+    """
+    now = datetime.now()
+    current_year, current_week, _ = now.isocalendar()
+    current_week_str = f"{current_year}W{current_week:02d}"
+    logger.info(f"Current ISO week: {current_week_str}")
+    
+    current_week_files = []
+    for file_path in files:
+        if current_week_str in file_path:
+            current_week_files.append(file_path)
+    
+    logger.info(f"Found {len(current_week_files)} files for current week {current_week_str}")
+    return current_week_files
+
+
+def filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]:
+    """Filter files to only include the N most recent ISO weeks for gasstation datasets.
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W39/
+    - data_2025W40/
+    - archives/2025W38/
+    - archives/2025W39/
+    
+    This function filters to only include files from the N most recent ISO weeks.
+    
+    Args:
+        files: List of file paths
+        num_weeks: Number of most recent weeks to include
+    
+    Returns:
+        Filtered list of files from recent weeks
+    """
+    now = datetime.now()
+    
+    recent_weeks = []
+    for i in range(num_weeks):
+        date_offset = now - timedelta(weeks=i)
+        year, week, _ = date_offset.isocalendar()
+        week_str = f"{year}W{week:02d}"
+        recent_weeks.append(week_str)
+    
+    logger.info(f"Filtering to last {num_weeks} weeks: {', '.join(recent_weeks)}")
+    
+    recent_week_files = []
+    for file_path in files:
+        for week_str in recent_weeks:
+            if week_str in file_path:
+                recent_week_files.append(file_path)
+                break
+    
+    logger.info(f"Found {len(recent_week_files)} files for last {num_weeks} weeks")
+    return recent_week_files

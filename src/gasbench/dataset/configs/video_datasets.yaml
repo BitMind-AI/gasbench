@@ -1,0 +1,244 @@
+# Video Dataset Configurations
+
+benchmark_size: 15000
+
+datasets:
+  - name: gasstation-generated-videos
+    path: gasstation/generated-videos
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: eidon-video
+    path: bitmind/bm-eidon-video
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: imagenet-vidvrd
+    path: shangxd/imagenet-vidvrd
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: pe-video
+    path: facebook/PE-Video
+    modality: video
+    media_type: real
+    source_format: tar
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: veo3-preferences
+    path: Rapidata/text-2-video-human-preferences-veo3
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: veo2-preferences
+    path: Rapidata/text-2-video-human-preferences-veo2
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: aura-video
+    path: bitmind/aura-video
+    modality: video
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: aislop-videos
+    path: bitmind/aislop-videos
+    modality: video
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 200
+    archives_per_dataset: 5
+
+  - name: semisynthetic-video
+    path: bitmind/semisynthetic-video
+    modality: video
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 100
+    archives_per_dataset: 10
+
+  - name: fakeparts-t2v
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: ["t2v/"]
+
+  - name: fakeparts-faceswap
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: ["faceswap/"]
+
+  - name: fakeparts-inpainting
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: ["inpainting/"]
+
+  - name: fakeparts-outpainting
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: ["outpainting/"]
+
+  - name: fakeparts-stylechange
+    path: hi-paris/FakeParts
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: ["stylechange/"]
+
+  # DeepAction v1 dataset - split by subdirectory and media type.
+  # 2600 total videos, so just take all from each subdir
+  - name: deepaction-pexels
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["Pexels/"]
+
+  - name: deepaction-bdanimate
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["BDAnimateDiffLightning/"]
+
+  - name: deepaction-cogvideox5b
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["CogVideoX5B/"]
+
+  - name: deepaction-runwayml
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["RunwayML/"]
+
+  - name: deepaction-stablediffusion
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["StableDiffusion/"]
+
+  - name: deepaction-veo
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["Veo/"]
+
+  - name: deepaction-videopoet
+    path: faridlab/deepaction_v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["VideoPoet/"]
+
+  - name: moviegen-bench
+    path: saiyan-world/Goku-MovieGenBench
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: klingai-videos
+    path: bitmind/klingai-videos
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+
+  - name: physics-101
+    path: Hemgg/Physics-101-Video-dataset
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+
+  - name: vidprom
+    path: bitmind/VidProM
+    modality: video
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 200
+    archives_per_dataset: 5
+
+  - name: moments-in-time
+    path: Pai3dot14/Moments_in_Time_Raw_50k
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: ucf101-fullvideo
+    path: bitmind/UCF101Fullvideo
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: vap-data
+    path: BianYx/VAP-Data
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 100
+    archives_per_dataset: 10
+
+

@@ -282,6 +282,7 @@ async def run_video_benchmark(
                         max_samples=dataset_cap, 
                         cache_dir=cache_dir,
                         download=should_download,
+                        num_weeks=2,
                         cache_policy=cache_policy,
                         hf_token=hf_token,
                         seed=seed,

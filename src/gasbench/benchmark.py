@@ -12,7 +12,7 @@ from .logger import get_logger
 from .processing.media import configure_huggingface_cache
 from .benchmarks.image_bench import run_image_benchmark
 from .benchmarks.video_bench import run_video_benchmark
-from .model.inference import create_inference_session
+from .benchmarks.utils import create_inference_session
 
 logger = get_logger(__name__)
 
@@ -29,6 +29,7 @@ async def run_benchmark(
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    records_parquet_path: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -95,6 +96,7 @@ async def run_benchmark(
             batch_size,
             dataset_config,
             holdout_config,
+            records_parquet_path,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -104,15 +106,10 @@ async def run_benchmark(
         benchmark_results["metrics"]["download_latest_gasstation_data"] = download_latest_gasstation_data
         benchmark_results["benchmark_completed"] = True
 
-        logger.info(f"Benchmark score: {benchmark_score:.2%}")
-        logger.info(f"✅ Benchmark COMPLETED for {modality} modality")
-
     except Exception as e:
         logger.error(f"Benchmark failed with error: {e}")
         benchmark_results["errors"].append(f"Benchmark error: {str(e)}")
         benchmark_results["benchmark_completed"] = False
-
-        # Initialize missing result structures
         if modality == "image" and "image_results" not in benchmark_results:
             benchmark_results["image_results"] = {"error": str(e)}
         elif modality == "video" and "video_results" not in benchmark_results:
@@ -149,7 +146,7 @@ async def load_model_for_benchmark(
         benchmark_results["validation"]["input_type"] = str(input_specs[0].type)
         benchmark_results["validation"]["output_shape"] = str(output_specs[0].shape)
 
-        logger.info(f"✅ Model loaded successfully")
+        logger.info(f"Model loaded successfully")
         
         # Get execution providers
         providers = session.get_providers()
@@ -187,12 +184,13 @@ async def execute_benchmark(
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    records_parquet_path: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
     logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data})")
     if modality == "image":
-        benchmark_score = await run_image_benchmark(
+        df = await run_image_benchmark(
             session,
             input_specs,
             benchmark_results,
@@ -205,9 +203,11 @@ async def execute_benchmark(
             batch_size,
             dataset_config,
             holdout_config,
+            records_parquet_path=records_parquet_path,
         )
+        benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
-        benchmark_score = await run_video_benchmark(
+        df = await run_video_benchmark(
             session,
             input_specs,
             benchmark_results,
@@ -220,7 +220,9 @@ async def execute_benchmark(
             batch_size,
             dataset_config,
             holdout_config,
+            records_parquet_path=records_parquet_path,
         )
+        benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")
 
@@ -311,17 +313,25 @@ def print_benchmark_summary(benchmark_results: Dict):
                     for week, count in sorted(by_week.items()):
                         print(f"    {week}: {count}")
 
-            per_source = results.get("per_source_accuracy", {})
-            if per_source:
-                print(f"\n🎭 PER-SOURCE ACCURACY:")
-                for source_type, datasets in per_source.items():
-                    print(f"  {source_type.upper()}:")
-                    for dataset_name, stats in datasets.items():
-                        correct = stats.get("correct", 0)
-                        incorrect = stats.get("incorrect", 0)
-                        total = correct + incorrect
-                        accuracy = correct / total if total > 0 else 0.0
-                        print(f"    {dataset_name}: {accuracy:.2%} ({correct}/{total})")
+            # Accuracy by media type (real/synthetic/semisynthetic)
+            dataset_info = results.get("dataset_info", {})
+            dataset_types = dataset_info.get("dataset_media_types", {})
+            if per_dataset and dataset_types:
+                by_type = {}
+                for ds_name, ds_stats in per_dataset.items():
+                    mtype = dataset_types.get(ds_name)
+                    if not mtype:
+                        continue
+                    entry = by_type.setdefault(mtype, {"samples": 0, "correct": 0})
+                    entry["samples"] += int(ds_stats.get("total", 0))
+                    entry["correct"] += int(ds_stats.get("correct", 0))
+                if by_type:
+                    print(f"\n🎭 ACCURACY BY MEDIA TYPE:")
+                    for mtype, v in by_type.items():
+                        samples = v["samples"]
+                        correct = v["correct"]
+                        acc = (correct / samples) if samples > 0 else 0.0
+                        print(f"  {mtype}: {acc:.2%} ({correct}/{samples})")
 
     validation = benchmark_results.get("validation", {})
     if validation:
@@ -408,24 +418,27 @@ def save_results_to_json(
             }
 
             # Per-source accuracy
-            per_source = results.get("per_source_accuracy", {})
-            if per_source:
-                output_data["per_source_accuracy"] = {}
-                for source_type, datasets in per_source.items():
-                    output_data["per_source_accuracy"][source_type] = {}
-                    for dataset_name, stats in datasets.items():
-                        correct = stats.get("correct", 0)
-                        incorrect = stats.get("incorrect", 0)
-                        total = correct + incorrect
-                        accuracy = correct / total if total > 0 else 0.0
-                        output_data["per_source_accuracy"][source_type][
-                            dataset_name
-                        ] = {
-                            "samples": total,
-                            "correct": correct,
-                            "incorrect": incorrect,
-                            "accuracy": accuracy,
-                        }
+            # Accuracy by media type (real/synthetic/semisynthetic)
+            per_dataset = results.get("per_dataset_results", {})
+            dataset_info = results.get("dataset_info", {})
+            dataset_types = dataset_info.get("dataset_media_types", {})
+            if per_dataset and dataset_types:
+                by_type = {}
+                for ds_name, ds_stats in per_dataset.items():
+                    mtype = dataset_types.get(ds_name)
+                    if not mtype:
+                        continue
+                    entry = by_type.setdefault(mtype, {"samples": 0, "correct": 0})
+                    entry["samples"] += int(ds_stats.get("total", 0))
+                    entry["correct"] += int(ds_stats.get("correct", 0))
+                output_data["accuracy_by_media_type"] = {
+                    t: {
+                        "samples": v["samples"],
+                        "correct": v["correct"],
+                        "accuracy": (v["correct"] / v["samples"]) if v["samples"] > 0 else 0.0,
+                    }
+                    for t, v in by_type.items()
+                }
 
             # Dataset info
             dataset_info = results.get("dataset_info", {})
@@ -443,6 +456,6 @@ def save_results_to_json(
     with open(filepath, "w") as f:
         json.dump(output_data, f, indent=2)
 
-    logger.info(f"Results saved to: {filepath}")
+    logger.info(f"Results summary saved to: {filepath}")
 
     return str(filepath)

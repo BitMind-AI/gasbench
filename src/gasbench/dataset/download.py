@@ -223,17 +223,25 @@ def download_and_extract(
                     logger.warning(f"Failed to cache parquet file list: {e}")
                     parquet_files_cache = []
 
-            successfully_processed = 0
-            for url in to_download:
-                iso_week = extract_iso_week_from_path(url)
-                downloaded_file = download_single_file(
-                    url, temp_dir_root, 8192, hf_token
-                )
-                if not downloaded_file:
-                    continue
+            max_download_workers = min(10, len(to_download))
 
-                successfully_processed += 1
+            downloaded_files = download_files(
+                to_download, temp_dir_root, chunk_size=8192, max_workers=max_download_workers, hf_token=hf_token
+            )
+
+            if not downloaded_files:
+                logger.warning(f"No files successfully downloaded for {dataset.name}")
+                return
+
+            successfully_processed = 0
+            for downloaded_file in downloaded_files:
+                if not downloaded_file or not downloaded_file.exists():
+                    continue
+                    
                 try:
+                    iso_week = extract_iso_week_from_path(str(downloaded_file))
+                    successfully_processed += 1
+                    
                     for sample in yield_media_from_source(
                         downloaded_file,
                         dataset,
@@ -252,7 +260,7 @@ def download_and_extract(
                         pass
 
             logger.info(
-                f"Downloaded and processed {successfully_processed}/{len(to_download)} files "
+                f"Downloaded and processed {successfully_processed}/{len(downloaded_files)} files "
                 f"for {dataset.name}"
             )
 
@@ -978,7 +986,7 @@ def _is_parquet_file(filename_lower: str) -> bool:
 
 
 def download_files(
-    urls: List[str], output_dir: Path, chunk_size: int = 8192, max_workers: int = 10
+    urls: List[str], output_dir: Path, chunk_size: int = 8192, max_workers: int = 10, hf_token: Optional[str] = None
 ) -> List[Path]:
     """Download multiple files in parallel.
 
@@ -987,6 +995,7 @@ def download_files(
         output_dir: Directory to save the files
         chunk_size: Size of chunks to download at a time
         max_workers: Maximum number of parallel downloads (default: 10)
+        hf_token: Hugging Face API token for private datasets
 
     Returns:
         List of successfully downloaded file paths
@@ -998,7 +1007,7 @@ def download_files(
 
     def download_url(url):
         try:
-            return download_single_file(url, output_dir, chunk_size)
+            return download_single_file(url, output_dir, chunk_size, hf_token)
         except Exception as e:
             logger.error(f"Error downloading {url}: {e}")
             return None

@@ -275,7 +275,7 @@ def command_download(args):
     try:
         from .download_manager import download_datasets
 
-        asyncio.run(
+        result = asyncio.run(
             download_datasets(
                 modality=args.modality,
                 mode=args.mode if args.mode else "full",
@@ -293,8 +293,12 @@ def command_download(args):
             )
         )
 
-        print("\n✅ Download completed successfully")
-        return 0
+        if result and result["completed"] > 0:
+            print(f"\n✅ Successfully downloaded {result['completed']}/{result['total']} datasets")
+            return 0 if result["failed"] == 0 else 1
+        else:
+            print("\n❌ No datasets were successfully downloaded")
+            return 1
 
     except KeyboardInterrupt:
         print("\nDownload interrupted by user")

@@ -241,4 +241,31 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
 
+  ## naming nuances noted in comments
+  - name: dfd-real
+    path: Hemgg/deep-fake-detection-dfd-entire-original-datasett # extra t
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["DFD_original sequences"] # space
+
+  - name: dfd-fake
+    path: Hemgg/deep-fake-detection-dfd-entire-original-datasett # extra t
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["DFD_manipulated_sequences"]
+
+  - name: ByteDance_Synthetic_Videos
+    path: kevinzzz8866/ByteDance_Synthetic_Videos
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
 

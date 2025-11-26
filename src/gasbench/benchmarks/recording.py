@@ -88,19 +88,14 @@ class BenchmarkRunRecorder:
             "sample_seed": None if sample_seed is None else int(sample_seed),
         }
 
-        # Identity and generator fields (best-effort)
-        archive_filename = sample.get("archive_filename")
-        member_path = sample.get("member_path")
-        source_file = sample.get("source_file")
-        
         row.update(
             {
                 "source_kind": sample.get("source_kind"),
                 "dataset_path": sample.get("dataset_path"),
                 "hf_resolved_revision": sample.get("hf_resolved_revision"),
-                "archive_filename": archive_filename if member_path else None,
-                "path_in_archive": member_path,
-                "path": source_file if not member_path else None,
+                "archive_filename": sample.get("archive_filename"),
+                "path_in_archive": sample.get("member_path"),
+                "source_file": sample.get("source_file"),
                 "iso_week": sample.get("iso_week"),
                 "cache_relpath": sample.get("cache_relpath"),
                 "generator_hotkey": sample.get("generator_hotkey"),
@@ -135,19 +130,14 @@ class BenchmarkRunRecorder:
             "status": "skipped",
             "skip_reason": reason,
         }
-        # Preserve identity if present
-        archive_filename = sample.get("archive_filename")
-        member_path = sample.get("member_path")
-        source_file = sample.get("source_file")
-        
         row.update(
             {
                 "source_kind": sample.get("source_kind"),
                 "dataset_path": sample.get("dataset_path"),
                 "hf_resolved_revision": sample.get("hf_resolved_revision"),
-                "archive_filename": archive_filename if member_path else None,
-                "path_in_archive": member_path,
-                "path": source_file if not member_path else None,
+                "archive_filename": sample.get("archive_filename"),
+                "path_in_archive": sample.get("member_path"),
+                "source_file": sample.get("source_file"),
             }
         )
         row["sample_id"] = build_sample_id(row)
@@ -173,18 +163,15 @@ class BenchmarkRunRecorder:
             "status": "error",
             "error_message": error_message[:300],
         }
-        archive_filename = sample.get("archive_filename")
-        member_path = sample.get("member_path")
-        source_file = sample.get("source_file")
         
         row.update(
             {
                 "source_kind": sample.get("source_kind"),
                 "dataset_path": sample.get("dataset_path"),
                 "hf_resolved_revision": sample.get("hf_resolved_revision"),
-                "archive_filename": archive_filename if member_path else None,
-                "path_in_archive": member_path,
-                "path": source_file if not member_path else None,
+                "archive_filename": sample.get("archive_filename"),
+                "path_in_archive": sample.get("member_path"),
+                "source_file": sample.get("source_file"),
             }
         )
         row["sample_id"] = build_sample_id(row)
@@ -220,14 +207,14 @@ def build_compound_id(row: Dict[str, Any]) -> Optional[str]:
             rev = row.get("hf_resolved_revision")
             archive_filename = row.get("archive_filename")
             path_in_archive = row.get("path_in_archive")
-            path = row.get("path")
+            source_file = row.get("source_file")
             
             if path_in_archive and archive_filename:
                 return f"hf://{repo}@{rev or 'main'}::{archive_filename}#{path_in_archive}"
             if archive_filename:
                 return f"hf://{repo}@{rev or 'main'}::{archive_filename}"
-            if path:
-                return f"hf://{repo}@{rev or 'main'}::{path}"
+            if source_file:
+                return f"hf://{repo}@{rev or 'main'}::{source_file}"
             return f"hf://{repo}@{rev or 'main'}"
         if source == "r2":
             bucket = row.get("r2_bucket")
@@ -254,14 +241,14 @@ def build_display_uri(row: Dict[str, Any]) -> Optional[str]:
             repo = row.get("dataset_path")
             archive_filename = row.get("archive_filename")
             path_in_archive = row.get("path_in_archive")
-            path = row.get("path")
+            source_file = row.get("source_file")
             
             if path_in_archive and archive_filename:
                 return f"{repo}::{archive_filename}#{path_in_archive}"
             if archive_filename:
                 return f"{repo}::{archive_filename}"
-            if path:
-                return f"{repo}::{path}"
+            if source_file:
+                return f"{repo}::{source_file}"
             return f"{repo}"
         if source == "r2":
             bucket = row.get("r2_bucket")
@@ -283,9 +270,9 @@ def build_sample_id(row: Dict[str, Any]) -> str:
     dataset_path = row.get("dataset_path") or ""
     archive_filename = row.get("archive_filename") or ""
     path_in_archive = row.get("path_in_archive") or ""
-    path = row.get("path") or ""
+    source_file = row.get("source_file") or ""
     
-    id_string = f"{source_kind}::{dataset_path}::{archive_filename}::{path_in_archive}::{path}"
+    id_string = f"{source_kind}::{dataset_path}::{archive_filename}::{path_in_archive}::{source_file}"
     return hashlib.sha256(id_string.encode()).hexdigest()[:16]
 
 

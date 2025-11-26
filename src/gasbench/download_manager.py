@@ -95,6 +95,17 @@ class DownloadManager:
             await asyncio.gather(*download_tasks, return_exceptions=True)
         
         self._print_summary(len(tasks))
+        
+        # Raise error if all downloads failed
+        if len(self.failed) == len(tasks) and len(tasks) > 0:
+            raise RuntimeError(f"All {len(tasks)} dataset downloads failed")
+        
+        # Return summary
+        return {
+            "total": len(tasks),
+            "completed": len(self.completed),
+            "failed": len(self.failed)
+        }
     
     async def _download_dataset_with_semaphore(
         self, 
@@ -187,6 +198,9 @@ class DownloadManager:
                 sample_count += 1
 
             logger.debug(f"Processed {sample_count} samples from {task.dataset.name}")
+            
+            if sample_count == 0:
+                raise RuntimeError(f"No samples downloaded for {task.dataset.name}")
 
         finally:
             # Restore original log levels
@@ -310,7 +324,7 @@ async def download_datasets(
         allow_eviction=allow_eviction,
     )
     
-    await manager.download_all(tasks)
+    return await manager.download_all(tasks)
 
 
 def _discover_datasets(

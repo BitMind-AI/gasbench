@@ -61,13 +61,16 @@ def get_week_directories(dataset_name: str, cache_dir: str, target_weeks: List[s
 
 
 def load_downloaded_archives(week_dir: str) -> Set[str]:
-    """Load the set of already-downloaded archives for a week.
+    """Load the set of already-processed parquet/archive files for a week.
+    
+    For parquet-based gasstation datasets, this tracks parquet filenames.
+    For legacy datasets, this tracks archive filenames.
     
     Args:
         week_dir: Path to the week's cache directory
         
     Returns:
-        Set of downloaded archive basenames
+        Set of downloaded parquet/archive basenames
     """
     archive_tracker_file = os.path.join(week_dir, "downloaded_archives.json")
     
@@ -83,11 +86,14 @@ def load_downloaded_archives(week_dir: str) -> Set[str]:
 
 
 def save_downloaded_archives(week_dir: str, downloaded_archives: Set[str]):
-    """Save the set of downloaded archives for a week.
+    """Save the set of processed parquet/archive files for a week.
+    
+    For parquet-based gasstation datasets, this tracks parquet filenames.
+    For legacy datasets, this tracks archive filenames.
     
     Args:
         week_dir: Path to the week's cache directory
-        downloaded_archives: Set of downloaded archive basenames
+        downloaded_archives: Set of processed parquet/archive basenames
     """
     archive_tracker_file = os.path.join(week_dir, "downloaded_archives.json")
     
@@ -108,12 +114,15 @@ def check_for_new_archives(
 ) -> Tuple[bool, int]:
     """Check if there are new archives available for a week.
     
+    For parquet-based gasstation datasets, checks for new parquet files
+    (which inherently means new tar archives are available, as they're uploaded together).
+    
     Args:
         dataset_path: HuggingFace dataset path
         week_str: ISO week string (e.g., "2025W40")
-        source_format: Source file format
+        source_format: Source file format (e.g., "parquet", "tar.gz")
         modality: Dataset modality ("image" or "video")
-        downloaded_archives: Set of already-downloaded archive basenames
+        downloaded_archives: Set of already-downloaded parquet/archive basenames
         
     Returns:
         Tuple of (has_new_archives, num_new_archives)
@@ -121,22 +130,19 @@ def check_for_new_archives(
     try:
         from ..download import list_hf_files
         
-        # Determine source format
         src_fmt = str(source_format).lower().lstrip(".")
         if not src_fmt:
             src_fmt = ".parquet" if modality == "image" else ".zip"
         else:
             src_fmt = "." + src_fmt if not src_fmt.startswith(".") else src_fmt
         
-        # List files for this specific week
         all_files = list_hf_files(repo_id=dataset_path, extension=src_fmt)
         week_files = [f for f in all_files if week_str in f]
         
-        # Check for new archives
         available_basenames = {os.path.basename(f) for f in week_files}
-        new_archives = available_basenames - downloaded_archives
+        new_files = available_basenames - downloaded_archives
         
-        return (len(new_archives) > 0, len(new_archives))
+        return (len(new_files) > 0, len(new_files))
         
     except Exception as e:
         logger.debug(f"Failed to check for new archives: {e}")

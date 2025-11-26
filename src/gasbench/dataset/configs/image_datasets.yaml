@@ -1,12 +1,13 @@
 # Image Dataset Configurations
 
-benchmark_size: 35000
+benchmark_size: 40000
 
 datasets:
   - name: gasstation-generated-images
-    path: gasstation/generated-images
+    path: gasstation/gs-images-v2
     modality: image
     media_type: synthetic
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
   

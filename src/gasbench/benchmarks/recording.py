@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 
-from .utils import Metrics, multiclass_to_binary
+from .utils import Metrics
 
 
 class BenchmarkRunRecorder:
@@ -297,9 +297,7 @@ def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
             "avg_inference_time_ms": 0.0,
             "p95_inference_time_ms": 0.0,
             "binary_mcc": 0.0,
-            "multiclass_mcc": 0.0,
             "binary_cross_entropy": 0.0,
-            "multiclass_cross_entropy": 0.0,
             "sn34_score": 0.0,
         }
 
@@ -310,9 +308,7 @@ def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
             "avg_inference_time_ms": 0.0,
             "p95_inference_time_ms": 0.0,
             "binary_mcc": 0.0,
-            "multiclass_mcc": 0.0,
             "binary_cross_entropy": 0.0,
-            "multiclass_cross_entropy": 0.0,
             "sn34_score": 0.0,
         }
 
@@ -323,7 +319,6 @@ def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
 
     metrics = Metrics()
     for _, r in ok_df.iterrows():
-        # Use generic probs vector
         try:
             probs = [
                 float(x)
@@ -335,16 +330,11 @@ def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
             ]
         except Exception:
             probs = []
-        # Derive binary from multiclass label/prediction
-        label_mc = int(r["label"])
-        pred_mc = int(r["predicted"])
-        label_bin = multiclass_to_binary(label_mc)
-        pred_bin = multiclass_to_binary(pred_mc)
+        label = int(r["label"])
+        pred = int(r["predicted"])
         metrics.update(
-            label_bin,
-            pred_bin,
-            label_mc,
-            pred_mc,
+            label,
+            pred,
             probs,
         )
 
@@ -354,9 +344,7 @@ def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
             "avg_inference_time_ms": avg_time,
             "p95_inference_time_ms": p95_time,
             "binary_mcc": metrics.calculate_binary_mcc(),
-            "multiclass_mcc": metrics.calculate_multiclass_mcc(),
             "binary_cross_entropy": metrics.calculate_binary_cross_entropy(),
-            "multiclass_cross_entropy": metrics.calculate_multiclass_cross_entropy(),
             "sn34_score": metrics.compute_sn34_score(),
         }
     )
@@ -380,7 +368,6 @@ def compute_per_dataset_from_df(df: pd.DataFrame) -> Dict[str, Any]:
         predictions = {
             "real": int(counts.get(0, 0)),
             "synthetic": int(counts.get(1, 0)),
-            "semisynthetic": int(counts.get(2, 0)),
         }
         per_ds[ds] = {
             "correct": correct,

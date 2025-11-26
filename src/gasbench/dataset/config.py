@@ -236,7 +236,7 @@ def build_dataset_info(
     """
     info = {
         "datasets_used": [d.name for d in valid_datasets],
-        "evaluation_type": "ai_generated_detection",
+        "evaluation_type": "synthetic_detection",
         "dataset_media_types": {d.name: d.media_type for d in valid_datasets},
     }
     if dataset_sampling:

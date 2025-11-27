@@ -131,6 +131,10 @@ This ensures consistent input sizes for efficient batching while preserving imag
 
 ### Output Format
 
+Models should output **2 classes** for binary classification:
+- Output shape: `[batch_size, 2]` where the classes represent (0=real, 1=synthetic)
+- Legacy 3-class models `[batch_size, 3]` are still supported for backward compatibility
+
 For detailed ONNX model requirements, see the [ONNX Model Specification](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/ONNX.md) from the BitMind Subnet documentation.
 
 ## Configuration
@@ -152,11 +156,9 @@ By default, datasets are cached at `/tmp/benchmark_data/`. Specify a custom loca
 ### Metrics
 
 - **benchmark_score**: Raw accuracy (correct predictions / total samples)
-- **sn34_score**: Combined metric [0, 1] averaging normalized MCC and cross-entropy (higher is better)
-- **binary_mcc**: Matthews Correlation Coefficient for binary classification (real vs AI)
-- **multiclass_mcc**: Matthews Correlation Coefficient for 3-class (real, synthetic, semisynthetic)
+- **sn34_score**: Combined metric [0, 1] from normalized MCC and cross-entropy (higher is better)
+- **binary_mcc**: Matthews Correlation Coefficient for binary classification (real vs synthetic)
 - **binary_cross_entropy**: Cross-entropy loss for binary classification
-- **multiclass_cross_entropy**: Cross-entropy loss for multiclass classification
 
 ### JSON Output
 
@@ -184,9 +186,7 @@ Benchmark results are automatically saved to a timestamped JSON file with the fo
     "avg_inference_time_ms": 12.3,
     "p95_inference_time_ms": 45.6,
     "binary_mcc": 0.4321,
-    "multiclass_mcc": 0.1234,
-    "binary_cross_entropy": 0.2345,
-    "multiclass_cross_entropy": 0.3456
+    "binary_cross_entropy": 0.2345
   },
   "per_source_accuracy": {
     "real": {

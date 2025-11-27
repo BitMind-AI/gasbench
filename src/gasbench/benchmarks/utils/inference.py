@@ -6,7 +6,7 @@ from typing import Tuple
 
 import onnxruntime as ort
 
-from ..logger import get_logger
+from ...logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -45,37 +45,31 @@ def create_inference_session(model_path: str, model_type: str):
     return session
 
 
-def process_model_output(logits: np.ndarray) -> Tuple[int, int, np.ndarray]:
+def process_model_output(logits: np.ndarray) -> Tuple[int, np.ndarray]:
     """
-    Process model output logits into binary and multiclass predictions.
+    Process model output logits into a binary prediction and probabilities.
     
     Handles 3-class, 2-class, and single-output model formats.
+    For 3-class models, synthetic and semisynthetic are conflated into AI-generated.
     
     Args:
         logits: Raw model output logits (1D array from single sample)
     
     Returns:
-        Tuple of (binary_prediction, multiclass_prediction, probabilities)
-        - binary: 0=real, 1=AI-generated
-        - multiclass: 0=real, 1=synthetic, 2=semisynthetic
-        - probabilities: softmax probabilities as 1D array
+        Tuple of (binary_prediction, probabilities)
+        - binary_prediction: 0=real, 1=AI-generated
+        - probabilities: softmax probabilities as 1D array (length 1,2, or 3)
     """
-    # Ensure logits is 1D
     logits = np.atleast_1d(logits).flatten()
-    
-    # Compute softmax
     exp_x = np.exp(logits - np.max(logits))
     pred_probs = exp_x / np.sum(exp_x)
     
     if len(pred_probs) == 3:
-        predicted_multiclass = int(np.argmax(pred_probs))
-        predicted_binary = 0 if predicted_multiclass == 0 else 1
+        predicted_binary = 0 if np.argmax(pred_probs) == 0 else 1
     elif len(pred_probs) == 2:
         predicted_binary = int(np.argmax(pred_probs))
-        predicted_multiclass = predicted_binary
-    else:  # Single output
+    else:
         predicted_binary = int(pred_probs[0] > 0.5)
-        predicted_multiclass = predicted_binary
     
-    return predicted_binary, predicted_multiclass, pred_probs
+    return predicted_binary, pred_probs
 

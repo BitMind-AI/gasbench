@@ -1,7 +1,8 @@
 from dataclasses import dataclass, replace
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import os
+import json
 import yaml
 from importlib.resources import files
 from collections import defaultdict
@@ -40,20 +41,21 @@ DOWNLOAD_SIZE_OVERRIDES = {
     },
 }
 
+
 @dataclass
 class BenchmarkDatasetConfig:
     name: str
     path: str
-    modality: str  # "image" or "video"
+    modality: str  # "image", "video", or "audio"
     media_type: str  # "real", "synthetic", or "semisynthetic"
 
     # Download parameters
     media_per_archive: int = 100
     archives_per_dataset: int = 5
     source_format: str = ""  # Auto-detected if empty
-    source: str = "huggingface"  # "huggingface" or "modelscope"
+    source: str = "huggingface"  # "huggingface", "modelscope", or "s3"
 
-    include_paths: Optional[List[str]] = None 
+    include_paths: Optional[List[str]] = None
     exclude_paths: Optional[List[str]] = None
     
     # For datasets with multiple media columns (e.g., PICA-100K with src_img and tgt_img)
@@ -61,14 +63,16 @@ class BenchmarkDatasetConfig:
     notes: Optional[str] = None  # Optional documentation field
 
 
-def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[str] = None) -> int:
+def get_benchmark_size(
+    modality: str, mode: str = "full", yaml_path: Optional[str] = None
+) -> int:
     """Get the target benchmark size for a given modality and mode.
-    
+
     Args:
         modality: "image", "video", or "audio"
         mode: "debug", "small", or "full"
         yaml_path: Optional path to custom yaml config (for full mode)
-        
+
     Returns:
         Target number of samples for the benchmark
     """
@@ -92,9 +96,12 @@ def get_benchmark_size(modality: str, mode: str = "full", yaml_path: Optional[st
         else:
             # Load from separate modality file
             filename = f"{modality}_datasets.yaml"
-            data = _load_bundled_config(filename)
-            if "benchmark_size" in data:
-                return data["benchmark_size"]
+            try:
+                data = _load_bundled_config(filename)
+                if "benchmark_size" in data:
+                    return data["benchmark_size"]
+            except FileNotFoundError:
+                data = _load_all_bundled_configs()
 
         logger.warning(f"'benchmark_size' not found in config for {modality}, using default")
         if modality == "image":
@@ -118,11 +125,11 @@ def apply_mode_to_datasets(
     datasets: List[BenchmarkDatasetConfig], mode: str
 ) -> List[BenchmarkDatasetConfig]:
     """Apply mode transformations to dataset configurations.
-    
+
     Args:
         datasets: List of dataset configurations
         mode: One of "debug", "small", or "full"
-        
+
     Returns:
         Transformed list of datasets based on mode
     """
@@ -133,83 +140,55 @@ def apply_mode_to_datasets(
         mode_config = DOWNLOAD_SIZE_OVERRIDES["debug"]
         modified = replace(
             dataset,
-            media_per_archive=mode_config.get("media_per_archive", dataset.media_per_archive),
-            archives_per_dataset=mode_config.get("archives_per_dataset", dataset.archives_per_dataset),
+            media_per_archive=mode_config.get(
+                "media_per_archive", dataset.media_per_archive
+            ),
+            archives_per_dataset=mode_config.get(
+                "archives_per_dataset", dataset.archives_per_dataset
+            ),
         )
         return [modified]
-    
+
     elif mode == "small":
         modified_datasets = []
         for dataset in datasets:
             mode_config = DOWNLOAD_SIZE_OVERRIDES["small"]
             modified = replace(
                 dataset,
-                media_per_archive=mode_config.get("media_per_archive", dataset.media_per_archive),
-                archives_per_dataset=mode_config.get("archives_per_dataset", dataset.archives_per_dataset),
+                media_per_archive=mode_config.get(
+                    "media_per_archive", dataset.media_per_archive
+                ),
+                archives_per_dataset=mode_config.get(
+                    "archives_per_dataset", dataset.archives_per_dataset
+                ),
             )
             modified_datasets.append(modified)
         return modified_datasets
-    
+
     else:
         return datasets  # Full mode (or unknown): Use YAML configs as-is
 
 
-def discover_benchmark_image_datasets(
+def discover_benchmark_datasets(
+    modality: str,
     mode: str = "full",
     gasstation_only: bool = False,
     no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark image datasets.
-    
-    Args:
-        mode: Benchmark mode - "debug", "small", or "full"
-        gasstation_only: If True, only return gasstation datasets
-        no_gasstation: If True, exclude gasstation datasets
-        yaml_path: Optional path to custom yaml config
-    """
+    """Return list of available benchmark datasets for a given modality ("image", "video", or "audio")."""
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
-    datasets = dataset_source["image"]
-
-    datasets = apply_mode_to_datasets(datasets, mode)
+    if modality not in dataset_source:
+        return []
+    datasets = dataset_source[modality]
 
     if gasstation_only:
-        gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
-        return gasstation_datasets
-    
+        datasets = [d for d in datasets if "gasstation" in d.name.lower()]
+
     if no_gasstation:
-        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
-        return non_gasstation_datasets
-
-    return datasets
-
-
-def discover_benchmark_video_datasets(
-    mode: str = "full",
-    gasstation_only: bool = False,
-    no_gasstation: bool = False,
-    yaml_path: Optional[str] = None,
-) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark video datasets.
-    
-    Args:
-        mode: Benchmark mode - "debug", "small", or "full"
-        gasstation_only: If True, only return gasstation datasets
-        no_gasstation: If True, exclude gasstation datasets
-        yaml_path: Optional path to custom yaml config
-    """
-    dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
-    datasets = dataset_source["video"]
+        datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
 
     datasets = apply_mode_to_datasets(datasets, mode)
-
-    if gasstation_only:
-        gasstation_datasets = [d for d in datasets if "gasstation" in d.name.lower()]
-        return gasstation_datasets
-    
-    if no_gasstation:
-        non_gasstation_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
-        return non_gasstation_datasets
 
     return datasets
 
@@ -245,18 +224,18 @@ def discover_benchmark_audio_datasets(
 
 
 def calculate_weighted_dataset_sampling(
-    datasets: List[BenchmarkDatasetConfig], 
-    target_total_samples: int, 
-    gasstation_weight: float = None
+    datasets: List[BenchmarkDatasetConfig],
+    target_total_samples: int,
+    gasstation_weight: float = None,
 ) -> Dict[str, int]:
     """
     Calculate per-dataset sampling with higher weight for gasstation datasets.
-    
+
     Args:
         datasets: List of dataset configurations
         target_total_samples: Total samples to aim for across all datasets
         gasstation_weight: Weight multiplier for gasstation datasets (default: GASSTATION_WEIGHT_MULTIPLIER)
-    
+
     Returns:
         Dict mapping dataset names to their max_samples cap
     """
@@ -267,14 +246,17 @@ def calculate_weighted_dataset_sampling(
     regular_datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
     num_gasstation = len(gasstation_datasets)
     num_regular = len(regular_datasets)
-    
+
     if num_gasstation == 0:
         per_dataset_cap = target_total_samples // len(datasets) if datasets else 0
         return {
-            d.name: min(REGULAR_DATASET_MAX_SAMPLES, per_dataset_cap * UNIFORM_SAMPLING_MULTIPLIER) 
+            d.name: min(
+                REGULAR_DATASET_MAX_SAMPLES,
+                per_dataset_cap * UNIFORM_SAMPLING_MULTIPLIER,
+            )
             for d in datasets
         }
-    
+
     # Currently each regular dataset gets weight=1, each gasstation gets weight=gasstation_weight
     total_weight = num_regular + (num_gasstation * gasstation_weight)
     samples_per_weight_unit = target_total_samples / total_weight
@@ -282,19 +264,26 @@ def calculate_weighted_dataset_sampling(
     regular_cap = int(samples_per_weight_unit)
     gasstation_cap = int(samples_per_weight_unit * gasstation_weight)
 
-    regular_cap = min(REGULAR_DATASET_MAX_SAMPLES, max(REGULAR_DATASET_MIN_SAMPLES, regular_cap))
-    gasstation_cap = min(GASSTATION_DATASET_MAX_SAMPLES, max(GASSTATION_DATASET_MIN_SAMPLES, gasstation_cap))
+    regular_cap = min(
+        REGULAR_DATASET_MAX_SAMPLES, max(REGULAR_DATASET_MIN_SAMPLES, regular_cap)
+    )
+    gasstation_cap = min(
+        GASSTATION_DATASET_MAX_SAMPLES,
+        max(GASSTATION_DATASET_MIN_SAMPLES, gasstation_cap),
+    )
 
     sampling_dict = {}
     for dataset in datasets:
         if "gasstation" in dataset.name.lower():
             sampling_dict[dataset.name] = gasstation_cap
         else:
-            sampling_dict[dataset.name] = regular_cap    
+            sampling_dict[dataset.name] = regular_cap
     return sampling_dict
 
 
-def build_dataset_info(valid_datasets: List, dataset_sampling: Dict[str, int] = None) -> Dict:
+def build_dataset_info(
+    valid_datasets: List, dataset_sampling: Dict[str, int] = None
+) -> Dict:
     """Build dataset info dictionary for results.
 
     Args:
@@ -303,7 +292,7 @@ def build_dataset_info(valid_datasets: List, dataset_sampling: Dict[str, int] = 
     """
     info = {
         "datasets_used": [d.name for d in valid_datasets],
-        "evaluation_type": "ai_generated_detection",
+        "evaluation_type": "synthetic_detection",
         "dataset_media_types": {d.name: d.media_type for d in valid_datasets},
     }
     if dataset_sampling:
@@ -337,6 +326,14 @@ def validate_dataset_config(
             errors.append(
                 f"Dataset '{dataset_name}': Invalid media_type '{config_dict['media_type']}'. "
                 f"Must be one of {valid_media_types}"
+            )
+
+    if "source" in config_dict:
+        valid_sources = ["huggingface", "modelscope", "s3"]
+        if config_dict["source"] not in valid_sources:
+            errors.append(
+                f"Dataset '{dataset_name}': Invalid source '{config_dict['source']}'. "
+                f"Must be one of {valid_sources}"
             )
 
     numeric_fields = [
@@ -402,6 +399,7 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                     source=dataset_dict.get("source", "huggingface"),
                     include_paths=dataset_dict.get("include_paths"),
                     exclude_paths=dataset_dict.get("exclude_paths"),
+                    image_columns=dataset_dict.get("image_columns"),
                 )
                 result[modality].append(config)
 
@@ -415,45 +413,85 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
 
 
 def _obfuscate_holdout_names(
-    datasets: List[BenchmarkDatasetConfig]
-) -> List[BenchmarkDatasetConfig]:
+    datasets: List[BenchmarkDatasetConfig],
+) -> Tuple[List[BenchmarkDatasetConfig], Dict[str, str]]:
     """
     Obfuscate dataset names for holdout datasets using a stable short hash so names
     do not change when items are inserted or reordered.
     Example: real-video-holdout-a1b2c3d4
+
+    Returns:
+        Tuple of (obfuscated_datasets, mapping_dict)
+        mapping_dict maps obfuscated_name -> original_name
     """
     obfuscated: List[BenchmarkDatasetConfig] = []
+    mapping: Dict[str, str] = {}
+
     for d in datasets:
+        original_name = d.name
         # Build a deterministic fingerprint based on key dataset fields
         include_paths = ",".join(sorted(d.include_paths)) if d.include_paths else ""
         exclude_paths = ",".join(sorted(d.exclude_paths)) if d.exclude_paths else ""
-        fingerprint = "|".join([
-            d.path or "",
-            d.modality or "",
-            d.media_type or "",
-            (d.source_format or ""),
-            include_paths,
-            exclude_paths,
-            (d.source or ""),
-        ])
+        fingerprint = "|".join(
+            [
+                d.path or "",
+                d.modality or "",
+                d.media_type or "",
+                (d.source_format or ""),
+                include_paths,
+                exclude_paths,
+                (d.source or ""),
+            ]
+        )
         short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
         new_name = f"{d.media_type}-{d.modality}-holdout-{short_hash}"
         obfuscated.append(replace(d, name=new_name))
-    return obfuscated
+        mapping[new_name] = original_name
+
+    return obfuscated, mapping
 
 
 def load_holdout_datasets_from_yaml(
-    yaml_path: str
+    yaml_path: str, cache_dir: Optional[str] = None
 ) -> Dict[str, List[BenchmarkDatasetConfig]]:
     """
     Load holdout datasets from YAML and return dict with obfuscated names.
     Structure of YAML matches regular dataset configs.
+
+    Also saves a mapping file (holdout_mapping.json) in the cache directory
+    showing obfuscated_name -> original_name mappings.
+
+    Args:
+        yaml_path: Path to holdout YAML config
+        cache_dir: Cache directory to save mapping file (optional)
     """
     base = load_datasets_from_yaml(yaml_path)
+
+    image_datasets, image_mapping = _obfuscate_holdout_names(base.get("image", []))
+    video_datasets, video_mapping = _obfuscate_holdout_names(base.get("video", []))
+    audio_datasets, audio_mapping = _obfuscate_holdout_names(base.get("audio", []))
+
+    # Save mapping file if cache_dir provided
+    if cache_dir:
+        try:
+            os.makedirs(cache_dir, exist_ok=True)
+            mapping_file = os.path.join(cache_dir, "holdout_mapping.json")
+            full_mapping = {
+                "image": image_mapping,
+                "video": video_mapping,
+                "audio": audio_mapping,
+                "source_config": yaml_path,
+            }
+            with open(mapping_file, "w") as f:
+                json.dump(full_mapping, f, indent=2)
+            logger.info(f"Saved holdout name mapping to: {mapping_file}")
+        except Exception as e:
+            logger.warning(f"Failed to save holdout mapping file: {e}")
+
     return {
-        "image": _obfuscate_holdout_names(base.get("image", [])),
-        "video": _obfuscate_holdout_names(base.get("video", [])),
-        "audio": _obfuscate_holdout_names(base.get("audio", [])),
+        "image": image_datasets,
+        "video": video_datasets,
+        "audio": audio_datasets,
     }
 
 
@@ -489,8 +527,39 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> t
     return benchmark_size, datasets
 
 
+def _load_all_bundled_configs() -> Dict:
+    """Load and merge all modality-specific config files (image, video, audio)."""
+    config_files = {
+        "image": "image_datasets.yaml", 
+        "video": "video_datasets.yaml",
+        "audio": "audio_datasets.yaml",
+    }
+    
+    merged_data = {}
+    
+    for modality, filename in config_files.items():
+        try:
+            data = _load_bundled_config(filename)
+            
+            if isinstance(data, dict):
+                if "benchmark_size" in data:
+                    merged_data[f"{modality}_benchmark_size"] = data["benchmark_size"]
+                
+                if "datasets" in data and isinstance(data["datasets"], list):
+                    merged_data[modality] = data["datasets"]
+                    
+        except FileNotFoundError:
+            logger.warning(f"Config file {filename} not found, skipping {modality}")
+            continue
+        except Exception as e:
+            logger.warning(f"Failed to load {filename}: {e}, skipping {modality}")
+            continue
+    
+    return merged_data
+
+
 def load_benchmark_datasets_from_yaml(
-    yaml_path: Optional[str] = None
+    yaml_path: Optional[str] = None,
 ) -> Dict[str, List[BenchmarkDatasetConfig]]:
     """Load benchmark datasets from YAML files.
     

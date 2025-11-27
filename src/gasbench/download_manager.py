@@ -16,8 +16,7 @@ from rich.progress import (
 from .logger import get_logger
 from .dataset.config import (
     BenchmarkDatasetConfig,
-    discover_benchmark_image_datasets,
-    discover_benchmark_video_datasets,
+    discover_benchmark_datasets,
     discover_benchmark_audio_datasets,
     load_holdout_datasets_from_yaml,
     apply_mode_to_datasets,
@@ -97,6 +96,17 @@ class DownloadManager:
             await asyncio.gather(*download_tasks, return_exceptions=True)
         
         self._print_summary(len(tasks))
+        
+        # Raise error if all downloads failed
+        if len(self.failed) == len(tasks) and len(tasks) > 0:
+            raise RuntimeError(f"All {len(tasks)} dataset downloads failed")
+        
+        # Return summary
+        return {
+            "total": len(tasks),
+            "completed": len(self.completed),
+            "failed": len(self.failed)
+        }
     
     async def _download_dataset_with_semaphore(
         self, 
@@ -189,6 +199,9 @@ class DownloadManager:
                 sample_count += 1
 
             logger.debug(f"Processed {sample_count} samples from {task.dataset.name}")
+            
+            if sample_count == 0:
+                raise RuntimeError(f"No samples downloaded for {task.dataset.name}")
 
         finally:
             # Restore original log levels
@@ -247,6 +260,7 @@ async def download_datasets(
     unlimited_samples: bool = False,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    dataset_filters: Optional[List[str]] = None,
 ):
     """Main entry point for efficient dataset downloads.
     
@@ -263,6 +277,8 @@ async def download_datasets(
         allow_eviction: If False, disable sample eviction and accumulate all samples
         unlimited_samples: If True, download ALL available samples (no cap)
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
+        holdout_config: Optional path to holdout YAML config file
+        dataset_filters: Optional list of dataset name patterns to filter by (supports partial matches)
     """
     if not cache_dir:
         cache_dir = "/.cache/gasbench"
@@ -270,12 +286,21 @@ async def download_datasets(
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
     
     datasets = _discover_datasets(
-        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config
+        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config, cache_dir
     )
+    
+    if dataset_filters:
+        original_count = len(datasets)
+        datasets = _filter_datasets_by_name(datasets, dataset_filters)
+        logger.info(f"Filtered {original_count} datasets to {len(datasets)} matching: {dataset_filters}")
     
     if not datasets:
         logger.warning("No datasets found matching criteria")
-        return
+        return {
+            "completed": 0,
+            "failed": 0,
+            "total": 0,
+        }
     
     logger.info(f"Found {len(datasets)} datasets to process")
     
@@ -312,7 +337,7 @@ async def download_datasets(
         allow_eviction=allow_eviction,
     )
     
-    await manager.download_all(tasks)
+    return await manager.download_all(tasks)
 
 
 def _discover_datasets(
@@ -322,30 +347,39 @@ def _discover_datasets(
     no_gasstation: bool = False,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    cache_dir: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
-        image_datasets = discover_benchmark_image_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        image_datasets = discover_benchmark_datasets("image", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
-                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("image", [])
+                logger.info(f"Loading holdout datasets from: {holdout_config}")
+                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("image", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
+                logger.info(f"Loaded {len(holdouts)} holdout image datasets")
                 image_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout image datasets: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
-        video_datasets = discover_benchmark_video_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        video_datasets = discover_benchmark_datasets("video", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
-                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("video", [])
+                logger.info(f"Loading holdout video datasets from: {holdout_config}")
+                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("video", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
+                logger.info(f"Loaded {len(holdouts)} holdout video datasets")
                 video_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout video datasets: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
         datasets.extend(video_datasets)
     
     if not modality or modality == "all" or modality == "audio":
@@ -362,13 +396,40 @@ def _discover_datasets(
     return datasets
 
 
+def _filter_datasets_by_name(
+    datasets: List[BenchmarkDatasetConfig],
+    filters: List[str],
+) -> List[BenchmarkDatasetConfig]:
+    """Filter datasets by name patterns (case-insensitive partial matches).
+    
+    Args:
+        datasets: List of dataset configs
+        filters: List of name patterns to match
+        
+    Returns:
+        Filtered list of datasets that match any of the patterns
+    """
+    if not filters:
+        return datasets
+    
+    filtered = []
+    filters_lower = [f.lower() for f in filters]
+    
+    for dataset in datasets:
+        dataset_name_lower = dataset.name.lower()
+        if any(filter_pattern in dataset_name_lower for filter_pattern in filters_lower):
+            filtered.append(dataset)
+    
+    return filtered
+
+
 def _needs_download(
     dataset: BenchmarkDatasetConfig,
     cache_dir: str,
     num_weeks: Optional[int],
 ) -> bool:
     """Check if dataset needs to be downloaded based on mode requirements."""
-    from .dataset import gasstation_utils
+    from .dataset.utils import gasstation_utils
     
     is_gasstation = "gasstation" in dataset.name.lower()
     

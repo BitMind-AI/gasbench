@@ -12,7 +12,7 @@ from typing import List, Set, Optional, Dict, Tuple
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from ..logger import get_logger
+from ...logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -61,13 +61,16 @@ def get_week_directories(dataset_name: str, cache_dir: str, target_weeks: List[s
 
 
 def load_downloaded_archives(week_dir: str) -> Set[str]:
-    """Load the set of already-downloaded archives for a week.
+    """Load the set of already-processed parquet/archive files for a week.
+    
+    For parquet-based gasstation datasets, this tracks parquet filenames.
+    For legacy datasets, this tracks archive filenames.
     
     Args:
         week_dir: Path to the week's cache directory
         
     Returns:
-        Set of downloaded archive basenames
+        Set of downloaded parquet/archive basenames
     """
     archive_tracker_file = os.path.join(week_dir, "downloaded_archives.json")
     
@@ -83,11 +86,14 @@ def load_downloaded_archives(week_dir: str) -> Set[str]:
 
 
 def save_downloaded_archives(week_dir: str, downloaded_archives: Set[str]):
-    """Save the set of downloaded archives for a week.
+    """Save the set of processed parquet/archive files for a week.
+    
+    For parquet-based gasstation datasets, this tracks parquet filenames.
+    For legacy datasets, this tracks archive filenames.
     
     Args:
         week_dir: Path to the week's cache directory
-        downloaded_archives: Set of downloaded archive basenames
+        downloaded_archives: Set of processed parquet/archive basenames
     """
     archive_tracker_file = os.path.join(week_dir, "downloaded_archives.json")
     
@@ -108,35 +114,35 @@ def check_for_new_archives(
 ) -> Tuple[bool, int]:
     """Check if there are new archives available for a week.
     
+    For parquet-based gasstation datasets, checks for new parquet files
+    (which inherently means new tar archives are available, as they're uploaded together).
+    
     Args:
         dataset_path: HuggingFace dataset path
         week_str: ISO week string (e.g., "2025W40")
-        source_format: Source file format
+        source_format: Source file format (e.g., "parquet", "tar.gz")
         modality: Dataset modality ("image" or "video")
-        downloaded_archives: Set of already-downloaded archive basenames
+        downloaded_archives: Set of already-downloaded parquet/archive basenames
         
     Returns:
         Tuple of (has_new_archives, num_new_archives)
     """
     try:
-        from .download import list_hf_files
+        from ..download import list_hf_files
         
-        # Determine source format
         src_fmt = str(source_format).lower().lstrip(".")
         if not src_fmt:
             src_fmt = ".parquet" if modality == "image" else ".zip"
         else:
             src_fmt = "." + src_fmt if not src_fmt.startswith(".") else src_fmt
         
-        # List files for this specific week
         all_files = list_hf_files(repo_id=dataset_path, extension=src_fmt)
         week_files = [f for f in all_files if week_str in f]
         
-        # Check for new archives
         available_basenames = {os.path.basename(f) for f in week_files}
-        new_archives = available_basenames - downloaded_archives
+        new_files = available_basenames - downloaded_archives
         
-        return (len(new_archives) > 0, len(new_archives))
+        return (len(new_files) > 0, len(new_files))
         
     except Exception as e:
         logger.debug(f"Failed to check for new archives: {e}")
@@ -221,3 +227,99 @@ def get_total_cached_samples(week_dirs: List[str]) -> int:
     for week_dir in week_dirs:
         total += get_week_sample_count(week_dir)
     return total
+
+
+def extract_iso_week_from_path(file_path: str) -> Optional[str]:
+    """Extract ISO week string from file path (e.g., '2025W40' from 'data_2025W40/file.parquet').
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W40/
+    - archives/2025W39/
+    
+    Args:
+        file_path: Path containing ISO week pattern
+    
+    Returns:
+        ISO week string like '2025W40', or None if not found
+    """
+    import re
+    
+    pattern = r'(\d{4}W\d{2})'
+    match = re.search(pattern, file_path)
+    if match:
+        return match.group(1)
+    return None
+
+
+def filter_files_by_current_week(files: List[str]) -> List[str]:
+    """Filter files to only include current ISO week's data for gasstation datasets.
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W39/
+    - data_2025W40/
+    - archives/2025W38/
+    - archives/2025W39/
+    
+    This function filters to only include files from the current ISO week.
+    
+    Args:
+        files: List of file paths to filter
+        
+    Returns:
+        Filtered list of files from current week
+    """
+    now = datetime.now()
+    current_year, current_week, _ = now.isocalendar()
+    current_week_str = f"{current_year}W{current_week:02d}"
+    logger.info(f"Current ISO week: {current_week_str}")
+    
+    current_week_files = []
+    for file_path in files:
+        if current_week_str in file_path:
+            current_week_files.append(file_path)
+    
+    logger.info(f"Found {len(current_week_files)} files for current week {current_week_str}")
+    return current_week_files
+
+
+def filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]:
+    """Filter files to only include the N most recent ISO weeks for gasstation datasets.
+    
+    Gasstation datasets are organized in weekly subdirectories like:
+    - data_2025W38/
+    - data_2025W39/
+    - data_2025W40/
+    - archives/2025W38/
+    - archives/2025W39/
+    
+    This function filters to only include files from the N most recent ISO weeks.
+    
+    Args:
+        files: List of file paths
+        num_weeks: Number of most recent weeks to include
+    
+    Returns:
+        Filtered list of files from recent weeks
+    """
+    now = datetime.now()
+    
+    recent_weeks = []
+    for i in range(num_weeks):
+        date_offset = now - timedelta(weeks=i)
+        year, week, _ = date_offset.isocalendar()
+        week_str = f"{year}W{week:02d}"
+        recent_weeks.append(week_str)
+    
+    logger.info(f"Filtering to last {num_weeks} weeks: {', '.join(recent_weeks)}")
+    
+    recent_week_files = []
+    for file_path in files:
+        for week_str in recent_weeks:
+            if week_str in file_path:
+                recent_week_files.append(file_path)
+                break
+    
+    logger.info(f"Found {len(recent_week_files)} files for last {num_weeks} weeks")
+    return recent_week_files

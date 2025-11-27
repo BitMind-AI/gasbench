@@ -1,39 +1,178 @@
-import json
 import os
 import time
 import asyncio
 import numpy as np
+import traceback
 from typing import Dict, Optional
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue, Empty
+import threading
 
 from ..logger import get_logger
 from ..processing.archive import video_archive_manager
-from ..processing.media import process_video_bytes_sample
+from ..processing.media import process_video_bytes_sample, process_video_frames_sample
 from ..processing.transforms import (
     apply_random_augmentations,
-    extract_target_size_from_input_specs,
 )
-from ..config import DEFAULT_TARGET_SIZE, DEFAULT_VIDEO_BATCH_SIZE
-from ..dataset.config import (
-    get_benchmark_size,
-    discover_benchmark_video_datasets,
-    calculate_weighted_dataset_sampling,
-    build_dataset_info,
-    load_holdout_datasets_from_yaml,
-    apply_mode_to_datasets,
-)
+from ..config import DEFAULT_VIDEO_BATCH_SIZE
 from ..dataset.iterator import DatasetIterator
-from .utils import (
-    Metrics,
-    multiclass_to_binary,
-    update_generator_stats,
-    calculate_per_source_accuracy,
-    should_track_sample,
-    create_misclassification_record,
-    aggregate_misclassification_stats,
-)
-from ..model.inference import process_model_output
+
+from .utils.inference import process_model_output
+from .recording import BenchmarkRunRecorder, log_dataset_summary
+from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
+import pandas as pd
 
 logger = get_logger(__name__)
+
+
+class VideoPrefetchPipeline:
+    """Pipeline for parallel loading and preprocessing of video samples."""
+
+    def __init__(
+        self,
+        dataset_iterator,
+        target_size,
+        batch_size,
+        seed,
+        augment_level,
+        crop_prob,
+        num_workers=3,
+        max_queue_size=6,
+    ):
+        self.dataset_iterator = dataset_iterator
+        self.target_size = target_size
+        self.batch_size = batch_size
+        self.seed = seed
+        self.augment_level = augment_level
+        self.crop_prob = crop_prob
+        self.num_workers = num_workers
+        self.max_queue_size = max_queue_size
+
+        self.batch_queue = Queue(maxsize=max_queue_size)
+        self.stop_event = threading.Event()
+        self.error = None
+
+        self.executor = ThreadPoolExecutor(max_workers=num_workers)
+        self.producer_thread = threading.Thread(target=self._producer_loop, daemon=True)
+        self.producer_thread.start()
+
+    def _preprocess_sample(self, sample, sample_index, dataset_name):
+        """Preprocess a single sample (runs in worker thread)."""
+        try:
+            if "video_frames" in sample:
+                video_array, label = process_video_frames_sample(sample)
+            else:
+                video_array, label = process_video_bytes_sample(sample)
+
+            if video_array is None or label is None:
+                return None
+
+            sample_seed = None if self.seed is None else (self.seed + sample_index)
+            try:
+                aug_thwc, _, _, _ = apply_random_augmentations(
+                    video_array,
+                    self.target_size,
+                    seed=sample_seed,
+                    level=self.augment_level,
+                    crop_prob=self.crop_prob,
+                )
+            except Exception as e:
+                logger.error(f"Video augmentation failed: {e}")
+                return None
+
+            aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
+
+            return {
+                "video": aug_tchw,
+                "label": label,
+                "sample": sample,
+                "sample_index": sample_index,
+                "dataset_name": dataset_name,
+                "sample_seed": sample_seed,
+            }
+        except Exception as e:
+            logger.warning(f"Failed to preprocess video sample: {e}")
+            return None
+
+    def _producer_loop(self):
+        """Main loop that feeds samples to workers and batches results."""
+        try:
+            batch = []
+            sample_index = 0
+            dataset_name = getattr(self.dataset_iterator.config, "name", "unknown")
+
+            futures = []
+            for sample in self.dataset_iterator:
+                if self.stop_event.is_set():
+                    break
+
+                sample_index += 1
+
+                future = self.executor.submit(
+                    self._preprocess_sample, sample, sample_index, dataset_name
+                )
+                futures.append(future)
+
+                if len(futures) >= self.num_workers * 2:
+                    for future in futures:
+                        if self.stop_event.is_set():
+                            break
+                        result = future.result()
+                        if result is not None:
+                            batch.append(result)
+                            if len(batch) >= self.batch_size:
+                                self.batch_queue.put(batch)
+                                batch = []
+                    futures = []
+
+            for future in futures:
+                if self.stop_event.is_set():
+                    break
+                result = future.result()
+                if result is not None:
+                    batch.append(result)
+                    if len(batch) >= self.batch_size:
+                        self.batch_queue.put(batch)
+                        batch = []
+
+            if batch and not self.stop_event.is_set():
+                self.batch_queue.put(batch)
+
+            self.batch_queue.put(None)
+
+        except Exception as e:
+            self.error = e
+            logger.error(
+                f"Error in video prefetch pipeline: {e}\n{traceback.format_exc()}"
+            )
+            self.batch_queue.put(None)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.error:
+            raise self.error
+
+        try:
+            batch = self.batch_queue.get(timeout=300)
+            if batch is None:
+                raise StopIteration
+            return batch
+        except Empty:
+            logger.error("Timeout waiting for batch from video prefetch pipeline")
+            raise StopIteration
+
+    def close(self):
+        """Clean up resources."""
+        self.stop_event.set()
+        self.executor.shutdown(wait=False)
+
+        while not self.batch_queue.empty():
+            try:
+                self.batch_queue.get_nowait()
+            except Empty:
+                break
 
 
 def process_video_batch(
@@ -41,124 +180,53 @@ def process_video_batch(
     input_specs,
     batch_videos,
     batch_metadata,
-    metrics,
-    generator_stats,
-    incorrect_samples,
-    per_dataset_pred_counts,
+    tracker: BenchmarkRunRecorder,
+    batch_id: int,
 ):
-    """push a batch of videos through the model."""
+    """push a batch of videos through the model and record rows in tracker."""
     if not batch_videos:
-        return 0, 0, []
+        return
 
-    # Preallocate batch tensor to avoid an extra copy from np.stack
     first = batch_videos[0]
     batch_array = np.empty((len(batch_videos),) + first.shape, dtype=first.dtype)
     for i, vid in enumerate(batch_videos):
         batch_array[i] = vid
 
     start = time.time()
-    outputs = session.run(None, {input_specs[0].name: batch_array})
+    outputs = None
+    try:
+        outputs = session.run(None, {input_specs[0].name: batch_array})
+    except Exception as e:
+        for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
+            batch_metadata
+        ):
+            tracker.add_error(
+                dataset_name=dataset_name,
+                sample_index=sample_index,
+                sample=sample,
+                error_message=f"inference-failed: {str(e)[:160]}",
+            )
+        return
     batch_inference_time = (time.time() - start) * 1000
     per_sample_time = batch_inference_time / len(batch_videos)
-    inference_times = [per_sample_time] * len(batch_videos)
 
-    correct = 0
-    for i, (true_label_binary, true_label_multiclass, sample, sample_index, dataset_name) in enumerate(batch_metadata):
-        predicted_binary, predicted_multiclass, pred_probs = process_model_output(outputs[0][i])
-
-        metrics.update(
-            true_label_binary, predicted_binary,
-            true_label_multiclass, predicted_multiclass,
-            pred_probs
+    for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
+        batch_metadata
+    ):
+        predicted, pred_probs = process_model_output(outputs[0][i])
+        tracker.add_ok(
+            dataset_name=dataset_name,
+            sample_index=sample_index,
+            sample=sample,
+            label=label,
+            predicted=predicted,
+            probs=pred_probs,
+            inference_time_ms=per_sample_time,
+            batch_inference_time_ms=batch_inference_time,
+            batch_id=batch_id,
+            batch_size=len(batch_videos),
+            sample_seed=sample_seed,
         )
-
-        # Track per-dataset predicted label counts (multiclass: 0=real,1=synthetic,2=semisynthetic)
-        ds_counts = per_dataset_pred_counts.get(dataset_name)
-        if ds_counts is None:
-            ds_counts = {0: 0, 1: 0, 2: 0}
-            per_dataset_pred_counts[dataset_name] = ds_counts
-        if predicted_multiclass in ds_counts:
-            ds_counts[predicted_multiclass] += 1
-        else:
-            # In case of unexpected class count, grow dict safely
-            ds_counts[predicted_multiclass] = ds_counts.get(predicted_multiclass, 0) + 1
-
-        is_correct = predicted_binary == true_label_binary
-        if is_correct:
-            correct += 1
-        else:
-            if should_track_sample(sample, dataset_name):
-                misclassification = create_misclassification_record(
-                    sample,
-                    sample_index,
-                    true_label_multiclass,
-                    predicted_multiclass,
-                )
-                incorrect_samples.append(misclassification)
-
-        update_generator_stats(generator_stats, sample, true_label_binary, predicted_binary)
-
-    return correct, len(batch_videos), inference_times
-
-
-async def video_prefetcher(
-    dataset_iterator,
-    dataset_config,
-    queue: asyncio.Queue,
-    max_queue_size: int = 2,
-    seed: int = None,
-    target_size=None,
-    augment_level: Optional[int] = 0,
-    crop_prob: float = 0.0,
-):
-    """
-    Prefetch and preprocess videos from the dataset iterator.
-    
-    Args:
-        dataset_iterator: Iterator over dataset samples
-        dataset_config: Configuration for the dataset
-        queue: Async queue to put processed videos into
-        max_queue_size: Maximum size of prefetch queue
-        seed: Optional random seed for reproducible augmentations
-        target_size: Optional (H, W) tuple for fixed target size from model specs
-    """
-    try:
-        sample_index = 0
-        for sample in dataset_iterator:
-            sample_index += 1
-            try:
-                video_array, true_label_multiclass = process_video_bytes_sample(sample)
-
-                if video_array is None or true_label_multiclass is None:
-                    # Put a skip marker in the queue
-                    await queue.put(("skip", None, None, None, None))
-                    continue
-
-                try:
-                    # video_array is THWC uint8; augment in THWC and transpose once at the end
-                    sample_seed = None if seed is None else (seed + sample_index)
-                    aug_thwc, _, _, _ = apply_random_augmentations(
-                        video_array, target_size, seed=sample_seed, level=augment_level, crop_prob=crop_prob
-                    )
-                    aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
-                    video_array = np.expand_dims(aug_tchw, 0)  # 1,T,C,H,W
-                except Exception as e:
-                    logger.error(f"Video augmentation failed: {e}")
-                    await queue.put(("skip", None, None, None, None))
-                    continue
-
-                true_label_binary = multiclass_to_binary(true_label_multiclass)
-                await queue.put(("data", video_array, true_label_binary, true_label_multiclass, sample))
-                
-            except Exception as e:
-                logger.warning(f"Failed to process video sample from {dataset_config.name}: {e}")
-                await queue.put(("error", None, None, None, None))
-                
-    except Exception as e:
-        logger.error(f"Prefetcher error for dataset {dataset_config.name}: {e}")
-    finally:
-        # Signal end of dataset
-        await queue.put(("done", None, None, None, None))
 
 
 async def run_video_benchmark(
@@ -176,9 +244,10 @@ async def run_video_benchmark(
     holdout_config: Optional[str] = None,
     augment_level: Optional[int] = 0,
     crop_prob: float = 0.0,
-) -> float:
+    records_parquet_path: Optional[str] = None,
+) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
-    
+
     if batch_size is None:
         batch_size = DEFAULT_VIDEO_BATCH_SIZE
 
@@ -189,97 +258,54 @@ async def run_video_benchmark(
             logger.info("Loading gasstation video datasets only")
         else:
             logger.info("Loading benchmark video datasets")
-        
-        available_datasets = discover_benchmark_video_datasets(mode, gasstation_only, yaml_path=dataset_config)
 
-        if holdout_config and not gasstation_only:
-            try:
-                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("video", [])
-                holdouts = apply_mode_to_datasets(holdouts, mode)
-                if not gasstation_only:
-                    available_datasets.extend(holdouts)
-            except Exception as e:
-                logger.error(f"Failed to load holdout video datasets: {e}")
-
-        if not available_datasets:
+        run_config = BenchmarkRunConfig(
+            modality="video",
+            mode=mode,
+            gasstation_only=gasstation_only,
+            dataset_config_path=dataset_config,
+            holdout_config_path=holdout_config,
+            cache_dir=cache_dir,
+            cache_policy_path=cache_policy,
+            hf_token=hf_token,
+            batch_size=batch_size,
+            augment_level=augment_level or 0,
+            crop_prob=crop_prob or 0.0,
+            records_parquet_path=records_parquet_path,
+        )
+        plan = build_plan(logger, run_config, input_specs)
+        if not plan:
             logger.error("No benchmark video datasets configured")
             benchmark_results["video_results"] = {"error": "No datasets available"}
             return 0.0
 
-        logger.info(f"Using {len(available_datasets)} video datasets for benchmarking")
-
-        target_size = extract_target_size_from_input_specs(input_specs)
-        if target_size is None:
-            target_size = DEFAULT_TARGET_SIZE
-            logger.info(f"Model has dynamic axes, using default target size: {target_size[0]}x{target_size[1]}")
-        else:
-            logger.info(f"Using fixed target size from model: {target_size[0]}x{target_size[1]}")
+        tracker = create_tracker(run_config, plan, input_specs)
 
         with video_archive_manager(cache_dir=cache_dir) as video_cache:
-            correct = 0
-            total = 0
-            inference_times = []
-            per_dataset_results = {}
-            per_dataset_pred_counts = {}
-            metrics = Metrics()
             skipped_samples = 0
-            incorrect_samples = []  # Track misclassified gasstation samples
-
-            target_samples = get_benchmark_size("video", mode)
-            dataset_sampling = calculate_weighted_dataset_sampling(available_datasets, target_samples)
-            
-            actual_total_samples = sum(dataset_sampling.values())
-
-            # Calculate summary stats for logging
-            gasstation_count = len([d for d in available_datasets if "gasstation" in d.name.lower()])
-            regular_count = len(available_datasets) - gasstation_count
-            gasstation_cap = dataset_sampling.get(
-                next((d.name for d in available_datasets if "gasstation" in d.name.lower()), ""), 0
-            )
-            regular_cap = dataset_sampling.get(
-                next((d.name for d in available_datasets if "gasstation" not in d.name.lower()), ""), 0
+            benchmark_results.setdefault("errors", [])
+            logger.info(
+                f"Sampling plan targets {plan.sampling_summary.actual_total_samples} samples across {plan.sampling_summary.num_datasets} datasets"
             )
 
-            sampling_info = {
-                "batch_size": batch_size,
-                "target_samples": target_samples,
-                "actual_total_samples": actual_total_samples,
-                "num_datasets": len(available_datasets),
-                "gasstation_datasets": gasstation_count,
-                "regular_datasets": regular_count,
-                "gasstation_samples_per_dataset": gasstation_cap,
-                "regular_samples_per_dataset": regular_cap,
-                "dataset_breakdown": {
-                    "real": len([d for d in available_datasets if d.media_type == 'real']),
-                    "synthetic": len([d for d in available_datasets if d.media_type == 'synthetic']),
-                    "semisynthetic": len([d for d in available_datasets if d.media_type == 'semisynthetic'])
-                }
-            }
-            logger.info(f"Sampling configuration: {json.dumps(sampling_info)}")
-            
-            dataset_info = build_dataset_info(available_datasets, dataset_sampling)
-
-            generator_stats = benchmark_results.get("video_generator_stats", {})
-
-            for dataset_idx, dataset_config in enumerate(available_datasets):
-                dataset_cap = dataset_sampling[dataset_config.name]
+            for dataset_idx, dataset_config in enumerate(plan.available_datasets):
+                dataset_cap = plan.sampling_plan[dataset_config.name]
                 logger.info(
-                    f"Processing dataset {dataset_idx + 1}/{len(available_datasets)}: "
+                    f"Processing dataset {dataset_idx + 1}/{len(plan.available_datasets)}: "
                     f"{dataset_config.name} ({dataset_cap} samples)"
                 )
 
-                dataset_correct = 0
-                dataset_total = 0
                 dataset_skipped = 0
 
                 try:
-                    # Download gasstation datasets only if flag is set; always download regular datasets if not cached
                     is_gasstation = "gasstation" in dataset_config.name.lower()
-                    should_download = download_latest_gasstation_data if is_gasstation else True
+                    should_download = (
+                        download_latest_gasstation_data if is_gasstation else True
+                    )
 
                     dataset_iterator = DatasetIterator(
-                        dataset_config, 
-                        max_samples=dataset_cap, 
+                        dataset_config,
+                        max_samples=dataset_cap,
                         cache_dir=cache_dir,
                         download=should_download,
                         cache_policy=cache_policy,
@@ -287,161 +313,80 @@ async def run_video_benchmark(
                         seed=seed,
                     )
 
-                    # Create prefetch queue with larger size to allow more parallelism
-                    prefetch_queue = asyncio.Queue(maxsize=16)
-
-                    prefetch_task = asyncio.create_task(
-                        video_prefetcher(
-                            dataset_iterator,
-                            dataset_config,
-                            prefetch_queue,
-                            seed=seed,
-                            target_size=target_size,
-                            augment_level=augment_level,
-                            crop_prob=crop_prob,
-                        )
+                    pipeline = VideoPrefetchPipeline(
+                        dataset_iterator=dataset_iterator,
+                        target_size=plan.target_size,
+                        batch_size=batch_size,
+                        seed=seed,
+                        augment_level=augment_level,
+                        crop_prob=crop_prob,
+                        num_workers=3,
+                        max_queue_size=6,
                     )
 
-                    sample_index = 0
-                    batch_videos = []
-                    batch_metadata = []
+                    batch_id = 0
+                    try:
+                        for batch_data in pipeline:
+                            batch_id += 1
 
-                    while True:
-                        item = await prefetch_queue.get()
-                        item_type = item[0]
-
-                        if item_type == "done":
-                            break
-                        elif item_type == "skip":
-                            dataset_skipped += 1
-                            skipped_samples += 1
-                            if dataset_skipped % 10 == 0:
-                                logger.debug(
-                                    f"Dataset {dataset_config.name}: Skipped {dataset_skipped} samples so far"
+                            batch_videos = [item["video"] for item in batch_data]
+                            batch_metadata = [
+                                (
+                                    item["label"],
+                                    item["sample"],
+                                    item["sample_index"],
+                                    item["dataset_name"],
+                                    item["sample_seed"],
                                 )
-                            continue
-                        elif item_type == "error":
-                            benchmark_results["errors"].append(f"Video processing error during prefetch")
-                            dataset_skipped += 1
-                            skipped_samples += 1
-                            continue
+                                for item in batch_data
+                            ]
 
-                        video_array, true_label_binary, true_label_multiclass, sample = item[1], item[2], item[3], item[4]
-                        sample_index += 1
-                        
-                        batch_videos.append(video_array[0])
-                        batch_metadata.append((true_label_binary, true_label_multiclass, sample, sample_index, dataset_config.name))
-
-                        if len(batch_videos) >= batch_size:
-                            batch_correct, batch_total, batch_times = process_video_batch(
-                                session, input_specs, batch_videos, batch_metadata,
-                                metrics, generator_stats, incorrect_samples, per_dataset_pred_counts
+                            process_video_batch(
+                                session,
+                                input_specs,
+                                batch_videos,
+                                batch_metadata,
+                                tracker,
+                                batch_id,
                             )
-                            correct += batch_correct
-                            dataset_correct += batch_correct
-                            total += batch_total
-                            dataset_total += batch_total
-                            inference_times.extend(batch_times)
-                            
-                            batch_videos = []
-                            batch_metadata = []
 
-                            if total % 500 == 0:
-                                logger.info(
-                                    f"Progress: {total}/{actual_total_samples} samples, "
-                                    f"Accuracy: {correct / total:.2%}"
-                                )
-                    
-                    # Wait for prefetcher to finish
-                    await prefetch_task
+                            if tracker.count % 500 == 0:
+                                logger.info(f"Progress: {tracker.count} samples")
 
-                    if batch_videos:
-                        batch_correct, batch_total, batch_times = process_video_batch(
-                            session, input_specs, batch_videos, batch_metadata,
-                            metrics, generator_stats, incorrect_samples, per_dataset_pred_counts
+                    finally:
+                        pipeline.close()
+
+                        log_dataset_summary(
+                            logger, tracker, dataset_config.name, include_skipped=True
                         )
-                        correct += batch_correct
-                        dataset_correct += batch_correct
-                        total += batch_total
-                        dataset_total += batch_total
-                        inference_times.extend(batch_times)
-
-                    dataset_accuracy = dataset_correct / dataset_total if dataset_total > 0 else 0.0
-                    # Format per-dataset prediction distribution
-                    pred_counts_raw = per_dataset_pred_counts.get(dataset_config.name, {})
-                    predictions = {
-                        "real": int(pred_counts_raw.get(0, 0)),
-                        "synthetic": int(pred_counts_raw.get(1, 0)),
-                        "semisynthetic": int(pred_counts_raw.get(2, 0)),
-                    }
-
-                    per_dataset_results[dataset_config.name] = {
-                        "correct": dataset_correct,
-                        "total": dataset_total,
-                        "accuracy": dataset_accuracy,
-                        "skipped": dataset_skipped,
-                        "predictions": predictions,
-                    }
-
-                    if generator_stats:
-                        benchmark_results["video_generator_stats"] = generator_stats
-
-                    logger.info(
-                        f"Dataset {dataset_config.name}: {dataset_accuracy:.2%} accuracy "
-                        f"({dataset_correct}/{dataset_total}), skipped: {dataset_skipped}"
-                    )
 
                 except Exception as e:
-                    logger.error(f"Failed to process dataset {dataset_config.name}: {e}")
-                    benchmark_results["errors"].append(f"Dataset error for {dataset_config.name}: {str(e)[:100]}")
-
-            accuracy = correct / total if total > 0 else 0.0
-            if skipped_samples > 0:
-                logger.info(f"Video benchmark: {total} samples processed, {skipped_samples} skipped")
-
-            avg_inference_time = sum(inference_times) / len(inference_times) if inference_times else 0.0
-            p95_inference_time = float(np.percentile(inference_times, 95)) if inference_times else 0.0
-
-            binary_mcc = metrics.calculate_binary_mcc() if total > 0 else 0.0
-            multiclass_mcc = metrics.calculate_multiclass_mcc()
-            binary_ce = metrics.calculate_binary_cross_entropy()
-            multiclass_ce = metrics.calculate_multiclass_cross_entropy()
-            sn34_score = metrics.compute_sn34_score()
-
-            per_source_accuracy = calculate_per_source_accuracy(available_datasets, per_dataset_results)
+                    logger.error(
+                        f"Failed to process dataset {dataset_config.name}: {e}"
+                    )
+                    benchmark_results["errors"].append(
+                        f"Dataset error for {dataset_config.name}: {str(e)[:100]}"
+                    )
 
             cache_info = video_cache.get_cache_info()
+            df = finalize_run(
+                config=run_config,
+                plan=plan,
+                tracker=tracker,
+                benchmark_results=benchmark_results,
+                results_key="video_results",
+                extra_fields={"cache_info": cache_info},
+            )
 
-            misclassification_stats = aggregate_misclassification_stats(incorrect_samples)
-
-            benchmark_results["video_results"] = {
-                "benchmark_score": accuracy,
-                "sn34_score": sn34_score,
-                "total_samples": total,
-                "correct_predictions": correct,
-                "avg_inference_time_ms": avg_inference_time,
-                "p95_inference_time_ms": p95_inference_time,
-                "binary_mcc": binary_mcc,
-                "multiclass_mcc": multiclass_mcc,
-                "binary_cross_entropy": binary_ce,
-                "multiclass_cross_entropy": multiclass_ce,
-                "per_source_accuracy": per_source_accuracy,
-                "per_dataset_results": per_dataset_results,
-                "dataset_info": dataset_info,
-                "cache_info": cache_info,
-                "misclassified_samples": incorrect_samples,
-                "misclassification_stats": misclassification_stats,
-            }
-
-            if benchmark_results.get("video_generator_stats"):
-                benchmark_results["video_results"]["generator_stats"] = benchmark_results["video_generator_stats"]
-
-            logger.info(f"✅ Benchmark complete: {accuracy:.2%} ({correct}/{total} correct)")
-            logger.info(f"Archive cache: {cache_info['unpacked_archives']} archives cached locally")
+            logger.info(
+                f"Archive cache: {cache_info['unpacked_archives']} archives cached locally"
+            )
             if skipped_samples > 0:
-                logger.warning(f"Skipped {skipped_samples} samples due to missing/inaccessible archives or processing errors")
-            
-            return accuracy
+                logger.warning(
+                    f"Skipped {skipped_samples} samples due to missing/inaccessible archives or processing errors"
+                )
+
+            return df
 
     except Exception as e:
         logger.error(f"Benchmark video testing failed: {e}")

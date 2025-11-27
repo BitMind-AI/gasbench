@@ -1,13 +1,13 @@
 # Video Dataset Configurations
 
-benchmark_size: 15000
+benchmark_size: 17500
 
 datasets:
   - name: gasstation-generated-videos
-    path: gasstation/generated-videos
+    path: gasstation/gs-videos-v2
     modality: video
     media_type: synthetic
-    source_format: tar.gz
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
 
@@ -222,16 +222,16 @@ datasets:
     modality: video
     media_type: real
     source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: ucf101-fullvideo
     path: bitmind/UCF101Fullvideo
     modality: video
     media_type: real
     source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: vap-data
     path: BianYx/VAP-Data
@@ -241,3 +241,37 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
 
+  ## naming nuances noted in comments
+  - name: dfd-real
+    path: Hemgg/deep-fake-detection-dfd-entire-original-datasett # extra t
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["DFD_original sequences"] # space
+
+  - name: dfd-fake
+    path: Hemgg/deep-fake-detection-dfd-entire-original-datasett # extra t
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["DFD_manipulated_sequences"]
+
+  - name: ByteDance_Synthetic_Videos
+    path: kevinzzz8866/ByteDance_Synthetic_Videos
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: first-impressions-v2
+    path: yeray142/first-impressions-v2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: 1

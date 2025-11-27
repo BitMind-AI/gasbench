@@ -1,14 +1,23 @@
 # Image Dataset Configurations
 
-benchmark_size: 35000
+benchmark_size: 40000
 
 datasets:
   - name: gasstation-generated-images
-    path: gasstation/generated-images
+    path: gasstation/gs-images-v2
     modality: image
     media_type: synthetic
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
+  
+  - name: flickr30k
+    path: nlphuji/flickr30k
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
 
   - name: ideogram-27k
     path: bitmind/ideogram-27k
@@ -294,8 +303,8 @@ datasets:
     modality: image
     media_type: synthetic
     source_format: parquet
-    media_per_archive: 1000
-    archives_per_dataset: 1
+    media_per_archive: 200
+    archives_per_dataset: 5
     image_columns: ["src_img", "tgt_img"]  # Use both columns
     notes: "Video-derived images stored in both src_img and tgt_img columns"
 
@@ -331,4 +340,3 @@ datasets:
     source_format: parquet
     media_per_archive: 1000
     archives_per_dataset: 1
-

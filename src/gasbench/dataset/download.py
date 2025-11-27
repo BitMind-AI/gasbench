@@ -6,16 +6,19 @@ import shutil
 import tarfile
 import tempfile
 import traceback
+import base64
 from contextlib import closing
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple
 from zipfile import ZipFile
+from datetime import datetime
 
 import pandas as pd
 import pyarrow.parquet as pq
 import requests
 import huggingface_hub as hf_hub
+import numpy as np
 from PIL import Image
 from modelscope.hub.api import HubApi as MSHubApi
 
@@ -290,7 +293,7 @@ def yield_media_from_source(
     seed: Optional[int] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """
-    Unified media extractor for zip, tar sources, frame directories, and raw media files.
+    Unified media extractor for parquet, zip, tar sources, frame directories, and raw media files.
 
     Returns complete sample dictionaries ready for processing functions.
     Samples include: image/video_bytes, media_type, dataset_name, dataset_path, etc.
@@ -301,6 +304,10 @@ def yield_media_from_source(
             return
 
         filename = str(source_path.name).lower()
+
+        if _is_parquet_file(filename):
+            yield from _process_parquet(source_path, dataset, num_items, iso_week, seed)
+            return
 
         if _is_zip_file(filename) or _is_tar_file(filename):
             yield from _process_zip_or_tar(
@@ -929,6 +936,187 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
         return
 
 
+def _clean_to_json_serializable(value: Any) -> Any:
+    """Convert arbitrary values to JSON-serializable equivalents."""
+    try:
+        if value is None or isinstance(value, (str, int, bool)):
+            return value
+
+        if isinstance(value, float):
+            if np.isnan(value) or np.isinf(value):
+                return None
+            return value
+
+        if isinstance(value, (np.integer,)):
+            return int(value)
+        if isinstance(value, (np.floating,)):
+            f = float(value)
+            if np.isnan(f) or np.isinf(f):
+                return None
+            return f
+        if isinstance(value, (np.bool_,)):
+            return bool(value)
+
+        if isinstance(value, (bytes, bytearray)):
+            try:
+                return base64.b64encode(bytes(value)).decode("ascii")
+            except Exception:
+                return None
+
+        if isinstance(value, datetime):
+            return value.isoformat()
+
+        if isinstance(value, (np.ndarray, list, tuple, set)):
+            return [
+                _clean_to_json_serializable(v) for v in (value.tolist() if isinstance(value, np.ndarray) else list(value))
+            ]
+
+        if isinstance(value, dict):
+            return {str(k): _clean_to_json_serializable(v) for k, v in value.items()}
+
+        try:
+            json.dumps(value)
+            return value
+        except Exception:
+            return str(value)
+    except Exception:
+        return None
+
+
+def _extract_parquet_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
+    """Extract non-media columns from a pandas Series row and clean to JSON-serializable dict."""
+    metadata: Dict[str, Any] = {}
+    try:
+        for col, val in row.items():
+            if str(col) == str(media_col):
+                continue
+            cleaned = _clean_to_json_serializable(val)
+            col_str = str(col)
+            metadata[col_str] = cleaned
+            
+            col_lower = col_str.lower()
+            if "hotkey" in col_lower and "generator_hotkey" not in metadata:
+                metadata["generator_hotkey"] = cleaned
+            if "uid" in col_lower and "generator_uid" not in metadata:
+                metadata["generator_uid"] = cleaned
+    except Exception:
+        pass
+    return metadata
+
+
+def _process_parquet(
+    source_path: Path, 
+    dataset, 
+    num_items: int, 
+    iso_week: Optional[str] = None, 
+    seed: Optional[int] = None
+):
+    """Process parquet files with embedded media bytes (e.g., PICA-100K).
+    
+    Supports datasets with single or multiple image columns.
+    For datasets with multiple columns (e.g., src_img and tgt_img), yields one sample per column.
+    """
+    try:
+        table = pq.read_table(source_path)
+        df = table.to_pandas()
+        
+        if num_items == -1:
+            sample_df = df
+        else:
+            sample_df = df.sample(n=min(num_items, len(df)), random_state=seed)
+
+        if dataset.modality == "image":
+            image_columns = getattr(dataset, 'image_columns', None)
+            if image_columns:
+                media_cols = [c for c in image_columns if c in sample_df.columns]
+                if not media_cols:
+                    logger.warning(
+                        f"Specified image columns {image_columns} not found in {source_path}"
+                    )
+                    return
+            else:
+                media_col = (
+                    next((c for c in sample_df.columns if c.lower() == "image"), None)
+                    or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
+                    or next((c for c in sample_df.columns if "image" in c.lower()), None)
+                )
+                media_cols = [media_col] if media_col else []
+        else:
+            candidates = ["video", "bytes", "content", "data"]
+            media_col = (
+                next((c for c in sample_df.columns if c.lower() in candidates), None)
+                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)
+                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates)), None)
+            )
+            media_cols = [media_col] if media_col else []
+
+        if not media_cols:
+            logger.warning(
+                f"No media column found in {source_path} for modality {dataset.modality}"
+            )
+            return
+
+        for _, row in sample_df.iterrows():
+            for col in media_cols:
+                try:
+                    media_data = row[col]
+                    if isinstance(media_data, dict):
+                        key = next(
+                            (
+                                k
+                                for k in media_data
+                                if any(
+                                    s in k.lower()
+                                    for s in ["bytes", "image", "video", "data", "content"]
+                                )
+                            ),
+                            None,
+                        )
+                        if key:
+                            media_data = media_data[key]
+                        else:
+                            logger.warning(f"No valid key found in dict media_data for {source_path}: {list(media_data.keys())}")
+                            continue
+
+                    if dataset.modality == "image":
+                        if media_data is None or isinstance(media_data, (int, float)):
+                            continue
+
+                        try:
+                            img = Image.open(BytesIO(media_data))
+                        except Exception:
+                            if isinstance(media_data, str):
+                                media_data = base64.b64decode(media_data)
+                            img = Image.open(BytesIO(media_data))
+                        sample = create_sample(dataset, img, source_path, iso_week)
+                    else:
+                        if media_data is None or isinstance(media_data, (int, float)):
+                            continue
+
+                        if not isinstance(media_data, (bytes, bytearray)):
+                            if isinstance(media_data, str):
+                                media_data = base64.b64decode(media_data)
+                            else:
+                                continue
+                        sample = create_sample(dataset, bytes(media_data), source_path, iso_week)
+
+                    row_metadata = _extract_parquet_row_metadata(row, col)
+                    for k, v in row_metadata.items():
+                        if k not in sample:
+                            sample[k] = v
+                    
+                    if len(media_cols) > 1:
+                        sample["source_column"] = col
+
+                    yield sample
+                except Exception as e:
+                    logger.warning(f"Failed to extract row from {source_path} (column {col}): {e}")
+                    continue
+    except Exception as e:
+        logger.warning(f"Error processing parquet file {source_path}: {e}")
+        return
+
+
 def _process_frame_directory(
     frame_dir: Path, dataset, iso_week: Optional[str] = None
 ) -> Generator[Dict[str, Any], None, None]:
@@ -1071,6 +1259,11 @@ def _is_tar_file(filename_lower: str) -> bool:
         or filename_lower.endswith(".tar.gz")
         or filename_lower.endswith(".tgz")
     )
+
+
+def _is_parquet_file(filename_lower: str) -> bool:
+    """Return True if filename looks like a parquet file."""
+    return filename_lower.endswith(".parquet")
 
 
 def download_files(

@@ -303,8 +303,8 @@ datasets:
     modality: image
     media_type: synthetic
     source_format: parquet
-    media_per_archive: 1000
-    archives_per_dataset: 1
+    media_per_archive: 200
+    archives_per_dataset: 5
     image_columns: ["src_img", "tgt_img"]  # Use both columns
     notes: "Video-derived images stored in both src_img and tgt_img columns"
 

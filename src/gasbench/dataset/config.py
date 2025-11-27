@@ -57,6 +57,9 @@ class BenchmarkDatasetConfig:
 
     include_paths: Optional[List[str]] = None
     exclude_paths: Optional[List[str]] = None
+    
+    # For datasets with multiple media columns (e.g., PICA-100K with src_img and tgt_img)
+    image_columns: Optional[List[str]] = None
 
 
 def get_benchmark_size(
@@ -156,13 +159,13 @@ def discover_benchmark_datasets(
         return []
     datasets = dataset_source[modality]
 
-    datasets = apply_mode_to_datasets(datasets, mode)
-
     if gasstation_only:
-        return [d for d in datasets if "gasstation" in d.name.lower()]
+        datasets = [d for d in datasets if "gasstation" in d.name.lower()]
 
     if no_gasstation:
-        return [d for d in datasets if "gasstation" not in d.name.lower()]
+        datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+
+    datasets = apply_mode_to_datasets(datasets, mode)
 
     return datasets
 
@@ -343,6 +346,7 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                     source=dataset_dict.get("source", "huggingface"),
                     include_paths=dataset_dict.get("include_paths"),
                     exclude_paths=dataset_dict.get("exclude_paths"),
+                    image_columns=dataset_dict.get("image_columns"),
                 )
                 result[modality].append(config)
 
@@ -538,6 +542,7 @@ def load_benchmark_datasets_from_yaml(
                         source=dataset_dict.get("source", "huggingface"),
                         include_paths=dataset_dict.get("include_paths"),
                         exclude_paths=dataset_dict.get("exclude_paths"),
+                        image_columns=dataset_dict.get("image_columns"),
                     )
                     result[modality].append(config)
 

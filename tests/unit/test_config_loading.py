@@ -31,8 +31,8 @@ class TestConfigLoading:
         configs = load_benchmark_datasets_from_yaml()
         
         # Update these counts when adding new datasets
-        assert len(configs["image"]) == 41, f"Expected 41 image datasets, got {len(configs['image'])}"
-        assert len(configs["video"]) == 28, f"Expected 28 video datasets, got {len(configs['video'])}"
+        assert len(configs["image"]) == 42, f"Expected 42 image datasets, got {len(configs['image'])}"
+        assert len(configs["video"]) == 32, f"Expected 32 video datasets, got {len(configs['video'])}"
         assert len(configs["audio"]) == 14, f"Expected 14 audio datasets, got {len(configs['audio'])}"
 
     def test_all_datasets_have_required_fields(self):

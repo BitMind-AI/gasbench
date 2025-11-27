@@ -259,6 +259,7 @@ async def download_datasets(
     unlimited_samples: bool = False,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    dataset_filters: Optional[List[str]] = None,
 ):
     """Main entry point for efficient dataset downloads.
     
@@ -275,6 +276,8 @@ async def download_datasets(
         allow_eviction: If False, disable sample eviction and accumulate all samples
         unlimited_samples: If True, download ALL available samples (no cap)
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
+        holdout_config: Optional path to holdout YAML config file
+        dataset_filters: Optional list of dataset name patterns to filter by (supports partial matches)
     """
     if not cache_dir:
         cache_dir = "/.cache/gasbench"
@@ -285,9 +288,18 @@ async def download_datasets(
         modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config, cache_dir
     )
     
+    if dataset_filters:
+        original_count = len(datasets)
+        datasets = _filter_datasets_by_name(datasets, dataset_filters)
+        logger.info(f"Filtered {original_count} datasets to {len(datasets)} matching: {dataset_filters}")
+    
     if not datasets:
         logger.warning("No datasets found matching criteria")
-        return
+        return {
+            "completed": 0,
+            "failed": 0,
+            "total": 0,
+        }
     
     logger.info(f"Found {len(datasets)} datasets to process")
     
@@ -370,6 +382,33 @@ def _discover_datasets(
         datasets.extend(video_datasets)
     
     return datasets
+
+
+def _filter_datasets_by_name(
+    datasets: List[BenchmarkDatasetConfig],
+    filters: List[str],
+) -> List[BenchmarkDatasetConfig]:
+    """Filter datasets by name patterns (case-insensitive partial matches).
+    
+    Args:
+        datasets: List of dataset configs
+        filters: List of name patterns to match
+        
+    Returns:
+        Filtered list of datasets that match any of the patterns
+    """
+    if not filters:
+        return datasets
+    
+    filtered = []
+    filters_lower = [f.lower() for f in filters]
+    
+    for dataset in datasets:
+        dataset_name_lower = dataset.name.lower()
+        if any(filter_pattern in dataset_name_lower for filter_pattern in filters_lower):
+            filtered.append(dataset)
+    
+    return filtered
 
 
 def _needs_download(

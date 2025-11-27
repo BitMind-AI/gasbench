@@ -71,7 +71,7 @@ def command_run(args):
         return 1
 
     # Print configuration as JSON for clarity
-    results_dir = getattr(args, "results_dir", "results")
+    results_dir = args.results_dir if args.results_dir else "results"
     results_path = Path(results_dir)
     results_path.mkdir(parents=True, exist_ok=True)
     timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -262,6 +262,8 @@ def command_download(args):
         config["cache_directory"] = args.cache_dir
     if args.num_weeks:
         config["num_weeks"] = args.num_weeks
+    if hasattr(args, "datasets") and args.datasets:
+        config["datasets"] = args.datasets
     if hasattr(args, "cache_policy") and args.cache_policy:
         config["cache_policy"] = args.cache_policy
     if hasattr(args, "unlimited_samples") and args.unlimited_samples:
@@ -290,6 +292,7 @@ def command_download(args):
                 unlimited_samples=getattr(args, "unlimited_samples", False),
                 dataset_config=getattr(args, "dataset_config", None),
                 holdout_config=getattr(args, "holdout_config", None),
+                dataset_filters=getattr(args, "datasets", None),
             )
         )
 
@@ -377,6 +380,7 @@ Examples:
     run_parser.add_argument(
         "--results-dir",
         type=str,
+        default="results",
         metavar="PATH",
         help="Directory to save results (default: results/)",
     )
@@ -415,6 +419,9 @@ Examples:
   # Download all image datasets in full mode
   gasbench download --modality image --full
   
+  # Download specific datasets by name
+  gasbench download --datasets pica-100k ffhq --debug
+  
   # Download only gasstation datasets with 4 concurrent downloads
   gasbench download --gasstation-only --concurrent 4
   
@@ -433,6 +440,13 @@ Examples:
         "--modality",
         choices=["image", "video", "all"],
         help="Download datasets for specific modality (default: all)",
+    )
+    download_parser.add_argument(
+        "--datasets",
+        type=str,
+        nargs="+",
+        metavar="NAME",
+        help="Filter datasets by name (space-separated list, supports partial matches)",
     )
 
     add_mode_args(download_parser)

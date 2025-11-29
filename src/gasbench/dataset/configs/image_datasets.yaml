@@ -324,12 +324,19 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
 
+  - name: artifact
+    path: bitmind/ArtiFact
+    modality: image
+    media_type: semisynthetic  # Contains both real and AI-generated
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "Contains both real and AI-generated images"
+
   - name: cosyn-400k
     path: allenai/CoSyn-400K
     modality: image
-    media_type: real
+    media_type: synthetic
     source_format: parquet
     media_per_archive: 1000
     archives_per_dataset: 1
-
-

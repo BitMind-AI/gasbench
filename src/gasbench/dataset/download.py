@@ -36,6 +36,7 @@ logger = get_logger(__name__)
 
 IMAGE_FILE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
 VIDEO_FILE_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v"}
+AUDIO_FILE_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}
 
 
 def _calculate_files_to_download(
@@ -52,6 +53,8 @@ def _calculate_files_to_download(
     # Direct media files (jpg, png, mp4, etc.) - download equivalent to archive extraction
     if dataset.modality == "image":
         is_direct_media = src_fmt in {ext.lstrip(".") for ext in IMAGE_FILE_EXTENSIONS}
+    elif dataset.modality == "audio":
+        is_direct_media = src_fmt in {ext.lstrip(".") for ext in AUDIO_FILE_EXTENSIONS}
     else:
         is_direct_media = src_fmt == "mp4"
 
@@ -321,7 +324,7 @@ def yield_media_from_source(
 
         if any(
             filename.endswith(ext)
-            for ext in (IMAGE_FILE_EXTENSIONS | VIDEO_FILE_EXTENSIONS)
+            for ext in (IMAGE_FILE_EXTENSIONS | VIDEO_FILE_EXTENSIONS | AUDIO_FILE_EXTENSIONS)
         ):
             yield from _process_raw(source_path, dataset, iso_week)
             return
@@ -755,7 +758,7 @@ def _process_tar_with_metadata(
             valid_exts = (
                 IMAGE_FILE_EXTENSIONS
                 if dataset.modality == "image"
-                else VIDEO_FILE_EXTENSIONS
+                else (AUDIO_FILE_EXTENSIONS if dataset.modality == "audio" else VIDEO_FILE_EXTENSIONS)
             )
 
             all_members = [m for m in archive.getmembers() if m.isreg()]
@@ -837,11 +840,12 @@ def _process_zip_or_tar(
     try:
         cm = ZipFile(source_path) if is_zip else tarfile.open(source_path, mode="r:*")
         with cm as archive:
-            valid_exts = (
-                IMAGE_FILE_EXTENSIONS
-                if dataset.modality == "image"
-                else VIDEO_FILE_EXTENSIONS
-            )
+            if dataset.modality == "image":
+                valid_exts = IMAGE_FILE_EXTENSIONS
+            elif dataset.modality == "audio":
+                valid_exts = AUDIO_FILE_EXTENSIONS
+            else:
+                valid_exts = VIDEO_FILE_EXTENSIONS
 
             if is_zip:
                 list_entries = archive.namelist()
@@ -920,6 +924,10 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
             filename.endswith(ext) for ext in IMAGE_FILE_EXTENSIONS
         ):
             media_obj = Image.open(BytesIO(data_bytes))
+        elif dataset.modality == "audio" and any(
+            filename.endswith(ext) for ext in AUDIO_FILE_EXTENSIONS
+        ):
+            media_obj = data_bytes
         elif dataset.modality == "video" and any(
             filename.endswith(ext) for ext in VIDEO_FILE_EXTENSIONS
         ):
@@ -1041,6 +1049,14 @@ def _process_parquet(
                     or next((c for c in sample_df.columns if "image" in c.lower()), None)
                 )
                 media_cols = [media_col] if media_col else []
+        elif dataset.modality == "audio":
+            candidates = ["audio", "bytes", "content", "data", "wav", "mp3"]
+            media_col = (
+                next((c for c in sample_df.columns if c.lower() == "audio"), None)
+                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)
+                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates)), None)
+            )
+            media_cols = [media_col] if media_col else []
         else:
             candidates = ["video", "bytes", "content", "data"]
             media_col = (
@@ -1477,6 +1493,20 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
                     "dataset_path": dataset.path,
                     "source_file": f"cached_{filename}",
                     **metadata,
+                }
+                yield sample
+
+            elif dataset.modality == "audio":
+                # Load audio file as bytes
+                with open(filepath, "rb") as f:
+                    audio_bytes = f.read()
+                sample = {
+                    "audio_bytes": audio_bytes,
+                    "media_type": dataset.media_type,
+                    "dataset_name": dataset.name,
+                    "dataset_path": dataset.path,
+                    "source_file": f"cached_{filename}",
+                    **metadata,  # Include all original metadata
                 }
                 yield sample
 

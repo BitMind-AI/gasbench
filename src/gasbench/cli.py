@@ -55,8 +55,11 @@ def command_run(args):
     elif args.video_model:
         model_path = Path(args.video_model)
         modality = "video"
+    elif args.audio_model:
+        model_path = Path(args.audio_model)
+        modality = "audio"
     else:
-        print("Error: Must specify either --image-model or --video-model")
+        print("Error: Must specify either --image-model, --video-model, or --audio-model")
         return 1
 
     # Validate model path
@@ -363,6 +366,12 @@ Examples:
         metavar="PATH",
         help="Path to ONNX video detection model",
     )
+    model_group.add_argument(
+        "--audio-model",
+        type=str,
+        metavar="PATH",
+        help="Path to ONNX audio detection model"
+    )
 
     add_mode_args(run_parser)
     add_common_args(run_parser)
@@ -438,7 +447,7 @@ Examples:
 
     download_parser.add_argument(
         "--modality",
-        choices=["image", "video", "all"],
+        choices=["image", "video", "audio", "all"],
         help="Download datasets for specific modality (default: all)",
     )
     download_parser.add_argument(
@@ -507,6 +516,53 @@ Examples:
 
     download_parser.set_defaults(func=command_download)
 
+    # ========== PREPROCESS COMMAND ==========
+    preprocess_parser = subparsers.add_parser(
+        "preprocess",
+        help="Preprocess audio datasets and cache as tensors for faster benchmarking",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Preprocess a specific audio dataset with GPU acceleration
+  gasbench preprocess --dataset deepfake-audio-dataset --gpu
+  
+  # Preprocess all audio datasets
+  gasbench preprocess --all --gpu
+  
+  # Preprocess with custom cache directory
+  gasbench preprocess --all --cache-dir /custom/cache --gpu
+        """,
+    )
+
+    preprocess_parser.add_argument(
+        "--dataset",
+        type=str,
+        help="Name of audio dataset to preprocess (e.g., deepfake-audio-dataset)",
+    )
+    preprocess_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Preprocess all audio datasets",
+    )
+    preprocess_parser.add_argument(
+        "--cache-dir",
+        type=str,
+        help="Base cache directory (default: /.cache/gasbench)",
+    )
+    preprocess_parser.add_argument(
+        "--gpu",
+        action="store_true",
+        help="Use GPU for preprocessing (faster if CUDA available)",
+    )
+    preprocess_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Batch size for GPU processing (default: 32)",
+    )
+
+    preprocess_parser.set_defaults(func=command_preprocess)
+
     # ========== VERIFY-CACHE COMMAND ==========
     verify_parser = subparsers.add_parser(
         "verify-cache",
@@ -553,6 +609,56 @@ Examples:
 
     args = parser.parse_args()
     return args.func(args)
+
+
+def command_preprocess(args):
+    """Execute the audio preprocessing command."""
+    print("\n🔄 Starting audio dataset preprocessing")
+    
+    if not args.dataset and not args.all:
+        print("Error: Must specify either --dataset or --all")
+        return 1
+    
+    cache_dir = args.cache_dir or "/.cache/gasbench"
+    
+    config = {
+        "cache_dir": cache_dir,
+        "use_gpu": args.gpu,
+        "batch_size": args.batch_size,
+    }
+    
+    if args.dataset:
+        config["dataset"] = args.dataset
+    
+    print(json.dumps(config, indent=2))
+    print("-" * 60)
+    
+    try:
+        from .processing.preprocess_audio import preprocess_dataset, preprocess_all_datasets
+        
+        if args.all:
+            preprocess_all_datasets(cache_dir=cache_dir, use_gpu=args.gpu)
+        else:
+            success = preprocess_dataset(
+                dataset_name=args.dataset,
+                cache_dir=cache_dir,
+                use_gpu=args.gpu,
+                batch_size=args.batch_size
+            )
+            if not success:
+                return 1
+        
+        print("\n✅ Preprocessing completed successfully")
+        return 0
+        
+    except KeyboardInterrupt:
+        print("\nPreprocessing interrupted by user")
+        return 130
+    except Exception as e:
+        print(f"\nPreprocessing failed with error: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
 
 
 if __name__ == "__main__":

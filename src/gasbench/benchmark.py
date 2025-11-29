@@ -227,7 +227,7 @@ async def execute_benchmark(
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
-        benchmark_score = await run_audio_benchmark(
+        df = await run_audio_benchmark(
             session,
             input_specs,
             benchmark_results,
@@ -240,7 +240,9 @@ async def execute_benchmark(
             batch_size,
             dataset_config,
             holdout_config,
+            records_parquet_path=records_parquet_path,
         )
+        benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:
         raise ValueError(f"Invalid modality: {modality}. Must be 'image', 'video' or 'audio'")
 

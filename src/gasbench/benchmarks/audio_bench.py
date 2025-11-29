@@ -44,7 +44,20 @@ def process_batch(
         return
 
     start = time.time()
-    outputs = session.run(None, {input_specs[0].name: batch_array})
+    outputs = None
+    try:
+        outputs = session.run(None, {input_specs[0].name: batch_array})
+    except Exception as e:
+        for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
+            batch_metadata
+        ):
+            tracker.add_error(
+                dataset_name=dataset_name,
+                sample_index=sample_index,
+                sample=sample,
+                error_message=f"inference-failed: {str(e)[:160]}",
+            )
+        return
     batch_inference_time = (time.time() - start) * 1000
     per_sample_time = batch_inference_time / len(batch_audio)
 
@@ -119,7 +132,7 @@ async def run_audio_benchmark(
         if not plan:
             logger.error("No benchmark audio datasets configured")
             benchmark_results["audio_results"] = {"error": "No datasets available"}
-            return pd.DataFrame()
+            return 0.0
 
         tracker = create_tracker(run_config, plan, input_specs)
 
@@ -127,6 +140,9 @@ async def run_audio_benchmark(
         target_sr = 16000
 
         benchmark_results.setdefault("errors", [])
+        logger.info(
+            f"Sampling plan targets {plan.sampling_summary.actual_total_samples} samples across {plan.sampling_summary.num_datasets} datasets"
+        )
         for dataset_idx, dataset_cfg in enumerate(plan.available_datasets):
             dataset_cap = plan.sampling_plan[dataset_cfg.name]
             logger.info(

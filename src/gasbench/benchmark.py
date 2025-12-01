@@ -30,6 +30,7 @@ async def run_benchmark(
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -51,7 +52,7 @@ async def run_benchmark(
         cache_dir = "/.cache/gasbench"
 
     configure_huggingface_cache(cache_dir)
-    run_id = str(uuid.uuid4())
+    run_id = run_id or str(uuid.uuid4())
 
     benchmark_results = {
         "model_path": model_path,

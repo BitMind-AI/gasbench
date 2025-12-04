@@ -1076,14 +1076,20 @@ def _process_parquet(
             for col in media_cols:
                 try:
                     media_data = row[col]
+                    audio_sampling_rate = None  # Track sampling rate for audio dicts
+                    
                     if isinstance(media_data, dict):
+                        # For audio, try to extract sampling_rate before getting the array
+                        if dataset.modality == "audio":
+                            audio_sampling_rate = media_data.get("sampling_rate") or media_data.get("sample_rate")
+                        
                         key = next(
                             (
                                 k
                                 for k in media_data
                                 if any(
                                     s in k.lower()
-                                    for s in ["bytes", "image", "video", "data", "content"]
+                                    for s in ["bytes", "image", "video", "audio", "array", "data", "content"]
                                 )
                             ),
                             None,
@@ -1109,7 +1115,24 @@ def _process_parquet(
                         if media_data is None or isinstance(media_data, (int, float)):
                             continue
 
-                        if not isinstance(media_data, (bytes, bytearray)):
+                        # Handle audio array format (common in HF audio datasets)
+                        if dataset.modality == "audio" and isinstance(media_data, (list, np.ndarray)):
+                            # Audio data is a numpy array - convert to WAV bytes
+                            try:
+                                import io
+                                import soundfile as sf
+                                audio_array = np.array(media_data, dtype=np.float32)
+                                if audio_array.ndim == 1:
+                                    audio_array = audio_array.reshape(-1, 1)
+                                # Use extracted sampling rate or default to 16000
+                                sr = audio_sampling_rate if audio_sampling_rate else 16000
+                                buffer = io.BytesIO()
+                                sf.write(buffer, audio_array, sr, format='WAV')
+                                media_data = buffer.getvalue()
+                            except Exception as e:
+                                logger.warning(f"Failed to convert audio array to bytes: {e}")
+                                continue
+                        elif not isinstance(media_data, (bytes, bytearray)):
                             if isinstance(media_data, str):
                                 media_data = base64.b64decode(media_data)
                             else:

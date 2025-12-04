@@ -223,6 +223,7 @@ async def run_image_benchmark(
     augment_level: Optional[int] = 0,
     crop_prob: float = 0.0,
     records_parquet_path: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> pd.DataFrame:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -250,6 +251,7 @@ async def run_image_benchmark(
             augment_level=augment_level or 0,
             crop_prob=crop_prob or 0.0,
             records_parquet_path=records_parquet_path,
+            run_id=run_id,
         )
 
         plan = build_plan(logger, run_config, input_specs)

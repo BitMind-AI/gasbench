@@ -31,6 +31,7 @@ async def run_benchmark(
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -52,7 +53,7 @@ async def run_benchmark(
         cache_dir = "/.cache/gasbench"
 
     configure_huggingface_cache(cache_dir)
-    run_id = str(uuid.uuid4())
+    run_id = run_id or str(uuid.uuid4())
 
     benchmark_results = {
         "model_path": model_path,
@@ -98,6 +99,7 @@ async def run_benchmark(
             dataset_config,
             holdout_config,
             records_parquet_path,
+            run_id,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -188,6 +190,7 @@ async def execute_benchmark(
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -207,6 +210,7 @@ async def execute_benchmark(
             dataset_config,
             holdout_config,
             records_parquet_path=records_parquet_path,
+            run_id=run_id,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -224,6 +228,7 @@ async def execute_benchmark(
             dataset_config,
             holdout_config,
             records_parquet_path=records_parquet_path,
+            run_id=run_id,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":

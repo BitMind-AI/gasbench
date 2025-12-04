@@ -37,6 +37,7 @@ class BenchmarkRunConfig:
     augment_level: int
     crop_prob: float
     records_parquet_path: Optional[str]
+    run_id: Optional[str] = None
 
 
 @dataclass
@@ -153,6 +154,7 @@ def create_tracker(
     config: BenchmarkRunConfig, plan: BenchmarkPlan, input_specs
 ) -> BenchmarkRunRecorder:
     return BenchmarkRunRecorder(
+        run_id=config.run_id,
         mode=config.mode,
         modality=config.modality,
         target_size=plan.target_size,

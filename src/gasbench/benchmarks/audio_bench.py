@@ -42,24 +42,16 @@ def process_batch(
         batch_audio_np = [b.squeeze() if b.ndim > 1 else b for b in batch_audio_np]
         
         batch_array = np.stack(batch_audio_np)
-        
-        if batch_id <= 1:
-            logger.info(f"Batch {batch_id}: stacked {len(batch_audio)} samples, shape={batch_array.shape}")
     except Exception as e:
         logger.error(f"Failed to stack audio batch: {e}")
         return
 
     start = time.time()
     outputs = None
-    
-    # Log shape info for debugging
-    logger.debug(f"Batch array shape: {batch_array.shape}, model expects: {input_specs[0].shape}")
-    
     try:
         outputs = session.run(None, {input_specs[0].name: batch_array})
     except Exception as e:
-        logger.error(f"Inference failed for batch {batch_id}: {e}")
-        logger.error(f"  Batch shape: {batch_array.shape}, expected input shape: {input_specs[0].shape}")
+        logger.error(f"Inference failed: {e} (batch shape: {batch_array.shape})")
         for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
             batch_metadata
         ):

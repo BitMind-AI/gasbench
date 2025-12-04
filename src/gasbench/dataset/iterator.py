@@ -152,17 +152,12 @@ class DatasetIterator:
 
                 cached_count = self._get_cached_count()
                 samples_to_load = min(cached_count, self.max_samples)
-                logger.info(
-                    f"Loading {samples_to_load} cached samples for {self.config.name} from {self.dataset_dir}"
+                logger.debug(
+                    f"Loading {samples_to_load} cached samples for {self.config.name}"
                 )
 
-                sample_yield_count = 0
                 for sample in self._load_from_cache_dir(self.dataset_dir):
-                    sample_yield_count += 1
-                    if sample_yield_count <= 3:
-                        logger.info(f"Yielding sample {sample_yield_count}: keys={list(sample.keys())[:5]}")
                     yield sample
-                logger.info(f"Total samples yielded for {self.config.name}: {sample_yield_count}")
 
         except Exception as e:
             logger.error(f"Failed to get samples from {self.config.name}: {e}")
@@ -479,9 +474,7 @@ class DatasetIterator:
             return
 
         Path(samples_dir).mkdir(parents=True, exist_ok=True)
-        logger.info(f"Downloading to cache: {samples_dir}")
 
-        download_count = 0
         for sample in download_and_extract(
             self.config,
             media_per_archive=self.config.media_per_archive,
@@ -497,7 +490,6 @@ class DatasetIterator:
             if sample_count >= CACHE_MAX_SAMPLES:
                 break
 
-            download_count += 1
             filename = save_sample_to_cache(
                 sample, self.config, samples_dir, next_index
             )
@@ -505,8 +497,6 @@ class DatasetIterator:
                 sample_metadata[filename] = self._extract_sample_metadata(sample)
                 sample_count += 1
                 next_index += 1  # Always increment to use new indices
-            else:
-                logger.warning(f"Failed to save sample {download_count} for {self.config.name}")
 
                 # Save metadata incrementally every 50 samples
                 if sample_count % 50 == 0:
@@ -524,8 +514,6 @@ class DatasetIterator:
                         f"Downloaded {sample_count}/{CACHE_MAX_SAMPLES} samples (checkpoint saved)"
                     )
 
-        logger.info(f"Download extraction yielded {download_count} samples, saved {sample_count} to cache")
-        
         # Save final metadata
         if sample_count > 0:
             save_dataset_cache_files(

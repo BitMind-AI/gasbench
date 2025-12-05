@@ -39,6 +39,8 @@ def create_sample(
 
     if dataset.modality == "image":
         base_sample["image"] = media_obj
+    elif dataset.modality == "audio":
+        base_sample["audio_bytes"] = media_obj
     else:
         base_sample["video_bytes"] = media_obj
 

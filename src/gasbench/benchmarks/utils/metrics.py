@@ -171,6 +171,7 @@ def calculate_per_source_accuracy(
             per_source_accuracy[media_type] = {}
 
         preds = results.get("predictions", {})
+        
         per_source_accuracy[media_type][dataset_config.name] = {
             "real": int(preds.get("real", 0)),
             "synthetic": int(preds.get("synthetic", 0)),

@@ -12,6 +12,7 @@ from .logger import get_logger
 from .processing.media import configure_huggingface_cache
 from .benchmarks.image_bench import run_image_benchmark
 from .benchmarks.video_bench import run_video_benchmark
+from .benchmarks.audio_bench import run_audio_benchmark
 from .benchmarks.utils import create_inference_session
 
 logger = get_logger(__name__)
@@ -30,6 +31,7 @@ async def run_benchmark(
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -51,7 +53,7 @@ async def run_benchmark(
         cache_dir = "/.cache/gasbench"
 
     configure_huggingface_cache(cache_dir)
-    run_id = str(uuid.uuid4())
+    run_id = run_id or str(uuid.uuid4())
 
     benchmark_results = {
         "model_path": model_path,
@@ -97,6 +99,7 @@ async def run_benchmark(
             dataset_config,
             holdout_config,
             records_parquet_path,
+            run_id,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -114,6 +117,8 @@ async def run_benchmark(
             benchmark_results["image_results"] = {"error": str(e)}
         elif modality == "video" and "video_results" not in benchmark_results:
             benchmark_results["video_results"] = {"error": str(e)}
+        elif modality == "audio" and "audio_results" not in benchmark_results:
+            benchmark_results["audio_results"] = {"error": str(e)}
 
         raise e
 
@@ -185,6 +190,7 @@ async def execute_benchmark(
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -204,6 +210,7 @@ async def execute_benchmark(
             dataset_config,
             holdout_config,
             records_parquet_path=records_parquet_path,
+            run_id=run_id,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -221,10 +228,28 @@ async def execute_benchmark(
             dataset_config,
             holdout_config,
             records_parquet_path=records_parquet_path,
+            run_id=run_id,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
+    elif modality == "audio":
+        df = await run_audio_benchmark(
+            session,
+            input_specs,
+            benchmark_results,
+            mode,
+            gasstation_only,
+            cache_dir,
+            download_latest_gasstation_data,
+            cache_policy,
+            seed,
+            batch_size,
+            dataset_config,
+            holdout_config,
+            records_parquet_path=records_parquet_path,
+        )
+        benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:
-        raise ValueError(f"Invalid modality: {modality}. Must be 'image' or 'video'")
+        raise ValueError(f"Invalid modality: {modality}. Must be 'image', 'video' or 'audio'")
 
     return benchmark_score
 

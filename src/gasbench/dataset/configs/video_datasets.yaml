@@ -275,6 +275,3 @@ datasets:
     source_format: mp4
     media_per_archive: 1000
     archives_per_dataset: 1
-
-
-

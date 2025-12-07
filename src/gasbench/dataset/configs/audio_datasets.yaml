@@ -80,8 +80,8 @@ datasets:
     modality: audio
     media_type: real
     source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 5
     exclude_paths: ["microsplit"]
     notes: "MLCommons People's Speech - large English corpus"
 

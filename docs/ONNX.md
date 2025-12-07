@@ -147,9 +147,9 @@ torch.onnx.export(
 
 ---
 
-## 4. Packaging
+## 4. Packaging (SN34 submission only)
 
-Each model must be zipped:
+Submitted models must be zipped before uploading with [gascli](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/Discriminative-Mining.md). Each zip must contain exactly **one** `.onnx` file.
 
 ```
 zip image_detector.zip image_detector.onnx
@@ -157,4 +157,3 @@ zip video_detector.zip video_detector.onnx
 zip audio_detector.zip audio_detector.onnx
 ```
 
-Each zip must contain exactly **one** `.onnx` file.

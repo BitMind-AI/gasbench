@@ -175,7 +175,7 @@ datasets:
     path: unfake/fake_voices
     modality: audio
     media_type: synthetic
-    source_format: parquet
+    source_format: zip
     media_per_archive: 50
     archives_per_dataset: 20
     notes: "Synthetic fake voices"

@@ -213,7 +213,9 @@ def process_audio_sample(
     4. Crop/pad to exactly 6 seconds (96,000 samples at 16kHz)
        - If longer: random crop (with seed) or center crop
        - If shorter: zero-pad on the right
-    5. Peak normalization
+    
+    No normalization is applied. torchaudio loads PCM as float32 in [-1, 1].
+    This matches image/video preprocessing where raw uint8 values are passed.
     
     Args:
         sample: Dictionary containing 'audio_bytes' and metadata
@@ -307,12 +309,9 @@ def process_audio_sample(
                 padding = target_length - current_length
                 waveform = torch.nn.functional.pad(waveform, (0, padding))
             
-            # Step 5: Peak normalization
-            max_val = waveform.abs().max()
-            if max_val > 0:
-                waveform = waveform / (max_val + 1e-8)
-            
             # Ensure output is float32 and shape (1, 96000)
+            # No normalization - torchaudio already loads as float32 in [-1, 1]
+            # This matches image/video approach where we pass raw values (uint8)
             waveform = waveform.float()
             
             # Move back to CPU for consistency with existing code

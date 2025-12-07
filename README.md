@@ -18,7 +18,7 @@ This package provides a self-contained benchmark evaluation system for testing m
   Accuracy, MCC, cross-entropy, inference times, and per-dataset breakdowns
 
 For detailed ONNX model requirements for all three modalities, see the  
-👉 **[ONNX Model Specification](./ONNX-Model-Spec.md)**
+👉 **[ONNX Model Specification](./docs/ONNX.md)**
 
 ---
 
@@ -105,7 +105,7 @@ results = asyncio.run(evaluate_model())
 
 - Models must be exported as **ONNX classifiers** (image, video, or audio).
 - GASBench expects **batched inputs** and **logits outputs**.
-- Image/video preprocessing (resize/crop/augment) and audio preprocessing (resample/window/normalize) are handled by GASBench.
+- Image/video preprocessing (resize/crop/augment) and audio preprocessing (mono/resample/crop) are handled by GASBench.
 - Both **binary (real vs synthetic)** and **3-class (real, semisynthetic, synthetic)** models are supported.
 
 For exact ONNX requirements, see:  

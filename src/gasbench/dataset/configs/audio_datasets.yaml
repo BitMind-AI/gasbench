@@ -1,0 +1,256 @@
+# Audio Dataset Configurations
+# 
+# media_per_archive: -1 = extract ALL media from each archive
+# archives_per_dataset: -1 = download ALL archives from dataset
+
+benchmark_size: 30000
+
+datasets:
+  # ============================================================================
+  # REAL SPEECH DATASETS - High Quality, Well-Labeled
+  # ============================================================================
+  
+  # Large-scale multilingual speech corpus (100+ languages)
+  - name: common-voice-17
+    path: fixie-ai/common_voice_17_0
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1 # 1-2k per parquet
+    archives_per_dataset: 10 
+    notes: "Mozilla Common Voice 17.0 - 100+ languages, volunteer recordings"
+    exclude_paths: ["invalidated"]
+
+  # European Parliament speeches (18 languages)
+  - name: voxpopuli
+    path: facebook/voxpopuli
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 200 #
+    archives_per_dataset: 5
+    notes: "EU Parliament speeches - 18 languages, professional quality"
+
+  # Meeting recordings (English)
+  - name: ami-corpus
+    path: edinburghcstr/ami
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 200
+    archives_per_dataset: 10
+    notes: "AMI Meeting Corpus - diverse speakers, natural speech"
+    include_paths: ["audio"]
+
+  # 1600+ languages (Facebook research)
+  - name: omnilingual-asr-corpus
+    path: facebook/omnilingual-asr-corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 50  # small parquet files
+    archives_per_dataset: 20
+    notes: "Facebook - 1600+ languages, research quality"
+
+  # Large English corpus
+  - name: gigaspeech
+    path: speechcolab/gigaspeech
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["audio"]
+    notes: "GigaSpeech - 10K hours English, diverse sources"
+
+  - name: gigaspeech-fixie
+    path: fixie-ai/gigaspeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: ["audio/xl_files_additional"]  # use largest superset, rest of dirs are subsets
+    notes: "GigaSpeech (Fixie parquet version)"
+
+
+  # People's Speech (large English corpus)
+  - name: peoples-speech
+    path: MLCommons/peoples_speech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    exclude_paths: ["microsplit"]
+    notes: "MLCommons People's Speech - large English corpus"
+
+  # Multilingual LibriSpeech subset
+  - name: mls-eng-10k
+    path: parler-tts/mls_eng_10k
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "MLS English 10K subset"
+
+  # English dialects
+  - name: english-dialects
+    path: ylacombe/english_dialects
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+    notes: "English dialect variations"
+
+  # CREMA-D emotion dataset
+  - name: crema-d
+    path: myleslinder/crema-d
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1  # single tar file, ~7.4k samples
+    notes: "CREMA-D - emotional speech, actors"
+
+  # ============================================================================
+  # SYNTHETIC/AI-GENERATED AUDIO DATASETS
+  # ============================================================================
+
+  # Arabic deepfakes
+  - name: arabic-deepfake
+    path: DeepFake-Audio-Rangers/Arabic_Audio_Deepfake
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 4  # 4 parquet files, ~15k samples
+    notes: "Arabic language deepfake audio"
+
+  # Urdu deepfakes
+  - name: deepfake-urdu-real
+    path: CSALT/deepfake_detection_dataset_urdu
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_datasets: ['Bonafide']
+    notes: "Urdu language deepfake detection"
+
+  - name: deepfake-urdu-fake
+    path: CSALT/deepfake_detection_dataset_urdu
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_datasets: ['Spoofed_TTS', 'Spoofed_Tacotron']
+    notes: "Urdu language deepfake detection"
+
+  # Synthetic emotional voices
+  - name: emovoice-db
+    path: yhaha/EmoVoice-DB
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "Synthetic emotional voice database"
+
+  # CJK TTS voices
+  - name: ultravoice-cjk
+    path: tutu0604/UltraVoice
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "Chinese/Japanese/Korean TTS voices"
+
+  # Fake/synthetic voice datasets
+  - name: fake-voices
+    path: unfake/fake_voices
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 50
+    archives_per_dataset: 20
+    notes: "Synthetic fake voices"
+
+  # ElevenLabs TTS samples (various sources)
+  - name: elevenlabs-dataset
+    path: skypro1111/elevenlabs_dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1 # ~1300 samples
+
+  - name: elevenlabs-velocity
+    path: velocity-engg/eleven_labs_dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1  # 1k samples
+
+  - name: elevenlabs-sh1man
+    path: Sh1man/elevenlabs
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 1100
+    archives_per_dataset: 1 
+
+  - name: elevenlabs-neoboy
+    path: NeoBoy/elevenlabsSpeechTest
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1  # 800 samples
+
+  - name: elevenlabs-latin
+    path: velocity-engg/eleven_labs_datase_latin
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1  # 1k samples
+
+  # German TTS
+  - name: thorsten-voice
+    path: Thorsten-Voice/TV-44kHz-Full
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "German TTS voice - Thorsten"
+
+  # ============================================================================
+  # COMMENTED OUT - Need special handling or verification
+  # ============================================================================
+
+  # Mixed Real/Fake - need label column mapping
+  # - name: real-fake-voices-dataset2
+  #   path: WpythonW/real-fake-voices-dataset2
+  #   modality: audio
+  #   media_type: mixed
+  #   source_format: parquet
+
+  # - name: fake-or-real
+  #   path: adarsh09singh/fake-or-real
+  #   modality: audio
+  #   media_type: mixed
+  #   source_format: parquet
+
+  # Special column names (input_audio/output_audio)
+  # - name: soda-tts
+  #   path: robinysh/soda_tts
+  #   modality: audio
+  #   media_type: synthetic
+  #   source_format: parquet

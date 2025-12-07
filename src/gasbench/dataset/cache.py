@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime
 from pathlib import Path
+import torch
 
 from ..logger import get_logger
 from .config import BenchmarkDatasetConfig
@@ -129,6 +130,22 @@ def save_sample_to_cache(
                 # No video data found
                 return None
 
+        elif dataset_config.modality == "audio":
+            audio_bytes = sample.get("audio_bytes")
+            if audio_bytes is None:
+                return None
+
+            source_name = str(sample.get("source_file", ""))
+            ext = Path(source_name).suffix.lower() if source_name else ".wav"
+            if not ext or ext not in {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}:
+                ext = ".wav"
+            filename = f"aud_{sample_count:06d}{ext}"
+            file_path = os.path.join(samples_dir, filename)
+
+            with open(file_path, "wb") as f:
+                f.write(audio_bytes)
+            return filename
+
     except Exception as e:
         logger.warning(
             f"Failed to save sample {sample_count} for {dataset_config.name}: {e}"
@@ -206,6 +223,95 @@ def cleanup_temp_directory_full(temp_dir: str):
             logger.info("🧹 Cleaned up consolidated temporary directory")
         except Exception as e:
             logger.warning(f"Failed to clean temp directory: {e}")
+
+
+def save_preprocessed_audio_tensor(
+    waveform: torch.Tensor,
+    label: int,
+    metadata: dict,
+    samples_dir: str,
+    sample_count: int
+) -> Optional[str]:
+    """
+    Save preprocessed audio tensor to cache as .pt file.
+    
+    This is much faster than saving raw audio bytes and re-processing every time.
+    
+    Args:
+        waveform: Preprocessed audio tensor (1, 96000)
+        label: Audio label (0=real, 1=synthetic)
+        metadata: Additional metadata to save
+        samples_dir: Directory to save the tensor
+        sample_count: Sample index for naming
+        
+    Returns:
+        Filename if successful, None otherwise
+    """
+    try:
+        filename = f"aud_{sample_count:06d}.pt"
+        file_path = os.path.join(samples_dir, filename)
+        
+        # Save tensor with label and metadata
+        torch.save({
+            'waveform': waveform.cpu(),  # Ensure it's on CPU for storage
+            'label': label,
+            'metadata': metadata,
+            'shape': waveform.shape,
+            'dtype': str(waveform.dtype)
+        }, file_path)
+        
+        return filename
+    except Exception as e:
+        logger.warning(f"Failed to save preprocessed audio tensor {sample_count}: {e}")
+        return None
+
+
+def load_preprocessed_audio_tensor(file_path: str) -> Optional[Dict]:
+    """
+    Load preprocessed audio tensor from cache.
+    
+    Args:
+        file_path: Path to the .pt file
+        
+    Returns:
+        Dictionary with 'waveform', 'label', and 'metadata' if successful, None otherwise
+    """
+    try:
+        data = torch.load(file_path, map_location='cpu')
+        return data
+    except Exception as e:
+        logger.warning(f"Failed to load preprocessed audio tensor from {file_path}: {e}")
+        return None
+
+
+def check_preprocessed_cache_exists(dataset_config: BenchmarkDatasetConfig, base_dir: str = "/.cache/gasbench") -> bool:
+    """
+    Check if preprocessed audio tensors exist in cache.
+    
+    Args:
+        dataset_config: Dataset configuration
+        base_dir: Base cache directory
+        
+    Returns:
+        True if preprocessed cache exists and has .pt files, False otherwise
+    """
+    try:
+        if dataset_config.modality != "audio":
+            return False
+            
+        dataset_dir = os.path.join(base_dir, "datasets", dataset_config.name)
+        samples_dir = os.path.join(dataset_dir, "samples")
+        
+        if not os.path.exists(samples_dir):
+            return False
+        
+        # Check if there are any .pt files
+        pt_files = [f for f in os.listdir(samples_dir) if f.endswith('.pt')]
+        return len(pt_files) > 0
+        
+    except Exception as e:
+        logger.debug(f"Failed to check preprocessed cache for {dataset_config.name}: {e}")
+        return False
 
 
 def format_size_bytes(size_bytes: int) -> str:
@@ -312,7 +418,7 @@ def verify_cache_against_configs(
     expected_datasets = []
 
     if dataset_config:
-        for modality in ["image", "video"]:
+        for modality in ["image", "video", "audio"]:
             datasets = load_datasets_from_yaml(
                 modality=modality, yaml_path=dataset_config
             )
@@ -322,7 +428,7 @@ def verify_cache_against_configs(
         datasets_dict = load_holdout_datasets_from_yaml(
             yaml_path=holdout_config, cache_dir=cache_dir
         )
-        for modality in ["image", "video"]:
+        for modality in ["image", "video", "audio"]:
             expected_datasets.extend(datasets_dict.get(modality, []))
 
     expected_names = {ds.name for ds in expected_datasets}

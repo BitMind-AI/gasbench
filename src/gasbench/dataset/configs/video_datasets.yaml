@@ -275,3 +275,28 @@ datasets:
     source_format: mp4
     media_per_archive: 1000
     archives_per_dataset: 1
+
+  - name: VideoUFO
+    path: WenhaoWang/VideoUFO
+    modality: video
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["VideoUFO_tar"]
+
+  - name: VideoDPO-10k
+    path: chungimungi/VideoDPO-10k
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: text-2-video-human-preferences-wan2.1
+    path: Rapidata/text-2-video-human-preferences-wan2.1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import random
@@ -1393,13 +1394,21 @@ def download_single_file(
                 # This is a frame directory - download all frames
                 return download_s3_frame_directory(bucket, key, output_dir)
             else:
-                # This is a single file
-                filename = os.path.basename(key)
+                # This is a single file - use unique filename to avoid collisions
+                url_hash = hashlib.md5(key.encode()).hexdigest()[:8]
+                base_filename = os.path.basename(key)
+                name, ext = os.path.splitext(base_filename)
+                filename = f"{name}_{url_hash}{ext}"
                 filepath = output_dir / filename
                 return download_s3_file(bucket, key, filepath)
 
         # Handle regular HTTP/HTTPS URLs
-        filename = os.path.basename(url)
+        # Use hash of full URL path to avoid filename collisions when multiple
+        # files from different directories have the same basename
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+        base_filename = os.path.basename(url)
+        name, ext = os.path.splitext(base_filename)
+        filename = f"{name}_{url_hash}{ext}"
         filepath = output_dir / filename
 
         logger.info(f"Downloading {url}")

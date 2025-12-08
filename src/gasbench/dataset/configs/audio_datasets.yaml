@@ -27,8 +27,8 @@ datasets:
     modality: audio
     media_type: real
     source_format: tar.gz
-    media_per_archive: 200 #
-    archives_per_dataset: 5
+    media_per_archive: 100
+    archives_per_dataset: 10
     notes: "EU Parliament speeches - 18 languages, professional quality"
 
   # Meeting recordings (English)
@@ -48,8 +48,8 @@ datasets:
     modality: audio
     media_type: real
     source_format: parquet
-    media_per_archive: 50  # small parquet files
-    archives_per_dataset: 20
+    media_per_archive: 20  
+    archives_per_dataset: 50  # small parquet files
     notes: "Facebook - 1600+ languages, research quality"
 
   # Large English corpus
@@ -62,17 +62,6 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["audio"]
     notes: "GigaSpeech - 10K hours English, diverse sources"
-
-  - name: gigaspeech-fixie
-    path: fixie-ai/gigaspeech
-    modality: audio
-    media_type: real
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    include_paths: ["audio/xl_files_additional"]  # use largest superset, rest of dirs are subsets
-    notes: "GigaSpeech (Fixie parquet version)"
-
 
   # People's Speech (large English corpus)
   - name: peoples-speech
@@ -166,8 +155,8 @@ datasets:
     modality: audio
     media_type: synthetic
     source_format: zip
-    media_per_archive: 200
-    archives_per_dataset: 5
+    media_per_archive: 100
+    archives_per_dataset: 10
     notes: "Chinese/Japanese/Korean TTS voices"
 
   # Fake/synthetic voice datasets
@@ -227,8 +216,8 @@ datasets:
     modality: audio
     media_type: synthetic
     source_format: parquet
-    media_per_archive: 200
-    archives_per_dataset: 5
+    media_per_archive: 100
+    archives_per_dataset: 10
     notes: "German TTS voice - Thorsten"
 
   # ============================================================================

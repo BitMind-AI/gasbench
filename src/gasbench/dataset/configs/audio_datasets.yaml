@@ -133,12 +133,12 @@ datasets:
   - name: deepfake-urdu-real
     path: CSALT/deepfake_detection_dataset_urdu
     modality: audio
-    media_type: synthetic
+    media_type: real
     source_format: wav
     media_per_archive: 1000
     archives_per_dataset: 1
-    include_datasets: ['Bonafide']
-    notes: "Urdu language deepfake detection"
+    include_paths: ['Bonafide']
+    notes: "Urdu language deepfake detection - real speech"
 
   - name: deepfake-urdu-fake
     path: CSALT/deepfake_detection_dataset_urdu
@@ -147,8 +147,8 @@ datasets:
     source_format: wav
     media_per_archive: 1000
     archives_per_dataset: 1
-    include_datasets: ['Spoofed_TTS', 'Spoofed_Tacotron']
-    notes: "Urdu language deepfake detection"
+    include_paths: ['Spoofed_TTS', 'Spoofed_Tacotron']
+    notes: "Urdu language deepfake detection - spoofed speech"
 
   # Synthetic emotional voices
   - name: emovoice-db

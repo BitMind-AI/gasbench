@@ -452,47 +452,104 @@ def _obfuscate_holdout_names(
 
 
 def load_holdout_datasets_from_yaml(
-    yaml_path: str, cache_dir: Optional[str] = None
+    yaml_path: str, cache_dir: Optional[str] = None, modality: Optional[str] = None
 ) -> Dict[str, List[BenchmarkDatasetConfig]]:
     """
     Load holdout datasets from YAML and return dict with obfuscated names.
-    Structure of YAML matches regular dataset configs.
+    
+    Supports two formats:
+    1. Single-modality format (new): Has 'datasets' key with list of datasets for one modality
+    2. Multi-modality format (legacy): Has 'image', 'video', 'audio' keys
 
-    Also saves a mapping file (holdout_mapping.json) in the cache directory
+    Also saves a mapping file (<modality>-holdout-mappings.yaml) in the cache directory
     showing obfuscated_name -> original_name mappings.
 
     Args:
         yaml_path: Path to holdout YAML config
         cache_dir: Cache directory to save mapping file (optional)
+        modality: Modality hint for single-modality configs (optional, auto-detected from datasets)
     """
-    base = load_datasets_from_yaml(yaml_path)
+    yaml_file = Path(yaml_path)
+    if not yaml_file.exists():
+        raise FileNotFoundError(f"Holdout config file not found: {yaml_path}")
 
-    image_datasets, image_mapping = _obfuscate_holdout_names(base.get("image", []))
-    video_datasets, video_mapping = _obfuscate_holdout_names(base.get("video", []))
-    audio_datasets, audio_mapping = _obfuscate_holdout_names(base.get("audio", []))
+    with open(yaml_file, "r") as f:
+        data = yaml.safe_load(f)
 
-    # Save mapping file if cache_dir provided
-    if cache_dir:
-        try:
-            os.makedirs(cache_dir, exist_ok=True)
-            mapping_file = os.path.join(cache_dir, "holdout_mapping.json")
-            full_mapping = {
-                "image": image_mapping,
-                "video": video_mapping,
-                "audio": audio_mapping,
-                "source_config": yaml_path,
-            }
-            with open(mapping_file, "w") as f:
-                json.dump(full_mapping, f, indent=2)
-            logger.info(f"Saved holdout name mapping to: {mapping_file}")
-        except Exception as e:
-            logger.warning(f"Failed to save holdout mapping file: {e}")
+    result = {"image": [], "video": [], "audio": []}
+    all_mappings = {"image": {}, "video": {}, "audio": {}}
 
-    return {
-        "image": image_datasets,
-        "video": video_datasets,
-        "audio": audio_datasets,
-    }
+    if "datasets" in data:
+        datasets_list = data["datasets"]
+        detected_modality = None
+        
+        for dataset_dict in datasets_list:
+            if not isinstance(dataset_dict, dict):
+                continue
+            ds_modality = dataset_dict.get("modality")
+            if ds_modality:
+                detected_modality = ds_modality
+                break
+        
+        effective_modality = modality or detected_modality
+        if not effective_modality:
+            raise ValueError("Could not determine modality from holdout config")
+        
+        configs = []
+        for dataset_dict in datasets_list:
+            if not isinstance(dataset_dict, dict):
+                continue
+            config = BenchmarkDatasetConfig(
+                name=dataset_dict["name"],
+                path=dataset_dict["path"],
+                modality=dataset_dict.get("modality", effective_modality),
+                media_type=dataset_dict["media_type"],
+                source_format=dataset_dict.get("source_format", ""),
+                source=dataset_dict.get("source", ""),
+                media_per_archive=dataset_dict.get("media_per_archive", -1),
+                archives_per_dataset=dataset_dict.get("archives_per_dataset", -1),
+                include_paths=dataset_dict.get("include_paths", []),
+                exclude_paths=dataset_dict.get("exclude_paths", []),
+                notes=dataset_dict.get("notes", ""),
+            )
+            configs.append(config)
+        
+        obfuscated, mapping = _obfuscate_holdout_names(configs)
+        result[effective_modality] = obfuscated
+        all_mappings[effective_modality] = mapping
+        
+        if cache_dir:
+            _save_holdout_mapping(cache_dir, effective_modality, mapping, yaml_path)
+    else:
+        base = load_datasets_from_yaml(yaml_path)
+        
+        for mod in ["image", "video", "audio"]:
+            if mod in base and base[mod]:
+                obfuscated, mapping = _obfuscate_holdout_names(base[mod])
+                result[mod] = obfuscated
+                all_mappings[mod] = mapping
+                
+                if cache_dir:
+                    _save_holdout_mapping(cache_dir, mod, mapping, yaml_path)
+
+    return result
+
+
+def _save_holdout_mapping(cache_dir: str, modality: str, mapping: Dict[str, str], source_config: str):
+    """Save holdout mapping to YAML file."""
+    try:
+        os.makedirs(cache_dir, exist_ok=True)
+        mapping_file = os.path.join(cache_dir, f"{modality}-holdout-mappings.yaml")
+        full_mapping = {
+            "modality": modality,
+            "source_config": source_config,
+            "mappings": mapping,
+        }
+        with open(mapping_file, "w") as f:
+            yaml.dump(full_mapping, f, default_flow_style=False, sort_keys=False)
+        logger.info(f"Saved holdout name mapping to: {mapping_file}")
+    except Exception as e:
+        logger.warning(f"Failed to save holdout mapping file: {e}")
 
 
 def _load_bundled_config(filename: str) -> Dict:

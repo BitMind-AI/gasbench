@@ -1293,12 +1293,21 @@ def _is_zip_file(filename_lower: str) -> bool:
 
 
 def _is_tar_file(filename_lower: str) -> bool:
-    """Return True if filename looks like a tar archive (.tar, .tar.gz, .tgz)."""
-    return (
-        filename_lower.endswith(".tar")
-        or filename_lower.endswith(".tar.gz")
-        or filename_lower.endswith(".tgz")
-    )
+    """Return True if filename looks like a tar archive (.tar, .tar.gz, .tgz).
+    
+    Also handles hash-suffixed filenames like 'file.tar_abc123.gz' that result
+    from download_single_file adding URL hashes to avoid collisions.
+    """
+    import re
+    
+    if filename_lower.endswith(".tar") or filename_lower.endswith(".tgz"):
+        return True
+    if filename_lower.endswith(".tar.gz"):
+        return True
+    # Handle hash-suffixed tar.gz files: file.tar_<hash>.gz
+    if re.search(r"\.tar_[a-f0-9]{8}\.gz$", filename_lower):
+        return True
+    return False
 
 
 def _is_parquet_file(filename_lower: str) -> bool:

@@ -246,6 +246,7 @@ async def execute_benchmark(
             dataset_config,
             holdout_config,
             records_parquet_path=records_parquet_path,
+            run_id=run_id,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

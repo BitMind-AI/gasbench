@@ -99,6 +99,7 @@ async def run_audio_benchmark(
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> pd.DataFrame:
     """Test model on benchmark audio datasets for AI-generated content detection.
     
@@ -130,6 +131,7 @@ async def run_audio_benchmark(
             augment_level=0,
             crop_prob=0.0,
             records_parquet_path=records_parquet_path,
+            run_id=run_id,
         )
 
         plan = build_plan(logger, run_config, input_specs)

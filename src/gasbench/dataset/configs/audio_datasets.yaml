@@ -100,8 +100,8 @@ datasets:
     modality: audio
     media_type: real
     source_format: tar.gz
-    media_per_archive: 1
-    archives_per_dataset: 1000  # single tar file, ~7.4k samples
+    media_per_archive: 1000
+    archives_per_dataset: 1
     notes: "CREMA-D - emotional speech, actors"
 
   # ============================================================================

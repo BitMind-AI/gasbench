@@ -6,240 +6,3959 @@
 benchmark_size: 30000
 
 datasets:
-  # ============================================================================
-  # REAL SPEECH DATASETS - High Quality, Well-Labeled
-  # ============================================================================
-  
-  # Large-scale multilingual speech corpus (100+ languages)
-  - name: common-voice-17
+  - name: common_voice_17_0
     path: fixie-ai/common_voice_17_0
     modality: audio
     media_type: real
     source_format: parquet
-    media_per_archive: -1 # 1-2k per parquet
-    archives_per_dataset: 10 
-    notes: "Mozilla Common Voice 17.0 - 100+ languages, volunteer recordings"
-    exclude_paths: ["invalidated"]
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  # European Parliament speeches (18 languages)
   - name: voxpopuli
     path: facebook/voxpopuli
     modality: audio
     media_type: real
     source_format: tar.gz
-    media_per_archive: 100
-    archives_per_dataset: 10
-    notes: "EU Parliament speeches - 18 languages, professional quality"
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  # Meeting recordings (English)
-  - name: ami-corpus
-    path: edinburghcstr/ami
-    modality: audio
-    media_type: real
-    source_format: tar.gz
-    media_per_archive: 200
-    archives_per_dataset: 10
-    notes: "AMI Meeting Corpus - diverse speakers, natural speech"
-    include_paths: ["audio"]
-
-  # 1600+ languages (Facebook research)
-  - name: omnilingual-asr-corpus
-    path: facebook/omnilingual-asr-corpus
-    modality: audio
-    media_type: real
-    source_format: parquet
-    media_per_archive: 20  
-    archives_per_dataset: 50  # small parquet files
-    notes: "Facebook - 1600+ languages, research quality"
-
-  # Large English corpus
-  - name: gigaspeech
-    path: speechcolab/gigaspeech
+  - name: tedlium
+    path: LIUM/tedlium
     modality: audio
     media_type: real
     source_format: tar.gz
     media_per_archive: -1
     archives_per_dataset: -1
-    include_paths: ["audio"]
-    notes: "GigaSpeech - 10K hours English, diverse sources"
 
-  # People's Speech (large English corpus)
-  - name: peoples-speech
+  - name: mailabs_fyw
+    path: Attention/mailabs_fyw
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: infore25
+    path: awghuku/infore25
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: audiomnist
+    path: flexthink/audiomnist
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: earnings22_robust_split
+    path: sanchit-gandhi/earnings22_robust_split
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: EA-DI
+    path: tarteel-ai/EA-DI
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: tedlium_small
+    path: chengan/tedlium_small
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: LibriS2S
+    path: PedroDKE/LibriS2S
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: fosd
+    path: awghuku/fosd
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: zeroth-korean
+    path: Bingsu/zeroth-korean
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "transcribed Korean audio "
+
+  - name: audio-diffusion-breaks-256
+    path: teticio/audio-diffusion-breaks-256
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: asr-train
+    path: oserikov/asr-train
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: slue
+    path: asapp/slue
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: broadCast_dataset_2
+    path: kksukk/broadCast_dataset_2
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: earnings22_split
+    path: sanchit-gandhi/earnings22_split
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: earnings22_split_resampled
+    path: sanchit-gandhi/earnings22_split_resampled
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: broadCast_dataset_5
+    path: kksukk/broadCast_dataset_5
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: broadCast_dataset_4
+    path: kksukk/broadCast_dataset_4
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: broadCast_dataset_6
+    path: kksukk/broadCast_dataset_6
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: broadCast_dataset_7
+    path: kksukk/broadCast_dataset_7
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: broadCast_dataset_8
+    path: kksukk/broadCast_dataset_8
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: common-voice-pt-wav
+    path: arielazzi/common-voice-pt-wav
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: broadCast_dataset_3
+    path: kksukk/broadCast_dataset_3
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: sberdevices_golos_10h_crowd
+    path: bond005/sberdevices_golos_10h_crowd
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: sberdevices_golos_100h_farfield
+    path: bond005/sberdevices_golos_100h_farfield
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: sova_rudevices
+    path: bond005/sova_rudevices
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: SAD
+    path: arbml/SAD
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: music_genres
+    path: lewtun/music_genres
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: audio-diffusion-1024
+    path: teticio/audio-diffusion-1024
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: libri-proc-whisper
+    path: bgstud/libri-proc-whisper
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: samromur_children
+    path: language-and-voice-lab/samromur_children
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: raddromur_asr
+    path: language-and-voice-lab/raddromur_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: speaker-recognition-american-rhetoric
+    path: owahltinez/speaker-recognition-american-rhetoric
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: libri_augmented_train_set
+    path: DTU54DL/libri_augmented_train_set
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: common-voice-test16k
+    path: DTU54DL/common-voice-test16k
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: uwb_atcc
+    path: Jzuluaga/uwb_atcc
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: common-native
+    path: DTU54DL/common-native
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: common-accent
+    path: DTU54DL/common-accent
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: quran-data
+    path: ashraf-ali/quran-data
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: my_dataset
+    path: Mizurodp/my_dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: qm_ly_gy_soundn
+    path: sjpmpzx/qm_ly_gy_soundn
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: idrak_ryanspeech
+    path: m-aliabbas/idrak_ryanspeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: everyayah
+    path: tarteel-ai/everyayah
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: swiss_parliament_corpus
+    path: yanickschraner/swiss_parliament_corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: common_voice_Arabic_12.0_Augmented
+    path: Salama1429/common_voice_Arabic_12.0_Augmented
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: ljspeech_phonemes
+    path: bookbot/ljspeech_phonemes
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: npsc_nb
+    path: scribe-project/npsc_nb
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: rulibrispeech
+    path: bond005/rulibrispeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: catalan_commonvoice
+    path: shields/catalan_commonvoice
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: genshin-voice-v3.3-mandarin
+    path: hanamizuki-ai/genshin-voice-v3.3-mandarin
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: phone-recognition-generated
+    path: Nithiwat/phone-recognition-generated
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: spoken_words_en_ml_commons_filtered_split
+    path: TheSeriousProgrammer/spoken_words_en_ml_commons_filtered_split
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: waxal_dataset
+    path: galsenai/waxal_dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: k_infinity_dataset
+    path: Muktau/k_infinity_dataset
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: vlsp-vie-speech2text
+    path: ademax/vlsp-vie-speech2text
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: sova_rudevices_audiobooks
+    path: dangrebenkin/sova_rudevices_audiobooks
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: fpt-vie-speech2text
+    path: ademax/fpt-vie-speech2text
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: vivos-vie-speech2text
+    path: ademax/vivos-vie-speech2text
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: mozilla-vie-speech2text
+    path: ademax/mozilla-vie-speech2text
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: myst_wav_clean
+    path: rishabhjain16/myst_wav_clean
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: genshin-voice-v3.4-mandarin
+    path: hanamizuki-ai/genshin-voice-v3.4-mandarin
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: whisper_mix_data
+    path: thanhduycao/whisper_mix_data
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: whisper_mix_data_v2
+    path: thanhduycao/whisper_mix_data_v2
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: RuDevSberDS
+    path: MegaKosT/RuDevSberDS
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: mg2_data
+    path: taqwa92/mg2_data
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: poetaexmachina-recitations-d6vergil
+    path: lsb/poetaexmachina-recitations-d6vergil
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: myst_pfs
+    path: rishabhjain16/myst_pfs
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: ismus
+    path: tiro-is/ismus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: nursultan_nazarbayev_speech
+    path: Shirali/nursultan_nazarbayev_speech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: NN
+    path: Shirali/NN
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: ISSAI_KSC_335RS_v_1_1
+    path: Shirali/ISSAI_KSC_335RS_v_1_1
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: sbtal_riksdag_asr
+    path: jimregan/sbtal_riksdag_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: atco2_atcosim
+    path: luigisaetta/atco2_atcosim
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: tlog
+    path: tarteel-ai/tlog
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: Okabe
+    path: Appruit/Okabe
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: shrutilipi_mr
+    path: bhatvineet/shrutilipi_mr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: NoDiacsDataAASR
+    path: MohammedNasri/NoDiacsDataAASR
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: AASR163762NoDiacs
+    path: MohammedNasri/AASR163762NoDiacs
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: slurp_dataset
+    path: yhfang/slurp_dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: LibriTTS
+    path: TeamSODA/LibriTTS
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: 0-9up_google_speech_commands_augmented_raw
+    path: mazkooleg/0-9up_google_speech_commands_augmented_raw
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: AntiSpoofing
+    path: ArturoHurtado7/AntiSpoofing
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: or_in_dataset
+    path: Ranjit/or_in_dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: Noise
+    path: MohammedNasri/Noise
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: data_test
+    path: linhqyy/data_test
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: banc-trawsgrifiadau-bangor
+    path: prvInSpace/banc-trawsgrifiadau-bangor
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: hinglish
+    path: ujs/hinglish
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: libri360_1s_augmented
+    path: mazkobot/libri360_1s_augmented
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: SLR35-Augmented-Dataset-10000-20000
+    path: OwLim/SLR35-Augmented-Dataset-10000-20000
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: SLR35-Augmented-Dataset-20000-30000
+    path: OwLim/SLR35-Augmented-Dataset-20000-30000
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: slr54
+    path: RikeshSilwal/slr54
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: openslr-slr67
+    path: daniel-dona/openslr-slr67
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: openslr-slr73-peruvian-spanish
+    path: rcastrovexler/openslr-slr73-peruvian-spanish
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: slr72_dataset
+    path: bookbot/slr72_dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "the dataset, originally collected by Google Colombian Spanish speakers."
+
+  - name: openslr-slr75-venezuelan-spanish
+    path: rcastrovexler/openslr-slr75-venezuelan-spanish
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: yoruba-slr86-short
+    path: Foluwa/yoruba-slr86-short
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: openslr-slr108
+    path: daniel-dona/openslr-slr108
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: MediaSpeech
+    path: ymoslem/MediaSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: openslr-slr132
+    path: mrmuminov/openslr-slr132
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Arabic speech to text Quran data"
+
+  - name: slr143
+    path: RikeshSilwal/slr143
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nepali"
+
+  - name: slr43_slr54_slr143
+    path: gauravparajuli/slr43_slr54_slr143
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: SLR41-Augmented-Dataset
+    path: OwLim/SLR41-Augmented-Dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: openslr-slr42-km-KH
+    path: Kimang18/openslr-slr42-km-KH
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: pianos
+    path: ccmusic-database/pianos
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: CTIS
+    path: ccmusic-database/CTIS
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: omnilingual-asr-corpus
+    path: facebook/omnilingual-asr-corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: dolly-audio-1000h-vietnamese
+    path: dolly-vn/dolly-audio-1000h-vietnamese
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "~1,000 hours of high-quality Vietnamese speech"
+
+  - name: smart-turn-data-v3.1-train
+    path: pipecat-ai/smart-turn-data-v3.1-train
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: MultiMed-ST
+    path: leduckhai/MultiMed-ST
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MultiMed-ST, the first large-scale multilingual medical speech translation dataset"
+
+  - name: ChildMandarin
+    path: BAAI/ChildMandarin
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "41.25 hours of high-quality speech data collected from 397 children across 22 provinces in China"
+
+  - name: librispeech_asr
+    path: openslr/librispeech_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: multilingual_librispeech
+    path: facebook/multilingual_librispeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: " 8 languages - English, German, Dutch, Spanish, French, Italian, Portuguese, Polish."
+
+  - name: gigaspeech
+    path: speechcolab/gigaspeech
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "multi-domain English speech recognition corpus with 10,000 hours"
+
+  - name: peoples_speech
     path: MLCommons/peoples_speech
     modality: audio
     media_type: real
     source_format: parquet
-    media_per_archive: 250
-    archives_per_dataset: 5
-    exclude_paths: ["microsplit"]
-    notes: "MLCommons People's Speech - large English corpus"
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  # Multilingual LibriSpeech subset
-  - name: mls-eng-10k
+  - name: hifi-tts
+    path: MikhailT/hifi-tts
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: nota
+    path: alexandrainst/nota
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "This data was created by the public institution Nota"
+
+  - name: nst-da
+    path: alexandrainst/nst-da
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: edacc
+    path: edinburghcstr/edacc
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "40 hours of English dyadic conversations between speakers with a diverse set of accents"
+
+  - name: urbansound8K
+    path: danavery/urbansound8K
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "This dataset contains 8732 labeled sound excerpts (<=4s) of urban sounds from 10 classes"
+
+  - name: unsupervised_peoples_speech
+    path: MLCommons/unsupervised_peoples_speech
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "It includes more than one million hours of audio with a diverse set of speakers"
+
+ 
+
+  - name: ftspeech
+    path: alexandrainst/ftspeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "There are 374 unique speakers in the training dataset"
+
+  - name: IMaSC
+    path: thennal/IMaSC
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "34,473 text-audio pairs of Malayalam , 8 speakers, 50 hours of audio."
+
+  - name: UrduMegaSpeech
+    path: humair025/UrduMegaSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "~1M+ audio-text pairs,Urdu (transcriptions), English (source text)"
+
+  - name: nonverbalspeech38k
+    path: nonverbalspeech/nonverbalspeech38k
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "total of 38,718 samples spanning approximately 131 hours, annotated with 10 non-verbal categories"
+
+  - name: SADA22
+    path: MohamedRashad/SADA22
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "contains over 667 hours of transcribed Arabic audio recordings"
+
+  - name: Svarah
+    path: ai4bharat/Svarah
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "comprises 9.6 hours of transcribed English audio from 117 speakers across 65 districts "
+
+  - name: VoiceAssistant-400K
+    path: gpt-omni/VoiceAssistant-400K
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: expresso
+    path: ylacombe/expresso
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "The dataset includes 4 speakers (2 males, 2 females), and totals 40 hours (11h read, 30h improvised"
+
+  - name: genshin-voice
+    path: simon3000/genshin-voice
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "voice lines from the game's characters in multiple languages, including Chinese, English, Japanese, and Korean."
+
+  - name: Libriheavy-HQ
+    path: mythicinfinity/Libriheavy-HQ
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "50,000 hours ASR corpus with punctuation casing and context.\"
+
+  - name: align-anything
+    path: PKU-Alignment/align-anything
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: DODa-audio-dataset
+    path: atlasia/DODa-audio-dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Swiss German parliamentary speech with Standard German transcriptions"
+
+  - name: spc_r
+    path: i4ds/spc_r
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "≈ 751 hours of high‑quality speech–text data"
+
+  - name: Galgame-VisualNovel-Reupload
+    path: joujiboi/Galgame-VisualNovel-Reupload
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: SpeechEval
+    path: Hui519/SpeechEval
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Utterances: 32,207 unique speech clips
+
+  - name: tr_50hrs
+    path: freyavoice/tr_50hrs
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: IndicVoices
+    path: ai4bharat/IndicVoices
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: " 19550 hours and  29K speakers covering 400+ Indian districts and 22 languages."
+  - name: tts-dataset-01
+    path: seastar105/tts-dataset-01
+    modality: audio
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: nchlt_speech_zul
+    path: danielshaps/nchlt_speech_zul
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "isiZulu language part of the NCHLT Speech Corpus of the South African languages."
+
+  - name: opendata-iisys-hui
+    path: Paradoxia/opendata-iisys-hui
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: LAION-Audio-300M
+    path: laion/LAION-Audio-300M
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: Casablanca
+    path: UBC-NLP/Casablanca
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Algerian, Egyptian, Emirati, Jordanian, Mauritanian, Moroccan, Palestinian, and Yemeni"
+
+  - name: GLOBE-annotated
+    path: ai4b-hf/GLOBE-annotated
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "500 hours of filtered, high-quality English audio from diverse speakers worldwide,"
+
+  - name: Arabic_Audio_Deepfake
+    path: DeepFake-Audio-Rangers/Arabic_Audio_Deepfake
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: ibo-dict-expansion
+    path: nkowaokwu/ibo-dict-expansion
+    modality: audio
+    media_type: real
+    source_format: webm/mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "contains 25,500 single-word audio recordings"
+
+  - name: code_switch_yodas_zh
+    path: georgechang8/code_switch_yodas_zh
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Chinese, English"
+
+  - name: Wikimedia-Speech-Irish
+    path: ymoslem/Wikimedia-Speech-Irish
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "34 hours and 23 minutes (34:23:12) spread across 15,090 utterances."
+
+  - name: Emilia-Dataset
+    path: amphion/Emilia-Dataset
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Emilia containing over 101k hours and Emilia-YODAS containing over 114k hours of speech data;
+
+  - name: IEMOCAP
+    path: AbstractTTS/IEMOCAP
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: VietSpeech
+    path: NhutP/VietSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: ": Vietnamese social voice dataset includes over 1,100 hours of speech data"
+
+  - name: switchboard
+    path: hhoangphuoc/switchboard
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "2,400 two-sided telephone conversations among 543 speakers (302 male, 241 female) from all areas of the United States"
+
+  - name: IndicTTS_Manipuri
+    path: SPRINGLab/IndicTTS_Manipuri
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "~20.75 hours of studio-quality 48kHz WAV audio featuring monolingual Manipuri"
+
+  - name: ShiftySpeech
+    path: ash56/ShiftySpeech
+    modality: audio
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "3000 hours of synthetic speech from 7 domains, 6 TTS systems, 12 vocoders, and 3 languages."
+
+  - name: Rasa
+    path: ai4bharat/Rasa
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "40 speaker-language pairs available now in all 22 Indian language/20 hours per speaker"
+
+  - name: coral-v2
+    path: CoRal-project/coral-v2
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "dataset contains 446.68 hours of audio from 703 speakers reading 261,277 unique sentences"
+
+  - name: Shrutilipi
+    path: ai4bharat/Shrutilipi
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: " Bengali, Gujarati, Hindi, Kannada, Malayalam, Marathi, Odia, Punjabi, Sanskrit, Tamil, Telugu, Urdu.
+
+  - name: voxbox
+    path: SparkAudio/voxbox
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "100,000 hours (or approximately 102.5k hours across 4.7 million audio files from 29 open datasets) "
+
+  - name: NonverbalTTS
+    path: deepvk/NonverbalTTS
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "17-hour dataset features authentic clips from 2,296 diverse speakers (60% male, 40% female)"
+
+  - name: YouTube-English
+    path: OrcinusOrca/YouTube-English
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: DeepDialogue-orpheus
+    path: SALT-Research/DeepDialogue-orpheus
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "40,150 high-quality multi-turn dialogues spanning 41 domains and incorporating 20 distinct emotions with coherent emotional progressions"
+
+  - name: Iqra_TTS
+    path: IqraEval/Iqra_TTS
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: za-african-next-voices
+    path: dsfsi-anv/za-african-next-voices
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "3000 hours of audio across 7 South African languages"
+
+  - name: Emilia-NV
+    path: amphion/Emilia-NV
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: MMAU-Pro
+    path: gamma-lab-umd/MMAU-Pro
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MMAU-Pro contains 5,305 expert-annotated question-answer pairs"
+
+  - name: behavior-sd
+    path: yhytoto12/behavior-sd
+    modality: audio
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "behavior-SD Dataset: 108K full-duplex dialogues (2,164 hours) with rich speaker-wise behavioral annotations."
+
+  - name: spokenwoz-whisper
+    path: pirxus/spokenwoz-whisper
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "SpokenWOZ dataset with all the original transcripts "
+
+  - name: indian_voices_dataset_all
+    path: ar17to/indian_voices_dataset_all
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: ToneWebinars
+    path: Vikhrmodels/ToneWebinars
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "contains 2053.55 hours of training  Russian audio and 154.34 hours of validation audio"
+
+  - name: OpenDialog
+    path: k2-fsa/OpenDialog
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "OpenDialog is a 6.8k-hour bilingual (Chinese 1,759h + English 5,074h) spoken dialogue dataset"
+
+  - name: soundscapes
+    path: laion/soundscapes
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: Clotho
+    path: CLAPv2/Clotho
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: tr-combined
+    path: Codyfederer/tr-combined
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "This is a merged speech dataset containing 221531 audio segments from 894 source datasets."
+
+  - name: MRSAudio
+    path: MRSAudio/MRSAudio
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MRSAudio spans four distinct components: MRSLife, MRSSpeech, MRSMusic, and MRSSing, covering diverse real-world scenarios."
+
+  - name: FalAR
+    path: inesc-id/FalAR
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Portuguese parliamentary speech data, including audio transcripts from debates and interventions"
+
+  - name: UltraVoice
+    path: tutu0604/UltraVoice
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "contains 100,770 high-quality spoken dialogue samples, totaling 832.92 hours of audio."
+
+  - name: VieNeu-TTS-500h-dialects
+    path: pnnbao-ump/VieNeu-TTS-500h-dialects
+    modality: audio
+    media_type: real
+    source_format: arrow
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VieNeu-TTS-500h-Dialects is a 500-hour Vietnamese speech dataset"
+
+  - name: arabic-whisper-multidialect
+    path: MadLook/arabic-whisper-multidialect
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "multi-dialect Arabic speech recognition dataset prepared for Whisper model fine-tuning/105,000 audio-text pairs"
+
+  - name: 1DamnAudio
+    path: mahwizzzz/1DamnAudio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Large-scale Urdu TTS dataset with 221,929 audio-text pairs totaling 208.5 hours of speech."
+
+  - name: smart-turn-data-v3.1-test
+    path: pipecat-ai/smart-turn-data-v3.1-test
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: camoes_SI
+    path: inesc-id/camoes_SI
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Fala Bracarense (6.1 hours, 9 speakers from Braga and Português Fundamental 4.2 hours, 169 speakers"
+    
+  - name: hifitts2_alignments_20_30
+    path: AdoCleanCode/hifitts2_alignments_20_30
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "36.7k hours of high-quality speech "
+
+  - name: commonvoice22_sidon
+    path: sarulab-speech/commonvoice22_sidon
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: arabic-wake-word
+    path: shredder-31/arabic-wake-word
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: cosyvoice-instruct
+    path: LALM-emotional-vulnerability/cosyvoice-instruct
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: pangloss
+    path: Lacito/pangloss
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Two fieldwork-based audio corpora of China’s minority languages Japhug and Na—totaling"
+
+  - name: ASCEND
+    path: CAiRE/ASCEND
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "ASCEND is a high-quality Hong Kong–collected dataset"
+
+  - name: ommon_voice_7_0_fr_processed
+    path: Plim/common_voice_7_0_fr_processed
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: luganda-zindi
+    path: cahya/luganda-zindi
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: hebrew_speech_kan
+    path: imvladikon/hebrew_speech_kan
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: hebrew_speech_coursera
+    path: imvladikon/hebrew_speech_coursera
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: sc09
+    path: krandiash/sc09
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: zeroth_korean
+    path: kresnik/zeroth_korean
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Approximately 51.6 hours of training data and 1.2 hours of test data"
+
+  - name: uaspeech
+    path: ngdiana/uaspeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: testing
+    path: moumeneb1/testing
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: benchmark_dataset
+    path: polinaeterna/benchmark_dataset
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: arabic_speech_massive
+    path: abdusah/arabic_speech_massive
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: music-fingerprint-dataset
+    path: arch-raven/music-fingerprint-dataset
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: GRID_audio
+    path: luomingshuang/GRID_audio
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: iiith-indic-speech
+    path: iitm-ddp/iiith-indic-speech
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: arabic_speech_massive_sm
+    path: abdusah/arabic_speech_massive_sm
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: minds14
+    path: PolyAI/minds14
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "covers 14 intents extracted from a commercial system in the e-banking domain"
+
+  - name: KSS_Dataset
+    path: Bingsu/KSS_Dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "12,853 audio files with a total running time of over 12 hours at a 44,100 kHz sample rate."
+
+  - name: Malay-TTS-Osman
+    path: huseinzol05/Malay-TTS-Osman
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: common_voice_ar_v9
+    path: colabtrial17/common_voice_ar_v9
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: ami
+    path: edinburghcstr/ami
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: voxceleb
+    path: ProgramComputer/voxceleb
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: gigaspeech2
+    path: speechcolab/gigaspeech2
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: gigaspeech
+    path: fixie-ai/gigaspeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: mls_eng_10k
     path: parler-tts/mls_eng_10k
     modality: audio
     media_type: real
     source_format: parquet
-    media_per_archive: 200
-    archives_per_dataset: 5
-    notes: "MLS English 10K subset"
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  # English dialects
-  - name: english-dialects
+  - name: english_dialects
     path: ylacombe/english_dialects
     modality: audio
     media_type: real
     source_format: parquet
-    media_per_archive: 100
-    archives_per_dataset: 10
-    notes: "English dialect variations"
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  # CREMA-D emotion dataset
   - name: crema-d
     path: myleslinder/crema-d
     modality: audio
     media_type: real
     source_format: tar.gz
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    notes: "CREMA-D - emotional speech, actors"
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  # ============================================================================
-  # SYNTHETIC/AI-GENERATED AUDIO DATASETS
-  # ============================================================================
-
-  # Arabic deepfakes
-  - name: arabic-deepfake
-    path: DeepFake-Audio-Rangers/Arabic_Audio_Deepfake
+  - name: AISHELL-3
+    path: AISHELL/AISHELL-3
     modality: audio
-    media_type: synthetic
+    media_type: real
     source_format: parquet
-    media_per_archive: 250
-    archives_per_dataset: 4  # 4 parquet files, ~15k samples
-    notes: "Arabic language deepfake audio"
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  # Urdu deepfakes
-  - name: deepfake-urdu-real
-    path: CSALT/deepfake_detection_dataset_urdu
+  - name: BigAudioDataset
+    path: AstraMindAI/BigAudioDataset
+    modality: audio
+    media_type: real
+    source_format: arrow
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: AudioSet
+    path: agkphysics/AudioSet
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: gtzan
+    path: marsyas/gtzan
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: m-ailabs-it_IT
+    path: psiyou/m-ailabs-it_IT
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: UrbanSound8K
+    path: MahiA/UrbanSound8K
     modality: audio
     media_type: real
     source_format: wav
-    media_per_archive: 100
-    archives_per_dataset: 10
-    include_paths: ['Bonafide']
-    notes: "Urdu language deepfake detection - real speech"
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  - name: deepfake-urdu-fake
+  - name: fsd50k_synth
+    path: Codec-SUPERB/fsd50k_synth
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: fleurs
+    path: google/fleurs
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: covost2
+    path: fixie-ai/covost2
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: AudioMarathon
+    path: Hezep/AudioMarathon
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: tat_hackathon_asr
+    path: yasalma/tat_hackathon_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "TatSC contains 269.1 hours of transcribed speech  hackathon dataset comprises 89.99 hours of audio"
+
+  - name: shan_language_asr_voices
+    path: freococo/shan_language_asr_voices
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "306-hour audio dataset of the Shan (Tai-Yai) language"
+
+  - name: French_Transcribed_Podcast
+    path: Nicolas-BZRD/French_Transcribed_Podcast
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Dataset of 280,000 mp3 links to French podcasts"
+
+  - name: MSMarco-ES-TTS-Big95.1ksamples
+    path: ejbejaranos/MSMarco-ES-TTS-Big95.1ksamples
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "95,108 additional samples of Spanish question–answer pairs converted to audio using text-to-speech (TTS)."
+
+  - name: The_Spoken_Wikipedia_Corpora_Dutch_ASR_Hiidden
+    path: Jaspernl/The_Spoken_Wikipedia_Corpora_Dutch_ASR_Hiidden
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: " 210 hours of audio, transcriptions, and metadata."
+
+  - name: speech_commands_extract_unit
+    path: Codec-SUPERB/speech_commands_extract_unit
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: fsd50k
+    path: nguyenvulebinh/fsd50k
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "FSD50K - 51,197 audio clips across 200 sound event classes"
+
+  - name: audio-skills
+    path: nvidia/AudioSkills
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioSkills - 10M examples, audio QA for expert-level reasoning"
+
+  - name: rir-mega
+    path: mandipgoswami/rirmega
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "RIR-Mega dataset"
+
+  - name: covost
+    path: facebook/covost2
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "CoVoST 2 - multilingual speech-to-text translation dataset"
+
+  - name: kspon-speech
+    path: jp1924/KsponSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "KsponSpeech - Korean spontaneous speech recognition"
+
+  - name: kresp-speech
+    path: jp1924/KrespSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "KrespSpeech - Korean response speech dataset"
+
+  - name: kconf-speech
+    path: jp1924/KconfSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "KconfSpeech - Korean conference speech dataset"
+
+  - name: korea-speech
+    path: jp1924/KoreaSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "KoreaSpeech - comprehensive Korean speech dataset"
+
+  - name: gyeongsang-speech
+    path: jp1924/GyeongsangSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "GyeongsangSpeech - Korean Gyeongsang dialect speech"
+
+  - name: burmese-asr
+    path: Ko-Yin-Maung/mig-burmese-audio-transcription
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Burmese audio transcription dataset"
+
+  - name: tatar-asr
+    path: yasalma/TatSC_ASR
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Tatar speech corpus ASR dataset"
+
+  - name: music-emotions
+    path: baobaoh/13-dimensions-music-emotions
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "13-dimensions music emotions dataset"
+
+  - name: nonverbal-sound-datasets
+    path: jp1924/NaturalandArtificialOccurrenceNonverbalSoundDatasets
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Natural and artificial occurrence nonverbal sound datasets"
+
+  - name: fluent_speech_commands_male
+    path: CodecSR/fluent_speech_commands_male
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Fluent Male Speech Commands - spoken language understanding"
+
+  - name: fluent_speech_commands_female
+    path: CodecSR/fluent_speech_commands_female
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Fluent Female Speech Commands - spoken language understanding"
+
+  - name: IEMOCAP-synth
+    path: Codec-SUPERB/iemocap_synth
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "IEMOCAP  dataset"
+
+  - name: ravdess-parquet
+    path: confit/ravdess-parquet
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "RAVDESS - Ryerson Audio-Visual Database of Emotional Speech"
+
+  - name: vctk
+    path: Milana/vctk_resampled_16k_balanced
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VCTK - multi-speaker English speech corpus, 109 speakers"
+
+  - name: noisy_vctk_16k_synth
+    path: Codec-SUPERB/noisy_vctk_16k_synth
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VCTK synth"
+
+  - name: deepfake-audio-dataset
+    path: Hemg/Deepfake-Audio-Dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Deepfake audio samples"
+
+  - name: deepfake-urdu
     path: CSALT/deepfake_detection_dataset_urdu
     modality: audio
     media_type: synthetic
     source_format: wav
-    media_per_archive: 100
-    archives_per_dataset: 10
-    include_paths: ['Spoofed_TTS', 'Spoofed_Tacotron']
-    notes: "Urdu language deepfake detection - spoofed speech"
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Urdu language deepfake detection"
 
-  # Synthetic emotional voices
   - name: emovoice-db
     path: yhaha/EmoVoice-DB
     modality: audio
     media_type: synthetic
     source_format: zip
-    media_per_archive: 200
-    archives_per_dataset: 5
+    media_per_archive: -1
+    archives_per_dataset: -1
     notes: "Synthetic emotional voice database"
 
-  # CJK TTS voices
-  - name: ultravoice-cjk
-    path: tutu0604/UltraVoice
-    modality: audio
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 100
-    archives_per_dataset: 10
-    notes: "Chinese/Japanese/Korean TTS voices"
-
-  # Fake/synthetic voice datasets
   - name: fake-voices
     path: unfake/fake_voices
     modality: audio
     media_type: synthetic
     source_format: zip
-    media_per_archive: 50
-    archives_per_dataset: 20
+    media_per_archive: -1
+    archives_per_dataset: -1
     notes: "Synthetic fake voices"
 
-  # ElevenLabs TTS samples (various sources)
   - name: elevenlabs-dataset
     path: skypro1111/elevenlabs_dataset
     modality: audio
     media_type: synthetic
     source_format: parquet
     media_per_archive: -1
-    archives_per_dataset: -1 # ~1300 samples
+    archives_per_dataset: -1
 
   - name: elevenlabs-velocity
     path: velocity-engg/eleven_labs_dataset
     modality: audio
     media_type: synthetic
-    source_format: parquet
+    source_format: zip
     media_per_archive: -1
-    archives_per_dataset: -1  # 1k samples
+    archives_per_dataset: -1
 
-  - name: elevenlabs-sh1man
+  - name: elevenlabs
     path: Sh1man/elevenlabs
     modality: audio
     media_type: synthetic
     source_format: wav
-    media_per_archive: 1100
-    archives_per_dataset: 1 
+    media_per_archive: -1
+    archives_per_dataset: -1
 
-  - name: elevenlabs-neoboy
+  - name: elevenlabsSpeechTest
     path: NeoBoy/elevenlabsSpeechTest
     modality: audio
     media_type: synthetic
     source_format: parquet
     media_per_archive: -1
-    archives_per_dataset: -1  # 800 samples
+    archives_per_dataset: -1
 
-  - name: elevenlabs-latin
+  - name: eleven_labs_datase_latin
     path: velocity-engg/eleven_labs_datase_latin
     modality: audio
     media_type: synthetic
     source_format: parquet
     media_per_archive: -1
-    archives_per_dataset: -1  # 1k samples
+    archives_per_dataset: -1
 
-  # German TTS
-  - name: thorsten-voice
+  - name: TV-44kHz-Full
     path: Thorsten-Voice/TV-44kHz-Full
     modality: audio
     media_type: synthetic
     source_format: parquet
-    media_per_archive: 100
-    archives_per_dataset: 10
+    media_per_archive: -1
+    archives_per_dataset: -1
     notes: "German TTS voice - Thorsten"
 
-  # ============================================================================
-  # COMMENTED OUT - Need special handling or verification
-  # ============================================================================
+  - name: audio-flan-hkust
+    path: HKUSTAudio/Audio-FLAN-Dataset
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Audio-FLAN Dataset - instruction-tuning for unified audio understanding"
 
-  # Mixed Real/Fake - need label column mapping
-  # - name: real-fake-voices-dataset2
-  #   path: WpythonW/real-fake-voices-dataset2
-  #   modality: audio
-  #   media_type: mixed
-  #   source_format: parquet
+  - name: multilingual-speech-commands-15lang
+    path: artur-muratov/multilingual-speech-commands-15lang
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Multilingual Speech Commands - 15 languages, augmented dataset"
 
-  # - name: fake-or-real
-  #   path: adarsh09singh/fake-or-real
-  #   modality: audio
-  #   media_type: mixed
-  #   source_format: parquet
+  - name: loquacious-set
+    path: speechbrain/LoquaciousSet
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LoquaciousSet - 25,000 hours transcribed English speech recognition data"
 
-  # Special column names (input_audio/output_audio)
-  # - name: soda-tts
-  #   path: robinysh/soda_tts
-  #   modality: audio
-  #   media_type: synthetic
-  #   source_format: parquet
+  - name: japanese-asr-reazon
+    path: japanese-asr/ja_asr.reazon_speech_all
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Japanese ASR - Reazon Speech all dataset"
+
+  - name: multitask-national-speech-corpus
+    path: MERaLiON/Multitask-National-Speech-Corpus-v1
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Multitask National Speech Corpus v1 - multitask speech understanding"
+
+  - name: speech-robust-bench
+    path: mshah1/speech_robust_bench
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Speech Robustness Benchmark - robust speech recognition evaluation"
+
+  - name: japanese-anime-speech-v2
+    path: joujiboi/japanese-anime-speech-v2
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Japanese Anime Speech v2 - 292K audio clips for ASR training"
+
+  - name: speech-instruct-bench
+    path: ddwang2000/SpeechInstructBench
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "SpeechInstructBench - multilingual Chinese/English benchmark"
+
+  - name: yodas2-sidon
+    path: sarulab-speech/yodas2_sidon
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "YODAS2-Sidon - massive multilingual speech synthesis dataset"
+
+  - name: mls-sidon
+    path: sarulab-speech/mls_sidon
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MLS-Sidon - Multilingual LibriSpeech with Sidon restoration"
+
+  - name: treble10-speech
+    path: treble-technologies/Treble10-Speech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Treble10-Speech - far-field speech recognition with room acoustics"
+
+  - name: speech-massive
+    path: FBK-MT/Speech-MASSIVE
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Speech-MASSIVE - multilingual spoken language understanding"
+
+  - name: instruction-speech-encodec
+    path: Menlo/instruction-speech-encodec-v1
+    modality: audio
+    media_type: real
+    source_format: arrow
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Instruction Speech - 450K English speech instruction to text"
+
+  - name: gemini-flash-speech
+    path: shb777/gemini-flash-2.0-speech
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Gemini Flash 2.0 Speech - high quality synthetic speech dataset"
+
+  - name: codecfake-audio
+    path: ajaykarthick/codecfake-audio
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Codecfake Audio - ALM-based deepfake audio detection dataset"
+
+  - name: laion-captioned-ai-music
+    path: laion/captioned-ai-music-snippets
+    modality: audio
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LAION Captioned AI Music - Suno-generated songs with Gemini captions"
+
+  - name: musicpile
+    path: m-a-p/MusicPile
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MusicPile - first pretraining corpus for music language models"
+
+  - name: free-music-archive-full
+    path: benjamin-paine/free-music-archive-full
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Free Music Archive Full - dataset for music analysis"
+
+  - name: musicbench
+    path: amaai-lab/MusicBench
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MusicBench - music audio-text pair dataset for text-to-music"
+
+  - name: music-theory-bench
+    path: m-a-p/MusicTheoryBench
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MusicTheoryBench - benchmark for advanced music understanding"
+
+  - name: audiocaps-opensound
+    path: OpenSound/AudioCaps
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioCaps - audio captioning dataset"
+
+  - name: esb-datasets-test
+    path: hf-audio/esb-datasets-test-only-sorted
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "ESB Test Sets - parquet and sorted format"
+
+  - name: ivrit-audio-v2
+    path: ivrit-ai/audio-v2
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Hebrew Audio v2 - 20K+ hours Hebrew audio"
+
+  - name: latin-audio
+    path: Ken-Z/Latin-Audio
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Latin Audio - Vox Classica, 73 hours Latin speech corpus"
+
+  - name: linto-arabic-tunisian
+    path: linagora/linto-dataset-audio-ar-tn
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LinTO Arabic Tunisian - Tunisian dialect audio for STT"
+
+  - name: linto-arabic-tunisian-augmented
+    path: linagora/linto-dataset-audio-ar-tn-augmented
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LinTO Arabic Tunisian Augmented - augmented version"
+
+  - name: dcase-audioqa
+    path: PeacefulData/2025_DCASE_AudioQA_Official
+    modality: audio
+    media_type: real
+    source_format: json
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "DCASE 2025 AudioQA - Bioacoustics QA, Temporal Soundscapes QA"
+
+  - name: meetingbank-audio
+    path: huuuyeah/MeetingBank_Audio
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MeetingBank Audio - 1,366 meetings, 3,579 hours from US city councils"
+
+  - name: audiosnippets
+    path: mitermix/audiosnippets
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioSnippets - large-scale audio dataset"
+
+  - name: audioqa-1m
+    path: shenyunhang/AudioQA-1M
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioQA-1M - 1 million audio question-answering examples"
+
+  - name: meddialog-audio
+    path: aline-gassenn/MedDialog-Audio
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MedDialog-Audio - English medical dialogue corpus for ASR"
+
+  - name: switchlingua-audio
+    path: Shelton1013/SwitchLingua_audio
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "SwitchLingua Audio - multilingual code-switching dataset"
+
+  - name: drone-audio-detection
+    path: geronimobasso/drone-audio-detection-samples
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Drone Audio Detection Samples - largest public drone audio database"
+
+  - name: big-bench-audio
+    path: ArtificialAnalysis/big_bench_audio
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Big Bench Audio - audio version of Big Bench Hard questions"
+
+  - name: kling-audio-eval
+    path: klingfoley/Kling-Audio-Eval
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Kling-Audio-Eval - video-to-audio generation evaluation"
+
+  - name: audioset-16khz-wds
+    path: confit/audioset-16khz-wds
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioSet 16kHz WebDataset - preprocessed AudioSet in WebDataset format"
+
+  - name: audioset-opus-24kbps
+    path: danjacobellis/audioset_opus_24kbps
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioSet Opus 24kbps - AudioSet compressed with Opus codec"
+
+  - name: audio-children-stories
+    path: ajibawa-2023/Audio-Children-Stories-Collection-Large
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Audio Children Stories - 5600+ audio files in MP3 format"
+
+  - name: speechocean762
+    path: mispeech/speechocean762
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "SpeechOcean762 - non-native English corpus for pronunciation scoring"
+
+  - name: assamese-speech-corpus
+    path: madhabpaul/assamese_speech_corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Assamese Speech Corpus - Assamese language speech dataset"
+
+  - name: the-mc-speech-dataset
+    path: czyzi0/the-mc-speech-dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Polish MC Speech - 24K audio clips, single speaker Polish"
+
+  - name: speech-ru
+    path: Sinoosoida/speech_ru
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Russian Speech - Russian-language audiobooks with STT"
+
+  - name: ethiopian-speech
+    path: badrex/ethiopian-speech-flat
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Ethiopian Speech Corpus - multilingual across 5 Ethiopian languages"
+
+  - name: subak-ko
+    path: SUST-CSE-Speech/SUBAK.KO
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "SUBAK.KO - Bangladeshi standard Bangla speech corpus"
+
+  - name: malay-speech-stt
+    path: mesolitica/malaya-speech-malay-stt
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Malay Speech STT - combined from Google STT and private datasets"
+
+  - name: galgame-speech-asr
+    path: litagin/Galgame_Speech_ASR_16kHz
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Galgame Speech ASR - Japanese visual novel speech dataset"
+
+  - name: moe-speech
+    path: litagin/moe-speech
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Moe Speech - Japanese anime-style speech dataset"
+
+  - name: pony-speech
+    path: synthbot/pony-speech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Pony Speech - My Little Pony voice dataset for TTS"
+
+  - name: emotional-speech
+    path: EQ4You/Emotional_Speech
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Emotional Speech - audio-text pairs with emotion descriptions"
+
+  - name: speech-disorders-voice
+    path: b-brave/speech_disorders_voice
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Speech Disorders Voice - dataset for speech disorder research"
+
+  - name: nemotron-content-safety-audio
+    path: nvidia/Nemotron-Content-Safety-Audio-Dataset
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nemotron Content Safety Audio - multimodal content safety dataset"
+
+  - name: overtone-singing-preview
+    path: Harmonic-Frontier-Audio/Overtone_Singing_Preview
+    modality: audio
+    media_type: real
+    source_format: audiofolder
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Overtone Singing Preview - high-fidelity vocal dataset for overtone singing"
+
+  - name: naturelm-audio-training
+    path: EarthSpeciesProject/NatureLM-audio-training
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "NatureLM Audio Training - large bioacoustic audio-language dataset"
+
+  - name: audio2face-3d-dataset
+    path: nvidia/Audio2Face-3D-Dataset-v1.0.0-claire
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Audio2Face 3D Dataset - audio files with blendshape data for face animation"
+
+  - name: asr-leaderboard-longform
+    path: hf-audio/asr-leaderboard-longform
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "ASR Leaderboard Longform - Earnings-21, Earnings-22, TED-LIUM test sets"
+
+  - name: tigrinya-audio-transcription
+    path: Aregay01/audio_transcription_for_tigrinya-from-drive
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Tigrinya Audio Transcription - Tigrinya language speech dataset"
+
+  - name: audioset-2022
+    path: Fhrozen/AudioSet2K22
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioSet 2022 - updated AudioSet ontology dataset"
+
+  - name: linustechtips-audio
+    path: Whispering-GPT/linustechtips-transcript-audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Linus Tech Tips Transcript Audio - YouTube channel transcriptions"
+
+  - name: lex-fridman-podcast-audio
+    path: Whispering-GPT/lex-fridman-podcast-transcript-audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Lex Fridman Podcast Audio - podcast transcriptions"
+
+  - name: yannick-kilcher-audio
+    path: Whispering-GPT/yannick-kilcher-transcript-audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Yannic Kilcher Transcript Audio - YouTube channel transcriptions"
+
+  - name: sampled-audio4ft
+    path: Plachta/sampled_audio4ft
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Sampled Audio for Fine-tuning - audio samples for model fine-tuning"
+
+  - name: mgb2-audios-transcriptions
+    path: BelalElhossany/mgb2_audios_transcriptions
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MGB2 Audios Transcriptions - Arabic broadcast speech dataset"
+
+  - name: sovits-audio-preview
+    path: jiaheillu/sovits_audio_preview
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "SoVITS Audio Preview - voice conversion model preview dataset"
+
+  - name: nmsqa-audio
+    path: voidful/NMSQA_audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "NMSQA Audio - natural language question answering with audio"
+
+  - name: audio-diffusion-256
+    path: teticio/audio-diffusion-256
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Audio Diffusion 256 - mel spectrograms for audio diffusion models"
+
+  - name: audio-diffusion-instrumental-hiphop-256
+    path: teticio/audio-diffusion-instrumental-hiphop-256
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Audio Diffusion Instrumental Hip Hop 256 - instrumental hip hop spectrograms"
+
+  - name: multilingual-tts
+    path: malaysia-ai/Multilingual-TTS
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Multilingual TTS - 59,378 hours across 150+ languages for TTS pretraining"
+
+  - name: vieneu-tts-140h
+    path: pnnbao-ump/VieNeu-TTS-140h
+    modality: audio
+    media_type: real
+    source_format: arrow
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VieNeu TTS 140h - Vietnamese TTS dataset with phonemized transcripts"
+
+  - name: vieneu-tts-1000h
+    path: pnnbao-ump/VieNeu-TTS-1000h
+    modality: audio
+    media_type: real
+    source_format: arrow
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VieNeu TTS 1000h - large-scale Vietnamese TTS dataset"
+
+  - name: long-tts-eval
+    path: wcy1122/Long-TTS-Eval
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Long TTS Eval - benchmark for long-form text-to-speech evaluation"
+
+  - name: google-speech-commands-wav2vec2-960h
+    path: Hunzla/google-speech-commands-wav2vec2-960h
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Google Speech Commands dataset"
+
+  - name: vad-human-ava-speech
+    path: nccratliri/vad-human-ava-speech
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VAD Human AVA Speech - voice activity detection dataset"
+
+  - name: cretan-speech-corpus
+    path: ilsp/cretan-speech-corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Cretan Speech Corpus - Modern Greek Cretan dialect speech"
+
+  - name: hal-9000-speech
+    path: campwill/HAL-9000-Speech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "HAL 9000 Speech - audio recordings of HAL 9000 dialogue from 2001"
+
+  - name: lithuanian-speech
+    path: shunyalabs/lithuanian-speech-dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Lithuanian Speech Dataset - Lithuanian language speech"
+
+  - name: ast-speech-business
+    path: Vyvo/AST-Speech-Business
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AST Speech Business - business domain speech dataset"
+
+  - name: urdu-asr-data
+    path: adnankarim/urdu_asr_data
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Urdu ASR Data - Urdu language speech recognition"
+
+  - name: open-large-bengali-asr
+    path: SKNahin/open-large-bengali-asr-data
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Open Large Bengali ASR - 5000 hours Bengali audio data"
+
+  - name: highquality-nepali-female-asr
+    path: Firoj112/highquality_nepali_female_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "High Quality Nepali Female ASR - SLR43 subset Nepali speech"
+
+  - name: voice-kusanagi-nene
+    path: MomoyamaSawa/Voice-KusanagiNene
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Voice Kusanagi Nene - Japanese voice dataset for TTS"
+
+  - name: porjai-thai-voice-central
+    path: CMKL/Porjai-Thai-voice-dataset-central
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Porjai Thai Voice Central - 700 hours Central Thai, 40h per dialect"
+
+  - name: nigerian-common-voice
+    path: benjaminogbonna/nigerian_common_voice_dataset
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nigerian Common Voice - 158 hours across English, Hausa, Igbo, Yoruba"
+
+  - name: japanese-eroge-voice
+    path: NandemoGHS/Japanese-Eroge-Voice
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Japanese Eroge Voice - Japanese adult game voice dataset"
+
+  - name: common-voice-11-hi
+    path: regisss/common_voice_11_0_hi
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice 11 Hindi - Hindi language subset"
+
+  - name: reference-ai-voices-timbre
+    path: laion/reference_ai_voices_with_timbre_annotations
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Reference AI Voices with Timbre - 32K AI-generated voice samples"
+
+  - name: voices-celebrities
+    path: sdialog/voices-celebrities
+    modality: audio
+    media_type: synthetic
+    source_format: audiofolder
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Voices Celebrities - voice cloning dataset for TTS"
+
+  - name: cml-tts
+    path: ylacombe/cml-tts
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "CML TTS - CML-Multi-Lingual-TTS, 7 European languages"
+
+  - name: multilingual-tts-rashad
+    path: MohamedRashad/multilingual-tts
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Multilingual TTS - 16 languages TTS dataset"
+
+  - name: music-genre-dataset
+    path: ccmusic-database/music_genre
+    modality: audio
+    media_type: real
+    source_format: arrow
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Music Genre Dataset - 1,700 musical pieces from NetEase music"
+
+  - name: music-genres-small
+    path: lewtun/music_genres_small
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Music Genres Small - smaller version of music genres dataset"
+
+  - name: music-clips-50
+    path: yongjian/music-clips-50
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Music Clips 50 - 50 music clips of 3-5 seconds"
+
+  - name: epidemic-music
+    path: Chr0my/Epidemic_music
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Epidemic Music - music dataset from Epidemic Sound"
+
+  - name: musicqa
+    path: mu-llama/MusicQA
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "MusicQA - dataset for Music Understanding Large Language Model"
+
+  - name: music-audio-pseudo-captions
+    path: seungheondoh/music-audio-pseudo-captions
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Music Audio Pseudo Captions - pseudo captions for music and audio"
+
+  - name: music-wiki
+    path: seungheondoh/music-wiki
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Music Wiki - Wikipedia music section text dataset"
+
+  - name: audioset-music
+    path: seungheondoh/audioset-music
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AudioSet Music - AudioSet subset with 130 music categories"
+
+  - name: lp-musiccaps-mc
+    path: seungheondoh/LP-MusicCaps-MC
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LP MusicCaps MC - music captioning dataset"
+
+  - name: lp-musiccaps-msd
+    path: seungheondoh/LP-MusicCaps-MSD
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LP MusicCaps MSD - Million Song Dataset version"
+
+  - name: lp-musiccaps-mtt
+    path: seungheondoh/LP-MusicCaps-MTT
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LP MusicCaps MTT - Music Theory Test version"
+
+  - name: music-caps-4sec-wave-type
+    path: mb23/music_caps_4sec_wave_type
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Music Caps 4sec Wave Type - 4-second MusicCaps clips"
+
+  - name: music-caps-4sec-classical
+    path: mb23/music_caps_4sec_wave_type_classical
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Music Caps 4sec Classical - classical music subset"
+
+  - name: nexdata-american-english-mobile
+    path: Nexdata/American_English_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata American English Mobile - 349 speakers mobile phone recordings"
+
+  - name: nexdata-north-american-english
+    path: Nexdata/North_American_English_Speech_Data_by_Mobile_Phone_and_PC
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata North American English - mobile phone and PC recordings"
+
+  - name: nexdata-american-english-dialogue
+    path: Nexdata/American_English_Natural_Dialogue_Speech_Data
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata American English Dialogue - 1000 hours conversational speech"
+
+  - name: nexdata-german-conversational
+    path: Nexdata/German_Conversational_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata German Conversational - mobile phone conversational speech"
+
+  - name: nexdata-vietnamese-conversational
+    path: Nexdata/Vietnamese_Conversational_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Vietnamese Conversational - mobile phone conversational speech"
+
+  - name: nexdata-french-conversational
+    path: Nexdata/French_Conversational_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata French Conversational - mobile phone conversational speech"
+
+  - name: nexdata-spanish-conversational
+    path: Nexdata/Spanish_Conversational_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Spanish Conversational - mobile phone conversational speech"
+
+  - name: nexdata-hindi-conversational
+    path: Nexdata/Hindi_Conversational_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Hindi Conversational - mobile phone conversational speech"
+
+  - name: nexdata-british-english-mobile
+    path: Nexdata/British_English_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata British English Mobile - 831 hours mobile telephony speech"
+
+  - name: nexdata-italian-mobile
+    path: Nexdata/Italian_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Italian Mobile - mobile phone speech data"
+
+  - name: nexdata-chinese-children-microphone
+    path: Nexdata/Chinese_Children_Speech_Data_by_Microphone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Chinese Children Microphone - children speech recordings"
+
+  - name: nexdata-chinese-speaking-english
+    path: Nexdata/Chinese_Speaking_English_Speech_Data_by_Mobile_phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Chinese Speaking English - Chinese speakers speaking English"
+
+  - name: nexdata-japanese-mobile-reading
+    path: Nexdata/Japanese_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Japanese Mobile Reading - mobile phone reading speech"
+
+  - name: nexdata-korean-mobile-reading
+    path: Nexdata/Korean_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Korean Mobile Reading - mobile phone reading speech"
+
+  - name: nexdata-british-children-microphone
+    path: Nexdata/British_Children_Speech_Data_by_Microphone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata British Children Microphone - 201 children speech recordings"
+
+  - name: nexdata-mixed-chinese-english
+    path: Nexdata/Mixed_Speech_with_Chinese_and_English_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Mixed Chinese English - code-switching speech dataset"
+
+  - name: nexdata-taiwan-mandarin-mobile
+    path: Nexdata/Taiwan_Mandarin_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Taiwan Mandarin Mobile - Taiwan Mandarin speech"
+
+  - name: nexdata-german-mobile-reading
+    path: Nexdata/German_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata German Mobile Reading - 327 German native speakers"
+
+  - name: nexdata-european-portuguese-mobile
+    path: Nexdata/European_Portuguese_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata European Portuguese Mobile - 986 hours Portuguese speech"
+
+  - name: nexdata-italian-mobile-reading
+    path: Nexdata/Italian_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Italian Mobile Reading - mobile phone reading speech"
+
+  - name: nexdata-thai-mobile-reading
+    path: Nexdata/Thai_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Thai Mobile Reading - mobile phone reading speech"
+
+  - name: nexdata-indonesian-mobile-reading
+    path: Nexdata/Indonesian_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Indonesian Mobile Reading - mobile phone reading speech"
+
+  - name: nexdata-malay-mobile-reading
+    path: Nexdata/Malay_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Malay Mobile Reading - 156 speakers mobile telephony speech"
+
+  - name: nexdata-american-children-microphone
+    path: Nexdata/American_Children_Speech_Data_by_Microphone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata American Children Microphone - children speech recordings"
+
+  - name: nexdata-british-english-mobile-reading
+    path: Nexdata/British_English_Speech_Data_by_Mobile_Phone_Reading
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata British English Mobile Reading - 346 British English speakers"
+
+  - name: nexdata-spanish-mobile
+    path: Nexdata/Spanish_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Spanish Mobile - 435 hours Spanish speech"
+
+  - name: nexdata-brazilian-portuguese-mobile
+    path: Nexdata/Brazilian_Portuguese_Speech_Data_by_Mobile_Phone
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Nexdata Brazilian Portuguese Mobile - 1044 hours Brazilian Portuguese"
+
+  - name: clear
+    path: J3romee/CLEAR
+    modality: audio
+    media_type: real
+    source_format: flac
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "CLEAR - audio dataset"
+
+  - name: resd
+    path: Aniemore/resd
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "RESD - audio dataset"
+
+  - name: kinyarwanda-tts-dataset
+    path: mbazaNLP/kinyarwanda-tts-dataset
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Kinyarwanda TTS Dataset - 3992 clips Kinyarwanda TTS corpus"
+
+  - name: dani-voice
+    path: daniel-dona/dani-voice
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Dani Voice - voice dataset"
+
+  - name: emirati-dialect-shows-audio
+    path: eabayed/EmiratiDialictShowsAudioTranscription
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Emirati Dialect Shows Audio Transcription - Emirati dialect audio"
+
+  - name: earnings22
+    path: anton-l/earnings22
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Earnings22 - earnings call audio dataset"
+
+  - name: mini-voxceleb1
+    path: s3prl/mini_voxceleb1
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Mini VoxCeleb1 - smaller VoxCeleb1 subset"
+
+  - name: earnings22-robust
+    path: anton-l/earnings22_robust
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Earnings22 Robust - robust version of earnings dataset"
+
+  - name: thaigov-radio-audio
+    path: napatswift/thaigov-radio-audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Thai Government Radio Audio - Thai government radio audio dataset"
+
+  - name: common-language
+    path: speechbrain/common_language
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Language - 45.1 hours from CommonVoice, 45 languages"
+
+  - name: peoples-speech-v1
+    path: MLCommons/peoples_speech_v1.0
+    modality: audio
+    media_type: real
+    source_format: tar
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "People's Speech v1.0 - version 1.0 of People's Speech dataset"
+
+  - name: crowd-speech-africa
+    path: chrisjay/crowd-speech-africa
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Crowd Speech Africa - African languages crowd-sourced speech"
+
+  - name: sanskrit-asr-84
+    path: addy88/sanskrit-asr-84
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Sanskrit ASR 84 - Sanskrit speech recognition dataset"
+
+  - name: sanskrit-asr-84-eval
+    path: addy88/sanskrit-asr-84-eval
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Sanskrit ASR 84 Eval - evaluation subset"
+
+  - name: vystadial2016-asr
+    path: comodoro/vystadial2016_asr
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Vystadial 2016 ASR - Czech telephone conversations"
+
+  - name: multispeaker-tts-sinhala
+    path: keshan/multispeaker-tts-sinhala
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Multispeaker TTS Sinhala - multi-speaker Sinhala TTS dataset"
+
+  - name: malay-tts-yasmin
+    path: huseinzol05/Malay-TTS-Yasmin
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Malay TTS Yasmin - Malay TTS dataset with Yasmin voice"
+
+  - name: hungarian-single-speaker-tts
+    path: KTH/hungarian-single-speaker-tts
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Hungarian Single Speaker TTS - CSS10 Hungarian single speaker"
+
+  - name: bible-tts-hausa
+    path: vpetukhov/bible_tts_hausa
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Bible TTS Hausa - 80 hours single speaker Hausa TTS"
+
+  - name: indic_tts_ml
+    path: thennal/indic_tts_ml
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Indic TTS Malayalam - Malayalam subset of Indic TTS Corpus"
+
+  - name: artur-studio-tts
+    path: ppisljar/artur_studio_tts
+    modality: audio
+    media_type: real
+    source_format: t.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Artur Studio TTS - 40 hours Slovenian studio recording"
+
+  - name: igor-gofman-tts
+    path: cwiz/igor-gofman-tts
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Igor Gofman TTS - 2522 transcribed audio files"
+
+  - name: sayoko-tts-corpus
+    path: bandad/sayoko-tts-corpus
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Sayoko TTS Corpus - Japanese voice corpus"
+
+  - name: umamusume-voice-text-pairs
+    path: Plachta/Umamusume-voice-text-pairs
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Umamusume Voice Text Pairs - Japanese game voice dataset"
+
+  - name: german-common-voice-processed
+    path: flax-community/german-common-voice-processed
+    modality: audio
+    media_type: real
+    source_format: arrow
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "German Common Voice Processed - processed German subset"
+
+  - name: ar-common-voice-processed
+    path: nouamanetazi/ar_common_voice_processed
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Arabic Common Voice Processed - processed Arabic subset"
+
+  - name: ht-voice-dataset
+    path: nucklehead/ht-voice-dataset
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Haitian Creole Voice Dataset - 7+ hours Haitian Creole speech"
+
+  - name: common-voice-turkish-processed
+    path: patrickvonplaten/common_voice_processed_turkish
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Turkish Processed - processed Turkish subset"
+
+  - name: common-voice-urdu
+    path: m-aliabbas/common_voice_urdu
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Urdu - Urdu language subset"
+
+  - name: common-voice-urdu1
+    path: m-aliabbas/common_voice_urdu1
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Urdu 1 - Urdu subset variant"
+
+  - name: ur-common-voice-8
+    path: hadiqa123/ur_Common_voice_8_0
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Urdu 8 - Urdu subset from CV 8"
+
+  - name: common-voice-11-kk
+    path: Shirali/common_voice_11_0_kk
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice 11 Kazakh - Kazakh language subset"
+
+  - name: common-voice-11-id-filtered
+    path: evanarlian/common_voice_11_0_id_filtered
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice 11 Indonesian Filtered - filtered Indonesian subset"
+
+  - name: common-voice-11-processed
+    path: illuin/common_voice_11_0_processed
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice 11 Processed - processed Common Voice 11"
+
+  - name: preprocessed-jsut-jsss-css10-common-voice-11
+    path: vumichien/preprocessed_jsut_jsss_css10_common_voice_11
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Preprocessed JSUT JSSS CSS10 Common Voice 11 - combined Japanese datasets"
+
+  - name: preprocessed-jsut-jsss-css10-fleurs-common-voice-11
+    path: vumichien/preprocessed_jsut_jsss_css10_fleurs_common_voice_11
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Preprocessed JSUT JSSS CSS10 FLEURS Common Voice 11 - with FLEURS"
+
+  - name: common-voice-test3k
+    path: DTU54DL/common-voice-test3k
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Test 3k - 3kHz test subset"
+
+  - name: malromur-asr
+    path: language-and-voice-lab/malromur_asr
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Malromur ASR - open source Icelandic voice samples corpus"
+
+  - name: samromur-asr
+    path: language-and-voice-lab/samromur_asr
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Samromur ASR - Samromur Icelandic Speech 1.0"
+
+  - name: althingi-asr
+    path: language-and-voice-lab/althingi_asr
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Althingi ASR - 542 hours Icelandic Parliament speeches 2005-2016"
+
+  - name: babelbox-voice
+    path: babelbox/babelbox_voice
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Babelbox Voice - Swedish speech for ASR and dictation"
+
+  - name: mozilla-common-voice-en-test-noise
+    path: joefox/Mozilla_Common_Voice_en_test_noise
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Mozilla Common Voice EN Test Noise - noise-augmented test set"
+
+  - name: mozilla-common-voice-ru-test-noise
+    path: joefox/Mozilla_Common_Voice_ru_test_noise
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Mozilla Common Voice RU Test Noise - noise-augmented Russian test"
+
+  - name: common-voice-minnan
+    path: jiyuntu/common_voice_minnan
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Minnan - Minnan (Southern Min) language subset"
+
+  - name: common-voice-sentence-similarity
+    path: charsiu/Common_voice_sentence_similarity
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Sentence Similarity - sentence similarity dataset"
+
+  - name: common-voice-hidden-units
+    path: charsiu/Common_voice_hidden_units
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Hidden Units - hidden unit representations"
+
+  - name: wav2vec2-common-voice-accents
+    path: willcai/wav2vec2_common_voice_accents
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Wav2Vec2 Common Voice Accents - accent classification dataset"
+
+  - name: wav2vec2-common-voice-accents-3
+    path: willcai/wav2vec2_common_voice_accents_3
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Wav2Vec2 Common Voice Accents 3 - extended accents dataset"
+
+  - name: common-voice-large
+    path: vumichien/common_voice_large
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Large - large Common Voice subset"
+
+  - name: common-voice-large-jsut-jsss-css10
+    path: vumichien/common_voice_large_jsut_jsss_css10
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Large JSUT JSSS CSS10 - combined Japanese datasets"
+
+  - name: librispeech40
+    path: Voicemod/librispeech40
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LibriSpeech 40 - LibriSpeech subset"
+
+  - name: librispeech_asr_dummy_noise-noise
+    path: sanchit-gandhi/librispeech_asr_dummy_noise-noise
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LibriSpeech ASR Dummy - 20 samples per split for testing"
+
+  - name: librispeech_asr-prompted
+    path: distil-whisper/librispeech_asr-prompted
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "LibriSpeech ASR Distil Whisper - for distil-whisper training"
+
+  - name: english-librispeech-asr-processed
+    path: jeapaul/english_librispeech_asr_processed
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "English LibriSpeech ASR Processed - processed English LibriSpeech"
+
+  - name: fleurs-asr-processed-audio
+    path: RASMUS/fleurs_asr_processed_audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "FLEURS ASR Processed Audio - processed FLEURS audio"
+
+  - name: voxpopuli-fi-processed-audio
+    path: RASMUS/voxpopuli_fi_processed_audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VoxPopuli Finnish Processed Audio - processed Finnish VoxPopuli"
+
+  - name: common-voice-train-processed-audio
+    path: RASMUS/common_voice_train_processed_audio
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Common Voice Train Processed Audio - processed training audio"
+
+  - name: alvenir-asr-da-eval
+    path: Alvenir/alvenir_asr_da_eval
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Alvenir ASR Danish Eval - Danish ASR evaluation dataset"
+
+  - name: openslr-nepali-asr-cleaned
+    path: spktsagar/openslr-nepali-asr-cleaned
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "OpenSLR Nepali ASR Cleaned - cleaned Nepali ASR from OpenSLR"
+
+  - name: kinyarwanda-english-multilingual-asr
+    path: molamin/Kinyarwanda_Engligh_Multilingual_ASR
+    modality: audio
+    media_type: real
+    source_format: qav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Kinyarwanda English Multilingual ASR - 3000 hours multilingual training"
+
+  - name: telugu-asr-corpus-eswar
+    path: eswardivi/Telugu_ASR_corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Telugu ASR Corpus Eswar - Telugu speech recognition"
+
+  - name: telugu-asr-bnr
+    path: bnriiitb/telugu_asr
+    modality: audio
+    media_type: real
+    source_format: audiofolder
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Telugu ASR BNR - Telugu ASR dataset"
+
+  - name: ravnursson-asr
+    path: carlosdanielhernandezmena/ravnursson_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "RAVNURSSON ASR - Faroese speech and transcripts corpus"
+
+  - name: dummy-corpus-asr-es
+    path: carlosdanielhernandezmena/dummy_corpus_asr_es
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Dummy Corpus ASR Spanish - example Spanish ASR corpus"
+
+  - name: toy-corpus-asr-es
+    path: carlosdanielhernandezmena/toy_corpus_asr_es
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Toy Corpus ASR Spanish - small Spanish ASR corpus for testing"
+
+  - name: asr-ccantcsc
+    path: ziyou-li/ASR-CCANTCSC
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "ASR CCANTCSC - Chinese ASR dataset"
+
+  - name: medical-asr-en
+    path: jarvisx17/Medical-ASR-EN
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Medical ASR English - English medical domain ASR"
+
+  - name: ASR_primock_data
+    path: enankobh1/ASR_primock_data
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "ASR Enankobh - general ASR dataset"
+
+  - name: noisy-join-mixed-asr
+    path: mesolitica/noisy-join-mixed-asr
+    modality: audio
+    media_type: real
+    source_format: webdataset
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Noisy Join Mixed ASR - multilingual mixed ASR with noise"
+
+  - name: asrdata-corner
+    path: corner/AsrData
+    modality: audio
+    media_type: real
+    source_format: audiofolder
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "AsrData Corner - ASR dataset"
+
+
+  # Audio Dataset Configurations
+# 
+# media_per_archive: -1 = extract ALL media from each archive
+# archives_per_dataset: -1 = download ALL archives from dataset
+
+  - name: voxceleb2
+    path: Reverb/voxceleb2
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "VoxCeleb2 - extended celebrity voice dataset"
+
+  # 1600+ languages (Facebook research)
+

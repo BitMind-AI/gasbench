@@ -220,6 +220,35 @@ datasets:
     archives_per_dataset: 10
     notes: "German TTS voice - Thorsten"
 
+  - name: samromur_children
+    path: language-and-voice-lab/samromur_children
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+  
+  - name: raddromur_asr
+    path: language-and-voice-lab/raddromur_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    
+  - name: ShiftySpeech
+    path: ash56/ShiftySpeech
+    modality: audio
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["TTS"]
+    notes: "3000 hours of synthetic speech from 7 domains, 6 TTS systems, 12 vocoders, and 3 languages."
+
+  
+  
+
   # ============================================================================
   # COMMENTED OUT - Need special handling or verification
   # ============================================================================

@@ -325,14 +325,6 @@ datasets:
     media_per_archive: 5
     archives_per_dataset: 200
 
-  - name: sekai
-    path: ONE-Lab/sekai
-    modality: video
-    media_type: real
-    source_format: tar.gz
-    media_per_archive: 1000
-    archives_per_dataset: 1
-
   - name: synthetic-emotions
     path: aadityaubhat/synthetic-emotions
     modality: video
@@ -375,15 +367,6 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: ["controlable_videos_upload"]
-
-  - name: senorita-grounding
-    path: SENORITADATASET/Senorita
-    modality: video
-    media_type: synthetic
-    source_format: tar.gz
-    media_per_archive: 250
-    archives_per_dataset: 2
-    include_paths: ["grounding_upload"]
 
   - name: senorita-inpainting
     path: SENORITADATASET/Senorita

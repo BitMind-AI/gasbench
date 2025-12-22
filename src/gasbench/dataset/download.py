@@ -1050,14 +1050,30 @@ def _process_parquet(
                     or next((c for c in sample_df.columns if "image" in c.lower()), None)
                 )
                 media_cols = [media_col] if media_col else []
+
         elif dataset.modality == "audio":
-            candidates = ["audio", "bytes", "content", "data", "wav", "mp3"]
-            media_col = (
-                next((c for c in sample_df.columns if c.lower() == "audio"), None)
-                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)
-                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates)), None)
-            )
-            media_cols = [media_col] if media_col else []
+            audio_columns = getattr(dataset, "audio_columns", None)
+            if audio_columns:
+                media_cols = [c for c in audio_columns if c in sample_df.columns]
+                if not media_cols:
+                    logger.warning(
+                        f"Specified audio columns {audio_columns} not found in {source_path}"
+                    )
+                    return
+            else:
+                candidates = ["audio", "bytes", "content", "data", "wav", "mp3"] + dataset.audio_columns
+
+                # Prefer an exact "audio" column if present, but otherwise take *all* matches
+                exact = [c for c in sample_df.columns if c.lower() == "audio"]
+                if exact:
+                    media_cols = exact
+                else:
+                    media_cols = [
+                        c
+                        for c in sample_df.columns
+                        if "_id" not in c.lower()
+                        and any(k in c.lower() for k in candidates)
+                    ]
         else:
             candidates = ["video", "bytes", "content", "data"]
             media_col = (

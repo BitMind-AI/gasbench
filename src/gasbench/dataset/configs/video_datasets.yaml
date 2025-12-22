@@ -300,3 +300,142 @@ datasets:
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
+
+  - name: soccernet-10s-5class
+    path: SushantGautam/SoccerNet-10s-5Class
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name:  sports-qa
+    path: HopLeeTop/Sports-QA
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: egocentric-100k
+    path: builddotai/Egocentric-100K
+    modality: video
+    media_type: real
+    source_format: tar
+    media_per_archive: 5
+    archives_per_dataset: 200
+
+  - name: sekai
+    path: ONE-Lab/sekai
+    modality: video
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: synthetic-emotions
+    path: aadityaubhat/synthetic-emotions
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: open-vfx
+    path: sophiaa/Open-VFX
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: lovora-real
+    path: cz-5f/LoVoRA
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: -1
+    include_paths: ["src_video"]
+  
+  - name: lovora-fake
+    path: cz-5f/LoVoRA
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: -1
+    include_paths: ["tar_video"]
+  
+  - name: senorita-controllable-videos
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["controlable_videos_upload"]
+
+  - name: senorita-grounding
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["grounding_upload"]
+
+  - name: senorita-inpainting
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["inpainting_upload"]
+
+  - name: senorita-local-style-transfer
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["local_style_transfer_upload"]
+
+  - name: senorita-obj-removal-videos
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["obj_removal_videos_upload", "obj_removal_videos_upload2"]
+
+  - name: senorita-obj-swap
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["obj_swap_upload"]
+
+  - name: senorita-outpainting
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["outpainting"]
+
+  - name: senorita-style-transfer
+    path: SENORITADATASET/Senorita
+    modality: video
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 250
+    archives_per_dataset: 2
+    include_paths: ["style_transfer_upload"]
+

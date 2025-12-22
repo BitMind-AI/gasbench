@@ -331,3 +331,56 @@ datasets:
     source_format: parquet
     media_per_archive: 1000
     archives_per_dataset: 1
+
+  - name: idnet-2025
+    path: cactuslab/IDNet-2025
+    modality: image
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 500
+    archives_per_dataset: 2
+    exclude_paths: ["models.tar.gz", "ALB.tar.gz", "SRB.tar.gz", "SRB_scanned.tar.gz", "LVA.tar.gz"]
+
+  - name: retrievatar
+    path: CausalLM/Retrievatar
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 5
+
+  - name: medvision
+    path: YongchengYAO/MedVision
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: ["Datasets"]
+
+  - name: food101
+    path: ethz/food101
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: mmmu
+    path: MMMU/MMMU
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+
+  - name: pubmedvision
+    path: FreedomIntelligence/PubMedVision
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+  
+  
+

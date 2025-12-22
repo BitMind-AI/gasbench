@@ -1,4 +1,8 @@
 # Image Dataset Configurations
+#
+# data_columns: specify column name(s) containing media bytes in parquet files
+#   - Use when the column is not auto-detected (e.g., "src_img" instead of "image")
+#   - Can specify multiple columns to extract from each row
 
 benchmark_size: 40000
 
@@ -305,7 +309,7 @@ datasets:
     source_format: parquet
     media_per_archive: 200
     archives_per_dataset: 5
-    image_columns: ["src_img", "tgt_img"]  # Use both columns
+    data_columns: ["src_img", "tgt_img"]
     notes: "Video-derived images stored in both src_img and tgt_img columns"
 
   - name: text-to-image-2m

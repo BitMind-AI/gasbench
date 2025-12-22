@@ -1,4 +1,8 @@
 # Video Dataset Configurations
+#
+# data_columns: specify column name(s) containing media bytes in parquet files
+#   - Use when the column is not auto-detected (e.g., "video_bytes" instead of "video")
+#   - Can specify multiple columns to extract from each row
 
 benchmark_size: 17500
 

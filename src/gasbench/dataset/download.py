@@ -1061,7 +1061,7 @@ def _process_parquet(
                     )
                     return
             else:
-                candidates = ["audio", "bytes", "content", "data", "wav", "mp3"] + dataset.audio_columns
+                candidates = ["audio", "bytes", "content", "data", "wav", "mp3"] + list(getattr(dataset, "audio_columns", []))
 
                 # Prefer an exact "audio" column if present, but otherwise take *all* matches
                 exact = [c for c in sample_df.columns if c.lower() == "audio"]

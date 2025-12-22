@@ -511,6 +511,7 @@ def load_holdout_datasets_from_yaml(
                 archives_per_dataset=dataset_dict.get("archives_per_dataset", -1),
                 include_paths=dataset_dict.get("include_paths", []),
                 exclude_paths=dataset_dict.get("exclude_paths", []),
+                data_columns=dataset_dict.get("data_columns"),
                 notes=dataset_dict.get("notes", ""),
             )
             configs.append(config)

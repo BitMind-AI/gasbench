@@ -386,11 +386,15 @@ def _discover_datasets(
         audio_datasets = discover_benchmark_audio_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
-                holdouts = load_holdout_datasets_from_yaml(holdout_config).get("audio", [])
+                logger.info(f"Loading holdout audio datasets from: {holdout_config}")
+                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("audio", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
+                logger.info(f"Loaded {len(holdouts)} holdout audio datasets")
                 audio_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout audio datasets: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
         datasets.extend(audio_datasets)
     
     return datasets

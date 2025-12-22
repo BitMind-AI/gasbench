@@ -2,6 +2,9 @@
 # 
 # media_per_archive: -1 = extract ALL media from each archive
 # archives_per_dataset: -1 = download ALL archives from dataset
+# data_columns: specify column name(s) containing media bytes in parquet files
+#   - Use when the column is not auto-detected (e.g., "output_audio" instead of "audio")
+#   - Can specify multiple columns to extract from each row
 
 benchmark_size: 30000
 
@@ -220,26 +223,28 @@ datasets:
     archives_per_dataset: 10
     notes: "German TTS voice - Thorsten"
 
-  # ============================================================================
-  # COMMENTED OUT - Need special handling or verification
-  # ============================================================================
-
-  # Mixed Real/Fake - need label column mapping
-  # - name: real-fake-voices-dataset2
-  #   path: WpythonW/real-fake-voices-dataset2
-  #   modality: audio
-  #   media_type: mixed
-  #   source_format: parquet
-
-  # - name: fake-or-real
-  #   path: adarsh09singh/fake-or-real
-  #   modality: audio
-  #   media_type: mixed
-  #   source_format: parquet
-
-  # Special column names (input_audio/output_audio)
-  # - name: soda-tts
-  #   path: robinysh/soda_tts
-  #   modality: audio
-  #   media_type: synthetic
-  #   source_format: parquet
+  - name: samromur_children
+    path: language-and-voice-lab/samromur_children
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+  
+  - name: raddromur_asr
+    path: language-and-voice-lab/raddromur_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    
+  - name: ShiftySpeech
+    path: ash56/ShiftySpeech
+    modality: audio
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["TTS"]
+    notes: "3000 hours of synthetic speech from 7 domains, 6 TTS systems, 12 vocoders, and 3 languages."

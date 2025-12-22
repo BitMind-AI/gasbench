@@ -86,6 +86,8 @@ class BenchmarkRunRecorder:
             "batch_id": int(batch_id),
             "batch_size": int(batch_size),
             "sample_seed": None if sample_seed is None else int(sample_seed),
+            "skip_reason": None,
+            "error_message": None,
         }
 
         row.update(
@@ -124,11 +126,28 @@ class BenchmarkRunRecorder:
             "run_id": self.run_id,
             "run_started_at": self.run_started_at,
             "mode": self.mode,
-            "media_type": sample.get("media_type"),
+            "modality": self.modality,
+            "model_name": self.model_name,
+            "input_name": self.model_input_name,
+            "target_height": self.target_height,
+            "target_width": self.target_width,
+            "augment_level": self.augment_level,
+            "crop_prob": self.crop_prob,
             "dataset_name": dataset_name,
             "iteration_index": int(sample_index),
+            "media_type": sample.get("media_type"),
             "status": "skipped",
+            "label": None,
+            "predicted": None,
+            "probs": None,
+            "correct": None,
+            "inference_time_ms": None,
+            "batch_inference_time_ms": None,
+            "batch_id": None,
+            "batch_size": None,
+            "sample_seed": None,
             "skip_reason": reason,
+            "error_message": None,
         }
         row.update(
             {
@@ -138,6 +157,12 @@ class BenchmarkRunRecorder:
                 "archive_filename": sample.get("archive_filename"),
                 "path_in_archive": sample.get("member_path"),
                 "source_file": sample.get("source_file"),
+                "iso_week": sample.get("iso_week"),
+                "cache_relpath": sample.get("cache_relpath"),
+                "generator_hotkey": sample.get("generator_hotkey"),
+                "generator_uid": sample.get("generator_uid"),
+                "generator_name": sample.get("generator_name"),
+                "generator_model": sample.get("model_name"),
             }
         )
         row["sample_id"] = build_sample_id(row)
@@ -157,13 +182,29 @@ class BenchmarkRunRecorder:
             "run_id": self.run_id,
             "run_started_at": self.run_started_at,
             "mode": self.mode,
-            "media_type": sample.get("media_type"),
+            "modality": self.modality,
+            "model_name": self.model_name,
+            "input_name": self.model_input_name,
+            "target_height": self.target_height,
+            "target_width": self.target_width,
+            "augment_level": self.augment_level,
+            "crop_prob": self.crop_prob,
             "dataset_name": dataset_name,
             "iteration_index": int(sample_index),
+            "media_type": sample.get("media_type"),
             "status": "error",
+            "label": None,
+            "predicted": None,
+            "probs": None,
+            "correct": None,
+            "inference_time_ms": None,
+            "batch_inference_time_ms": None,
+            "batch_id": None,
+            "batch_size": None,
+            "sample_seed": None,
+            "skip_reason": None,
             "error_message": error_message[:300],
         }
-        
         row.update(
             {
                 "source_kind": sample.get("source_kind"),
@@ -172,6 +213,12 @@ class BenchmarkRunRecorder:
                 "archive_filename": sample.get("archive_filename"),
                 "path_in_archive": sample.get("member_path"),
                 "source_file": sample.get("source_file"),
+                "iso_week": sample.get("iso_week"),
+                "cache_relpath": sample.get("cache_relpath"),
+                "generator_hotkey": sample.get("generator_hotkey"),
+                "generator_uid": sample.get("generator_uid"),
+                "generator_name": sample.get("generator_name"),
+                "generator_model": sample.get("model_name"),
             }
         )
         row["sample_id"] = build_sample_id(row)

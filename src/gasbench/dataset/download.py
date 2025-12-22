@@ -1034,30 +1034,33 @@ def _process_parquet(
         else:
             sample_df = df.sample(n=min(num_items, len(df)), random_state=seed)
 
-        if dataset.modality == "image":
-            image_columns = getattr(dataset, 'image_columns', None)
-            if image_columns:
-                media_cols = [c for c in image_columns if c in sample_df.columns]
-                if not media_cols:
-                    logger.warning(
-                        f"Specified image columns {image_columns} not found in {source_path}"
-                    )
-                    return
-            else:
-                media_col = (
-                    next((c for c in sample_df.columns if c.lower() == "image"), None)
-                    or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
-                    or next((c for c in sample_df.columns if "image" in c.lower()), None)
+        data_columns = getattr(dataset, 'data_columns', None)
+        if data_columns:
+            media_cols = [c for c in data_columns if c in sample_df.columns]
+            if not media_cols:
+                logger.warning(
+                    f"Specified data_columns {data_columns} not found in {source_path}"
                 )
-                media_cols = [media_col] if media_col else []
-        elif dataset.modality == "audio":
-            candidates = ["audio", "bytes", "content", "data", "wav", "mp3"]
+                return
+        elif dataset.modality == "image":
             media_col = (
-                next((c for c in sample_df.columns if c.lower() == "audio"), None)
-                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates) and "_id" not in c.lower()), None)
-                or next((c for c in sample_df.columns if any(k in c.lower() for k in candidates)), None)
+                next((c for c in sample_df.columns if c.lower() == "image"), None)
+                or next((c for c in sample_df.columns if "image" in c.lower() and "_id" not in c.lower()), None)
+                or next((c for c in sample_df.columns if "image" in c.lower()), None)
             )
             media_cols = [media_col] if media_col else []
+        elif dataset.modality == "audio":
+            candidates = ["audio", "bytes", "content", "data", "wav", "mp3"]
+            exact = [c for c in sample_df.columns if c.lower() == "audio"]
+            if exact:
+                media_cols = exact
+            else:
+                media_cols = [
+                    c
+                    for c in sample_df.columns
+                    if "_id" not in c.lower()
+                    and any(k in c.lower() for k in candidates)
+                ]
         else:
             candidates = ["video", "bytes", "content", "data"]
             media_col = (

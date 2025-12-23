@@ -408,15 +408,6 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["obj_swap_upload"]
 
-  - name: senorita-outpainting
-    path: SENORITADATASET/Senorita
-    modality: video
-    media_type: synthetic
-    source_format: tar.gz
-    media_per_archive: 250
-    archives_per_dataset: 2
-    include_paths: ["outpainting"]
-
   - name: senorita-style-transfer
     path: SENORITADATASET/Senorita
     modality: video

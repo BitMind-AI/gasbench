@@ -404,7 +404,7 @@ class DatasetIterator:
 
         new_samples = sample_count - initial_sample_count
 
-        if new_samples > 0:
+        if new_samples > 0 or replacing_samples:
             save_dataset_cache_files(
                 self.config,
                 week_dir,
@@ -422,12 +422,12 @@ class DatasetIterator:
                     f"Week {week_str}: Downloaded {new_samples} new samples (replaced old samples). "
                     f"Total: {sample_count} samples, {len(downloaded_archives)} archives"
                 )
-            else:
+            elif new_samples > 0:
                 logger.info(
                     f"Week {week_str}: Downloaded {new_samples} new samples. "
                     f"Total: {sample_count} samples, {len(downloaded_archives)} archives"
                 )
-        elif sample_count < 0:
+        elif sample_count <= 0:
             logger.warning(f"No samples cached for week {week_str}")
 
     def _download_and_cache(self):

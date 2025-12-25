@@ -754,6 +754,8 @@ def _process_tar_with_metadata(
     """
     archive_basename = archive_path.name
 
+    archive_basename_normalized = re.sub(r"\.tar_[a-f0-9]{8}\.gz$", ".tar.gz", archive_basename)
+
     try:
         with tarfile.open(archive_path, mode="r:*") as archive:
             valid_exts = (
@@ -807,8 +809,7 @@ def _process_tar_with_metadata(
                     sample["archive_filename"] = archive_basename
                     sample["member_path"] = member.name
 
-                    # Look up metadata from parquet
-                    metadata_key = (archive_basename, member.name)
+                    metadata_key = (archive_basename_normalized, member.name)
                     if metadata_key in metadata_map:
                         meta = metadata_map[metadata_key]
                         for k, v in meta.items():

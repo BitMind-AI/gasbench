@@ -26,6 +26,9 @@ def calculate_target_weeks(num_weeks: Optional[int] = None) -> List[str]:
     Returns:
         List of ISO week strings (e.g., ["2025W39", "2025W40"])
     """
+    # TEMP PATCH
+    year_offset = -1
+    
     target_weeks = []
     now = datetime.now()
     
@@ -33,12 +36,11 @@ def calculate_target_weeks(num_weeks: Optional[int] = None) -> List[str]:
         for i in range(num_weeks):
             date_offset = now - timedelta(weeks=i)
             year, week, _ = date_offset.isocalendar()
-            week_str = f"{year}W{week:02d}"
+            week_str = f"{year + year_offset}W{week:02d}"
             target_weeks.append(week_str)
     else:
-        # Default to current week only
         year, week, _ = now.isocalendar()
-        week_str = f"{year}W{week:02d}"
+        week_str = f"{year + year_offset}W{week:02d}"
         target_weeks = [week_str]
     
     target_weeks.sort()
@@ -270,9 +272,12 @@ def filter_files_by_current_week(files: List[str]) -> List[str]:
     Returns:
         Filtered list of files from current week
     """
+    # TEMP PATCH: bitmind-subnet is uploading 2026 data with year 2025
+    year_offset = -1
+    
     now = datetime.now()
     current_year, current_week, _ = now.isocalendar()
-    current_week_str = f"{current_year}W{current_week:02d}"
+    current_week_str = f"{current_year + year_offset}W{current_week:02d}"
     logger.info(f"Current ISO week: {current_week_str}")
     
     current_week_files = []
@@ -303,13 +308,16 @@ def filter_files_by_recent_weeks(files: List[str], num_weeks: int) -> List[str]:
     Returns:
         Filtered list of files from recent weeks
     """
+    # TEMP PATCH: bitmind-subnet is uploading 2026 data with year 2025
+    year_offset = -1
+    
     now = datetime.now()
     
     recent_weeks = []
     for i in range(num_weeks):
         date_offset = now - timedelta(weeks=i)
         year, week, _ = date_offset.isocalendar()
-        week_str = f"{year}W{week:02d}"
+        week_str = f"{year + year_offset}W{week:02d}"
         recent_weeks.append(week_str)
     
     logger.info(f"Filtering to last {num_weeks} weeks: {', '.join(recent_weeks)}")

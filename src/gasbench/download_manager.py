@@ -421,7 +421,11 @@ def _filter_datasets_by_name(
     
     for dataset in datasets:
         dataset_name_lower = dataset.name.lower()
-        if any(filter_pattern in dataset_name_lower for filter_pattern in filters_lower):
+        original_name_lower = (dataset.original_name or "").lower()
+        if any(
+            filter_pattern in dataset_name_lower or filter_pattern in original_name_lower
+            for filter_pattern in filters_lower
+        ):
             filtered.append(dataset)
     
     return filtered

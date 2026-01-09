@@ -384,6 +384,7 @@ datasets:
     source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
+    image_columns: ["base_image"]
 
   - name: bananamark-dataset
     path: Rapidata/bananamark-dataset

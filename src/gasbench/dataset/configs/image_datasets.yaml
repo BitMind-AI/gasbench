@@ -377,5 +377,28 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
   
-  
+  - name: MMMG
+    path: MMMGBench/MMMG
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
 
+  - name: bananamark-dataset
+    path: Rapidata/bananamark-dataset
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    image_columns: ["image1", "image2"]
+
+  - name: wikiart
+    path: huggan/wikiart
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 4
+  

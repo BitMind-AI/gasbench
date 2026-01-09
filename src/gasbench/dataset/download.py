@@ -1352,22 +1352,15 @@ def download_files(
 
     max_workers = min(max_workers, len(urls)) if urls else 1
 
-    if len(urls) > 1:
-        logger.info(
-            f"Downloading {len(urls)} files with {max_workers} parallel workers..."
-        )
+    logger.debug(f"Downloading {len(urls)} files with {max_workers} parallel workers")
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(download_url, url): url for url in urls}
 
-        completed = 0
         for future in as_completed(futures):
             result = future.result()
             if result:
                 downloaded_files.append(result)
-            completed += 1
-            if len(urls) > 10 and completed % 10 == 0:
-                logger.info(f"  Progress: {completed}/{len(urls)} files downloaded")
 
     return downloaded_files
 
@@ -1424,7 +1417,7 @@ def download_single_file(
         filename = f"{name}_{url_hash}{ext}"
         filepath = output_dir / filename
 
-        logger.info(f"Downloading {url}")
+        logger.debug(f"Downloading {url}")
         headers = {}
         if hf_token and "huggingface.co" in url:
             headers["Authorization"] = f"Bearer {hf_token}"
@@ -1435,41 +1428,19 @@ def download_single_file(
             return None
 
         total_size = int(response.headers.get("content-length", 0))
-        logger.info(f"Writing to {filepath} (size: {total_size/(1024*1024):.1f} MB)")
 
-        downloaded = 0
-        last_log_mb = 0
         with open(filepath, "wb") as f:
-            for chunk in response.iter_content(
-                chunk_size=max(chunk_size, 1024 * 1024)
-            ):  # Use at least 1MB chunks
+            for chunk in response.iter_content(chunk_size=max(chunk_size, 1024 * 1024)):
                 if chunk:
                     f.write(chunk)
-                    downloaded += len(chunk)
-                    current_mb = downloaded / (1024 * 1024)
-                    if current_mb - last_log_mb >= 100:
-                        if total_size > 0:
-                            pct = (downloaded / total_size) * 100
-                            logger.info(
-                                f"Progress: {current_mb:.0f}MB / {total_size/(1024*1024):.0f}MB ({pct:.1f}%)"
-                            )
-                        else:
-                            logger.info(f"Downloaded: {current_mb:.0f}MB")
-                        last_log_mb = current_mb
 
-        # Verify download completeness
         if total_size > 0:
             actual_size = filepath.stat().st_size
             if actual_size != total_size:
                 logger.error(
-                    f"❌ Download incomplete: expected {total_size} bytes, got {actual_size} bytes"
+                    f"Download incomplete: expected {total_size} bytes, got {actual_size} bytes"
                 )
                 return None
-            logger.info(
-                f"✅ Download verified: {filename} ({actual_size/(1024*1024):.1f} MB)"
-            )
-        else:
-            logger.info(f"✅ Downloaded: {filename}")
 
         return filepath
 

@@ -402,4 +402,12 @@ datasets:
     source_format: parquet
     media_per_archive: 250
     archives_per_dataset: 4
+
+  - name: OpenScene
+    path: OpenDriveLab/OpenScene
+    modality: video
+    media_type: real
+    source_format: tgz
+    media_per_archive: 500
+    archives_per_dataset: 2
   

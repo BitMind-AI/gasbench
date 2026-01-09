@@ -432,11 +432,12 @@ datasets:
     source_format: mp4
     media_per_archive: 1000
     archives_per_dataset: -1
-  
-  - name: OpenScene
-    path: OpenDriveLab/OpenScene
+
+  - name: humanoid-everyday
+    path: USC-GVL/humanoid-everyday
     modality: video
     media_type: real
-    source_format: tgz
-    media_per_archive: 500
-    archives_per_dataset: 2
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: -1
+    include_paths: ["videos"]

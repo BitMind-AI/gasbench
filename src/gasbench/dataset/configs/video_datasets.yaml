@@ -4,7 +4,7 @@
 #   - Use when the column is not auto-detected (e.g., "video_bytes" instead of "video")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 17500
+benchmark_size: 20000
 
 datasets:
   - name: gasstation-generated-videos

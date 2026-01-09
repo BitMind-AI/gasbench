@@ -4,7 +4,7 @@
 #   - Use when the column is not auto-detected (e.g., "src_img" instead of "image")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 40000
+benchmark_size: 50000
 
 datasets:
   - name: gasstation-generated-images

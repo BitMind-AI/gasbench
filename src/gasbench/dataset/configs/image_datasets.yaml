@@ -419,13 +419,3 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     exclude_paths: ["models.tar.gz", "ALB.tar.gz", "SRB.tar.gz", "SRB_scanned.tar.gz", "LVA.tar.gz"]
-
-  - name: text-to-image-2M
-    path: jackyhate/text-to-image-2M
-    modality: image
-    media_type: synthetic
-    source_format: tar
-    media_per_archive: 500
-    archives_per_dataset: 2
-    notes: "Text to Image 2M"
-  

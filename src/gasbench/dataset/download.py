@@ -131,6 +131,14 @@ def download_and_extract(
             exclude_paths = getattr(dataset, "exclude_paths", None)
             source = getattr(dataset, "source", "huggingface")
 
+            n_files = _calculate_files_to_download(
+                dataset,
+                dataset.source_format,
+                media_per_archive,
+                archives_per_dataset,
+            )
+            max_files_to_list = n_files if n_files > 0 else None
+
             filenames = _list_remote_dataset_files(
                 dataset.path,
                 dataset.source_format,
@@ -141,6 +149,7 @@ def download_and_extract(
                 exclude_paths,
                 source,
                 hf_token,
+                max_files=max_files_to_list,
             )
             if not filenames:
                 is_gasstation = "gasstation" in dataset.name.lower()
@@ -172,6 +181,7 @@ def download_and_extract(
                             exclude_paths,
                             source,
                             hf_token,
+                            max_files=max_files_to_list,
                         )
                         if filenames:
                             logger.info(
@@ -184,13 +194,6 @@ def download_and_extract(
                     return
 
             remote_paths = _get_download_urls(dataset.path, filenames, source)
-
-            n_files = _calculate_files_to_download(
-                dataset,
-                dataset.source_format,
-                media_per_archive,
-                archives_per_dataset,
-            )
 
             is_gasstation = "gasstation" in dataset.name.lower()
             to_download = _select_files_to_download(
@@ -370,6 +373,9 @@ def _select_files_to_download(
     return random.sample(urls, min(count, len(urls)))
 
 
+MAX_FILES_DEFAULT = 5000
+
+
 def _list_remote_dataset_files(
     dataset_path: str,
     source_format: str = ".parquet",
@@ -380,6 +386,7 @@ def _list_remote_dataset_files(
     exclude_paths: Optional[List[str]] = None,
     source: str = "huggingface",
     hf_token: Optional[str] = None,
+    max_files: Optional[int] = None,
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format and path patterns.
 
@@ -396,7 +403,10 @@ def _list_remote_dataset_files(
         include_paths: Only include files containing one of these path segments
         exclude_paths: Exclude files containing any of these path segments
         source: Source platform ("huggingface" or "modelscope")
+        max_files: Stop after collecting this many files (None uses MAX_FILES_DEFAULT)
     """
+    if max_files is None:
+        max_files = MAX_FILES_DEFAULT
     # Don't add "." prefix for special formats like "frames"
     if source_format != "frames" and not source_format.startswith("."):
         source_format = "." + source_format
@@ -406,20 +416,27 @@ def _list_remote_dataset_files(
 
     if source == "modelscope":
         files = list_modelscope_files(repo_id=dataset_path, extension=source_format)
+        if include_paths:
+            files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
+        if exclude_paths:
+            files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
+        files = files[:max_files]
     elif source == "s3":
         files = list_s3_files(path=dataset_path, extension=source_format)
-    else:  # hf
+        if include_paths:
+            files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
+        if exclude_paths:
+            files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
+        files = files[:max_files]
+    else:  # hf - supports early termination natively
         files = list_hf_files(
-            repo_id=dataset_path, extension=source_format, token=hf_token
+            repo_id=dataset_path,
+            extension=source_format,
+            token=hf_token,
+            max_files=max_files,
+            include_paths=include_paths,
+            exclude_paths=exclude_paths,
         )
-
-    if include_paths:
-        files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
-
-    if exclude_paths:
-        files = [
-            f for f in files if not any(path_seg in f for path_seg in exclude_paths)
-        ]
 
     if "gasstation" in dataset_path.lower():
         if target_week:
@@ -1221,29 +1238,50 @@ def _process_frame_directory(
         return
 
 
-def list_hf_files(repo_id, repo_type="dataset", extension=None, token=None):
-    """List files from a Hugging Face repository.
+def list_hf_files(
+    repo_id,
+    repo_type="dataset",
+    extension=None,
+    token=None,
+    max_files=None,
+    include_paths=None,
+    exclude_paths=None,
+):
+    """List files from a Hugging Face repository with early termination support.
 
     Args:
         repo_id: Repository ID
         repo_type: Type of repository ('dataset', 'model', etc.)
         extension: Filter files by extension
         token: Hugging Face API token for private datasets
+        max_files: Stop after collecting this many matching files (None = no limit)
+        include_paths: Only include files containing one of these path segments
+        exclude_paths: Exclude files containing any of these path segments
 
     Returns:
         List of files in the repository
     """
     files = []
+    if extension:
+        if isinstance(extension, (list, tuple, set)):
+            exts = tuple(extension)
+        else:
+            exts = (extension,)
+    else:
+        exts = None
+
     try:
-        files = list(
-            hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type, token=token)
-        )
-        if extension:
-            if isinstance(extension, (list, tuple, set)):
-                exts = tuple(extension)
-                files = [f for f in files if f.endswith(exts)]
-            else:
-                files = [f for f in files if f.endswith(extension)]
+        for f in hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type, token=token):
+            if exts and not f.endswith(exts):
+                continue
+            if include_paths and not any(path_seg in f for path_seg in include_paths):
+                continue
+            if exclude_paths and any(path_seg in f for path_seg in exclude_paths):
+                continue
+            files.append(f)
+            if max_files and len(files) >= max_files:
+                logger.info(f"Early termination: collected {max_files} files from {repo_id}")
+                break
     except Exception as e:
         logger.error(f"Failed to list files of type {extension} in {repo_id}: {e}")
     return files

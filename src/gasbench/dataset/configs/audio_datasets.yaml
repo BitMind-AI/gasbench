@@ -248,3 +248,27 @@ datasets:
     archives_per_dataset: 1
     include_paths: ["TTS"]
     notes: "3000 hours of synthetic speech from 7 domains, 6 TTS systems, 12 vocoders, and 3 languages."
+  
+  - name: slurp
+    path: qmeeus/slurp
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+  
+  - name: MediaSpeech
+    path: ymoslem/MediaSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 4
+  
+  - name: genshin-voice
+    path: simon3000/genshin-voice
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1

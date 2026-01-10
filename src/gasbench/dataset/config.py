@@ -62,6 +62,9 @@ class BenchmarkDatasetConfig:
     # Works for any modality (image, audio, video)
     data_columns: Optional[List[str]] = None
     notes: Optional[str] = None
+    
+    # For holdout datasets: stores the original name before obfuscation
+    original_name: Optional[str] = None
 
 
 def get_benchmark_size(
@@ -429,8 +432,7 @@ def _obfuscate_holdout_names(
     mapping: Dict[str, str] = {}
 
     for d in datasets:
-        original_name = d.name
-        # Build a deterministic fingerprint based on key dataset fields
+        orig_name = d.name
         include_paths = ",".join(sorted(d.include_paths)) if d.include_paths else ""
         exclude_paths = ",".join(sorted(d.exclude_paths)) if d.exclude_paths else ""
         fingerprint = "|".join(
@@ -446,8 +448,8 @@ def _obfuscate_holdout_names(
         )
         short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
         new_name = f"{d.media_type}-{d.modality}-holdout-{short_hash}"
-        obfuscated.append(replace(d, name=new_name))
-        mapping[new_name] = original_name
+        obfuscated.append(replace(d, name=new_name, original_name=orig_name))
+        mapping[new_name] = orig_name
 
     return obfuscated, mapping
 

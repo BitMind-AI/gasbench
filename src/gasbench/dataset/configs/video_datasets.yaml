@@ -4,7 +4,7 @@
 #   - Use when the column is not auto-detected (e.g., "video_bytes" instead of "video")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 17500
+benchmark_size: 20000
 
 datasets:
   - name: gasstation-generated-videos
@@ -417,3 +417,35 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["style_transfer_upload"]
 
+  - name: klingai
+    path: nyuuzyou/klingai
+    modality: video
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: FreeTacMan
+    path: OpenDriveLab/FreeTacMan
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: -1
+
+  - name: humanoid-everyday
+    path: USC-GVL/humanoid-everyday
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 1000
+    archives_per_dataset: -1
+    include_paths: ["videos"]
+
+  - name: workout-vids
+    path: 34data/workout-vids
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1

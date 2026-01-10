@@ -4,7 +4,7 @@
 #   - Use when the column is not auto-detected (e.g., "src_img" instead of "image")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 40000
+benchmark_size: 50000
 
 datasets:
   - name: gasstation-generated-images
@@ -377,5 +377,45 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
   
-  
+  - name: MMMG
+    path: MMMGBench/MMMG
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    data_columns: ["base_image"]
 
+  - name: bananamark-dataset
+    path: Rapidata/bananamark-dataset
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    data_columns: ["image1", "image2"]
+
+  - name: wikiart
+    path: huggan/wikiart
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 4
+
+  - name: OpenScene
+    path: OpenDriveLab/OpenScene
+    modality: video
+    media_type: real
+    source_format: tgz
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: idnet-2025
+    path: cactuslab/IDNet-2025
+    modality: image
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 500
+    archives_per_dataset: 2
+    exclude_paths: ["models.tar.gz", "ALB.tar.gz", "SRB.tar.gz", "SRB_scanned.tar.gz", "LVA.tar.gz"]

@@ -260,6 +260,7 @@ async def download_datasets(
     unlimited_samples: bool = False,
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
+    holdouts_only: bool = False,
     dataset_filters: Optional[List[str]] = None,
 ):
     """Main entry point for efficient dataset downloads.
@@ -278,6 +279,7 @@ async def download_datasets(
         unlimited_samples: If True, download ALL available samples (no cap)
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
         holdout_config: Optional path to holdout YAML config file
+        holdouts_only: If True, only download holdout datasets (requires holdout_config)
         dataset_filters: Optional list of dataset name patterns to filter by (supports partial matches)
     """
     if not cache_dir:
@@ -286,7 +288,7 @@ async def download_datasets(
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
     
     datasets = _discover_datasets(
-        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config, cache_dir
+        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config, cache_dir, holdouts_only
     )
     
     if dataset_filters:
@@ -348,12 +350,13 @@ def _discover_datasets(
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     cache_dir: Optional[str] = None,
+    holdouts_only: bool = False,
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
     
     if not modality or modality == "all" or modality == "image":
-        image_datasets = discover_benchmark_datasets("image", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        image_datasets = [] if holdouts_only else discover_benchmark_datasets("image", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
                 logger.info(f"Loading holdout datasets from: {holdout_config}")
@@ -368,7 +371,7 @@ def _discover_datasets(
         datasets.extend(image_datasets)
     
     if not modality or modality == "all" or modality == "video":
-        video_datasets = discover_benchmark_datasets("video", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        video_datasets = [] if holdouts_only else discover_benchmark_datasets("video", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
                 logger.info(f"Loading holdout video datasets from: {holdout_config}")
@@ -383,7 +386,7 @@ def _discover_datasets(
         datasets.extend(video_datasets)
     
     if not modality or modality == "all" or modality == "audio":
-        audio_datasets = discover_benchmark_audio_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        audio_datasets = [] if holdouts_only else discover_benchmark_audio_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
         if holdout_config and not gasstation_only:
             try:
                 logger.info(f"Loading holdout audio datasets from: {holdout_config}")
@@ -421,7 +424,11 @@ def _filter_datasets_by_name(
     
     for dataset in datasets:
         dataset_name_lower = dataset.name.lower()
-        if any(filter_pattern in dataset_name_lower for filter_pattern in filters_lower):
+        original_name_lower = (dataset.original_name or "").lower()
+        if any(
+            filter_pattern in dataset_name_lower or filter_pattern in original_name_lower
+            for filter_pattern in filters_lower
+        ):
             filtered.append(dataset)
     
     return filtered

@@ -410,6 +410,7 @@ datasets:
     source_format: tgz
     media_per_archive: 500
     archives_per_dataset: 2
+    include_paths: ["openscene_sensor_test_camera", "openscene_sensor_trainval_camera"]
 
   - name: idnet-2025
     path: cactuslab/IDNet-2025

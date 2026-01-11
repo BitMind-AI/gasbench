@@ -405,7 +405,7 @@ datasets:
 
   - name: OpenScene
     path: OpenDriveLab/OpenScene
-    modality: video
+    modality: image
     media_type: real
     source_format: tgz
     media_per_archive: 500

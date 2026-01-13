@@ -255,12 +255,19 @@ def command_download(args):
     """Execute the dataset download command."""
     print("\n📥 Starting gasbench dataset download")
 
+    holdouts_only = getattr(args, "holdouts_only", False)
+    if holdouts_only and not getattr(args, "holdout_config", None):
+        print("Error: --holdouts-only requires --holdout-config")
+        return 1
+
     config = {
         "modality": args.modality.upper() if args.modality else "ALL",
         "mode": (args.mode if args.mode else "full").upper(),
         "gasstation_only": args.gasstation_only,
         "concurrent_downloads": args.concurrent,
     }
+    if holdouts_only:
+        config["holdouts_only"] = True
     if args.cache_dir:
         config["cache_directory"] = args.cache_dir
     if args.num_weeks:
@@ -295,6 +302,7 @@ def command_download(args):
                 unlimited_samples=getattr(args, "unlimited_samples", False),
                 dataset_config=getattr(args, "dataset_config", None),
                 holdout_config=getattr(args, "holdout_config", None),
+                holdouts_only=holdouts_only,
                 dataset_filters=getattr(args, "datasets", None),
             )
         )
@@ -512,6 +520,11 @@ Examples:
         type=str,
         metavar="PATH",
         help="Path to private holdout YAML with additional datasets (names will be obfuscated)",
+    )
+    download_parser.add_argument(
+        "--holdouts-only",
+        action="store_true",
+        help="Only download holdout datasets (requires --holdout-config)",
     )
 
     download_parser.set_defaults(func=command_download)

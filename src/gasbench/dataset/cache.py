@@ -404,35 +404,52 @@ def compute_cache_statistics(datasets: List[Dict]) -> Tuple[Dict, Dict]:
 
 def verify_cache_against_configs(
     cached_names: set,
+    cached_datasets: List[Dict],
     dataset_config: Optional[str] = None,
     holdout_config: Optional[str] = None,
     cache_dir: str = "/.cache/gasbench",
-) -> Tuple[set, set, List]:
+) -> Tuple[set, set, set, List, set]:
     """Verify cache completeness against config files.
 
+    Args:
+        cached_names: Set of dataset names present in cache
+        cached_datasets: List of dataset dicts from scan_cache_directory
+        dataset_config: Path to dataset config YAML
+        holdout_config: Path to holdout config YAML
+        cache_dir: Base cache directory
+
     Returns:
-        Tuple of (present_names, missing_names, expected_datasets)
+        Tuple of (present_names, missing_names, extra_names, expected_datasets, config_modalities)
     """
     from .config import load_datasets_from_yaml, load_holdout_datasets_from_yaml
 
     expected_datasets = []
+    config_modalities = set()
 
     if dataset_config:
+        datasets_dict = load_datasets_from_yaml(yaml_path=dataset_config)
         for modality in ["image", "video", "audio"]:
-            datasets = load_datasets_from_yaml(
-                modality=modality, yaml_path=dataset_config
-            )
-            expected_datasets.extend(datasets)
+            if modality in datasets_dict and datasets_dict[modality]:
+                config_modalities.add(modality)
+                expected_datasets.extend(datasets_dict[modality])
 
     if holdout_config:
         datasets_dict = load_holdout_datasets_from_yaml(
             yaml_path=holdout_config, cache_dir=cache_dir
         )
         for modality in ["image", "video", "audio"]:
-            expected_datasets.extend(datasets_dict.get(modality, []))
+            if modality in datasets_dict and datasets_dict[modality]:
+                config_modalities.add(modality)
+                expected_datasets.extend(datasets_dict.get(modality, []))
 
     expected_names = {ds.name for ds in expected_datasets}
     present = expected_names & cached_names
     missing = expected_names - cached_names
 
-    return present, missing, expected_datasets
+    cached_in_modalities = {
+        ds["name"] for ds in cached_datasets
+        if ds.get("modality", "").lower() in config_modalities
+    }
+    extra = cached_in_modalities - expected_names
+
+    return present, missing, extra, expected_datasets, config_modalities

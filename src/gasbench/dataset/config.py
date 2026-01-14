@@ -356,7 +356,12 @@ def validate_dataset_config(
 
 
 def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetConfig]]:
-    """Load benchmark dataset configurations from a YAML file."""
+    """Load benchmark dataset configurations from a YAML file.
+    
+    Supports two YAML formats:
+    1. Flat format with 'datasets' list where each entry has a 'modality' field
+    2. Grouped format with 'image', 'video', 'audio' top-level keys
+    """
     yaml_file = Path(yaml_path)
 
     if not yaml_file.exists():
@@ -371,41 +376,47 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
     if not isinstance(data, dict):
         raise ValueError(f"YAML file must contain a dictionary at root level")
 
-    # Validate
     all_errors = []
     result = {"image": [], "video": [], "audio": []}
-    for modality in ["image", "video", "audio"]:
-        if modality not in data:
-            continue
 
-        if not isinstance(data[modality], list):
-            raise ValueError(f"'{modality}' must be a list of dataset configurations")
+    def process_dataset(idx: int, dataset_dict: dict, source_key: str):
+        if not isinstance(dataset_dict, dict):
+            all_errors.append(f"{source_key}[{idx}]: Must be a dictionary")
+            return
 
-        for idx, dataset_dict in enumerate(data[modality]):
-            if not isinstance(dataset_dict, dict):
-                all_errors.append(f"{modality}[{idx}]: Must be a dictionary")
-                continue
+        dataset_name = dataset_dict.get("name", f"dataset_{idx}")
+        validation_errors = validate_dataset_config(dataset_dict, dataset_name)
+        all_errors.extend(validation_errors)
 
-            dataset_name = dataset_dict.get("name", f"{modality}_dataset_{idx}")
-
-            validation_errors = validate_dataset_config(dataset_dict, dataset_name)
-            all_errors.extend(validation_errors)
-
-            if not validation_errors:
-                config = BenchmarkDatasetConfig(
-                    name=dataset_dict["name"],
-                    path=dataset_dict["path"],
-                    modality=dataset_dict["modality"],
-                    media_type=dataset_dict["media_type"],
-                    media_per_archive=dataset_dict.get("media_per_archive", 100),
-                    archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
-                    source_format=dataset_dict.get("source_format", ""),
-                    source=dataset_dict.get("source", "huggingface"),
-                    include_paths=dataset_dict.get("include_paths"),
-                    exclude_paths=dataset_dict.get("exclude_paths"),
-                    data_columns=dataset_dict.get("data_columns"),
-                )
+        if not validation_errors:
+            modality = dataset_dict["modality"].lower()
+            config = BenchmarkDatasetConfig(
+                name=dataset_dict["name"],
+                path=dataset_dict["path"],
+                modality=modality,
+                media_type=dataset_dict["media_type"],
+                media_per_archive=dataset_dict.get("media_per_archive", 100),
+                archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
+                source_format=dataset_dict.get("source_format", ""),
+                source=dataset_dict.get("source", "huggingface"),
+                include_paths=dataset_dict.get("include_paths"),
+                exclude_paths=dataset_dict.get("exclude_paths"),
+                data_columns=dataset_dict.get("data_columns"),
+            )
+            if modality in result:
                 result[modality].append(config)
+
+    if "datasets" in data and isinstance(data["datasets"], list):
+        for idx, dataset_dict in enumerate(data["datasets"]):
+            process_dataset(idx, dataset_dict, "datasets")
+    else:
+        for modality in ["image", "video", "audio"]:
+            if modality not in data:
+                continue
+            if not isinstance(data[modality], list):
+                raise ValueError(f"'{modality}' must be a list of dataset configurations")
+            for idx, dataset_dict in enumerate(data[modality]):
+                process_dataset(idx, dataset_dict, modality)
 
     if all_errors:
         error_msg = "Validation errors in YAML file:\n" + "\n".join(

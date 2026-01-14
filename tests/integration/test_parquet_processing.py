@@ -89,13 +89,12 @@ class TestParquetProcessingDualColumn:
         fixture_path = FIXTURES_DIR / "test_image_dual.parquet"
         assert fixture_path.exists(), f"Fixture not found: {fixture_path}"
         
-        # Create test config with image_columns
         config = BenchmarkDatasetConfig(
             name="test_dual",
             path="test/test",
             modality="image",
             media_type="synthetic",
-            image_columns=["src_img", "tgt_img"],
+            data_columns=["src_img", "tgt_img"],
         )
         
         # Process parquet
@@ -113,7 +112,7 @@ class TestParquetProcessingDualColumn:
             path="test/test",
             modality="image",
             media_type="synthetic",
-            image_columns=["src_img", "tgt_img"],
+            data_columns=["src_img", "tgt_img"],
         )
         
         samples = list(_process_parquet(fixture_path, config, num_items=-1))
@@ -135,7 +134,7 @@ class TestParquetProcessingDualColumn:
             path="test/test",
             modality="image",
             media_type="synthetic",
-            image_columns=["src_img", "tgt_img"],
+            data_columns=["src_img", "tgt_img"],
         )
         
         samples = list(_process_parquet(fixture_path, config, num_items=-1))
@@ -155,7 +154,7 @@ class TestParquetProcessingDualColumn:
             path="test/test",
             modality="image",
             media_type="synthetic",
-            image_columns=["src_img", "tgt_img"],
+            data_columns=["src_img", "tgt_img"],
         )
         
         samples = list(_process_parquet(fixture_path, config, num_items=-1))
@@ -177,7 +176,7 @@ class TestParquetProcessingDualColumn:
             path="test/test",
             modality="image",
             media_type="synthetic",
-            image_columns=["src_img", "tgt_img"],
+            data_columns=["src_img", "tgt_img"],
         )
         
         # Request 2 rows: should get 4 samples (2 rows × 2 columns)
@@ -244,7 +243,7 @@ class TestParquetErrorHandling:
             path="test/test",
             modality="image",
             media_type="real",
-            image_columns=["nonexistent_col"],
+            data_columns=["nonexistent_col"],
         )
         
         samples = list(_process_parquet(fixture_path, config, num_items=-1))
@@ -262,7 +261,7 @@ class TestParquetErrorHandling:
             path="test/test",
             modality="image",
             media_type="synthetic",
-            image_columns=["src_img", "nonexistent"],
+            data_columns=["src_img", "nonexistent"],
         )
         
         samples = list(_process_parquet(fixture_path, config, num_items=-1))

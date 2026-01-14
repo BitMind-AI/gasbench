@@ -78,13 +78,13 @@ class TestImageDatasets:
         assert pica is not None, "PICA-100K dataset not found"
 
     def test_pica_100k_has_dual_columns(self):
-        """Verify PICA-100K has image_columns configured for dual-column support."""
+        """Verify PICA-100K has data_columns configured for dual-column support."""
         configs = load_benchmark_datasets_from_yaml()
         pica = next((d for d in configs["image"] if d.name == "pica-100k"), None)
         
-        assert pica.image_columns is not None, "PICA-100K missing image_columns"
-        assert pica.image_columns == ["src_img", "tgt_img"], \
-            f"PICA-100K image_columns incorrect: {pica.image_columns}"
+        assert pica.data_columns is not None, "PICA-100K missing data_columns"
+        assert pica.data_columns == ["src_img", "tgt_img"], \
+            f"PICA-100K data_columns incorrect: {pica.data_columns}"
 
     def test_pica_100k_has_correct_format(self):
         """Verify PICA-100K configuration is correct."""
@@ -112,18 +112,18 @@ class TestImageDatasets:
         for name in new_datasets:
             assert name in image_names, f"New image dataset '{name}' not found"
 
-    def test_only_pica_has_image_columns(self):
-        """Verify only PICA-100K uses image_columns (for now)."""
+    def test_datasets_with_data_columns(self):
+        """Verify datasets using data_columns for custom column extraction."""
         configs = load_benchmark_datasets_from_yaml()
         
-        datasets_with_image_cols = [
+        datasets_with_data_cols = [
             d.name for d in configs["image"] 
-            if getattr(d, "image_columns", None) is not None
+            if getattr(d, "data_columns", None) is not None
         ]
         
-        # Currently only PICA-100K should have this
-        assert datasets_with_image_cols == ["pica-100k"], \
-            f"Unexpected datasets with image_columns: {datasets_with_image_cols}"
+        expected = ["pica-100k", "MMMG", "bananamark-dataset"]
+        assert sorted(datasets_with_data_cols) == sorted(expected), \
+            f"Datasets with data_columns: {datasets_with_data_cols}"
 
 
 class TestVideoDatasets:

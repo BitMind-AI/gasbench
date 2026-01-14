@@ -157,7 +157,7 @@ def command_verify_cache(args):
     if not datasets:
         print("📭 No cached datasets found")
         if args.dataset_config or args.holdout_config:
-            return _verify_against_config(set(), args, cache_dir)
+            return _verify_against_config(set(), [], args, cache_dir)
         return 0
 
     cached_names = {ds["name"] for ds in datasets}
@@ -201,19 +201,20 @@ def command_verify_cache(args):
                 )
 
     if args.dataset_config or args.holdout_config:
-        return _verify_against_config(cached_names, args, cache_dir)
+        return _verify_against_config(cached_names, datasets, args, cache_dir)
 
     return 0
 
 
-def _verify_against_config(cached_names, args, cache_dir):
+def _verify_against_config(cached_names, cached_datasets, args, cache_dir):
     """Verify cache completeness against config files."""
     from collections import defaultdict
     from .dataset.cache import verify_cache_against_configs
 
     try:
-        present, missing, expected_datasets = verify_cache_against_configs(
+        present, missing, extra, expected_datasets, config_modalities = verify_cache_against_configs(
             cached_names=cached_names,
+            cached_datasets=cached_datasets,
             dataset_config=args.dataset_config,
             holdout_config=args.holdout_config,
             cache_dir=cache_dir,
@@ -223,17 +224,23 @@ def _verify_against_config(cached_names, args, cache_dir):
         return 1
 
     if not expected_datasets:
+        print("\n⚠️  No datasets found in config files")
         return 0
 
     expected_names = {ds.name for ds in expected_datasets}
+    modalities_str = ", ".join(sorted(m.upper() for m in config_modalities))
 
-    print(f"\n🔎 CONFIG VERIFICATION")
+    print(f"\n🔎 CONFIG VERIFICATION (modalities: {modalities_str})")
     print(f"Expected Datasets: {len(expected_names)}")
     print(f"Present in Cache:  {len(present)} ✅")
     print(f"Missing from Cache: {len(missing)} {'❌' if missing else '✅'}")
+    print(f"Extra in Cache:    {len(extra)} {'⚠️' if extra else '✅'}")
+
+    has_issues = False
 
     if missing:
-        print(f"\n❌ MISSING DATASETS:")
+        has_issues = True
+        print(f"\n❌ MISSING DATASETS (in config but not in cache):")
         by_modality = defaultdict(list)
         for ds in expected_datasets:
             if ds.name in missing:
@@ -245,10 +252,25 @@ def _verify_against_config(cached_names, args, cache_dir):
             for ds in sorted(datasets_list, key=lambda x: x.name):
                 print(f"    • {ds.name:50} [{ds.media_type}]")
 
-        return 1
+    if extra:
+        has_issues = True
+        print(f"\n⚠️  EXTRA DATASETS (in cache but not in config):")
+        by_modality = defaultdict(list)
+        for ds in cached_datasets:
+            if ds["name"] in extra:
+                by_modality[ds["modality"]].append(ds)
 
-    print("\n✅ All expected datasets are present in cache")
-    return 0
+        for modality in sorted(by_modality.keys()):
+            datasets_list = by_modality[modality]
+            print(f"\n  {modality.upper()}:")
+            for ds in sorted(datasets_list, key=lambda x: x["name"]):
+                print(f"    • {ds['name']:50} [{ds['media_type']}]")
+
+    if not has_issues:
+        print("\n✅ Cache matches config exactly")
+        return 0
+
+    return 1
 
 
 def command_download(args):

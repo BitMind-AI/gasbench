@@ -1,0 +1,9 @@
+benchmark_size: 5037
+
+datasets:
+  - name: yanez-data
+    path: workspace/yanez-data
+    modality: image
+    media_type: synthetic  # or "synthetic" depending on your data
+    media_per_archive: -1
+    archives_per_dataset: -1

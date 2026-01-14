@@ -32,6 +32,7 @@ async def run_benchmark(
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
     run_id: Optional[str] = None,
+    dataset_filters: Optional[list] = None,
 ) -> Dict:
     """
     Args:
@@ -45,6 +46,7 @@ async def run_benchmark(
         seed: Optional random seed for non-gasstation dataset sampling (for reproducible random sampling)
         batch_size: Batch size for model inference (default: 8)
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
+        dataset_filters: Optional list of dataset name patterns to filter by (case-insensitive partial matches)
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -100,6 +102,7 @@ async def run_benchmark(
             holdout_config,
             records_parquet_path,
             run_id,
+            dataset_filters,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -191,10 +194,13 @@ async def execute_benchmark(
     holdout_config: Optional[str] = None,
     records_parquet_path: Optional[str] = None,
     run_id: Optional[str] = None,
+    dataset_filters: Optional[list] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
     logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data})")
+    if dataset_filters:
+        logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
         df = await run_image_benchmark(
             session,
@@ -211,6 +217,7 @@ async def execute_benchmark(
             holdout_config,
             records_parquet_path=records_parquet_path,
             run_id=run_id,
+            dataset_filters=dataset_filters,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -229,6 +236,7 @@ async def execute_benchmark(
             holdout_config,
             records_parquet_path=records_parquet_path,
             run_id=run_id,
+            dataset_filters=dataset_filters,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
@@ -247,6 +255,7 @@ async def execute_benchmark(
             holdout_config,
             records_parquet_path=records_parquet_path,
             run_id=run_id,
+            dataset_filters=dataset_filters,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

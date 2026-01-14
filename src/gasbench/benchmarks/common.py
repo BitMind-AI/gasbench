@@ -38,6 +38,7 @@ class BenchmarkRunConfig:
     crop_prob: float
     records_parquet_path: Optional[str]
     run_id: Optional[str] = None
+    dataset_filters: Optional[List[str]] = None
 
 
 @dataclass
@@ -81,6 +82,15 @@ def build_plan(
             available_datasets.extend(holdouts)
         except Exception as e:
             logger.error(f"Failed to load holdout {config.modality} datasets: {e}")
+
+    if config.dataset_filters:
+        original_count = len(available_datasets)
+        filters_lower = [f.lower() for f in config.dataset_filters]
+        available_datasets = [
+            d for d in available_datasets
+            if any(f in d.name.lower() for f in filters_lower)
+        ]
+        logger.info(f"Filtered {original_count} datasets to {len(available_datasets)} matching: {config.dataset_filters}")
 
     if not available_datasets:
         return None

@@ -54,11 +54,11 @@ class TestColumnNormalization:
         assert iteration_count == 2
 
 
-class TestImageColumnsAttribute:
-    """Test the image_columns attribute handling."""
+class TestDataColumnsAttribute:
+    """Test the data_columns attribute handling."""
 
-    def test_dataset_without_image_columns(self):
-        """Test dataset without image_columns attribute."""
+    def test_dataset_without_data_columns(self):
+        """Test dataset without data_columns attribute."""
         dataset = BenchmarkDatasetConfig(
             name="test",
             path="test/test",
@@ -66,30 +66,29 @@ class TestImageColumnsAttribute:
             media_type="real",
         )
         
-        image_columns = getattr(dataset, 'image_columns', None)
-        assert image_columns is None
+        data_columns = getattr(dataset, 'data_columns', None)
+        assert data_columns is None
 
-    def test_dataset_with_image_columns(self):
-        """Test dataset with image_columns attribute."""
+    def test_dataset_with_data_columns(self):
+        """Test dataset with data_columns attribute."""
         dataset = BenchmarkDatasetConfig(
             name="test",
             path="test/test",
             modality="image",
             media_type="real",
-            image_columns=["src_img", "tgt_img"],
+            data_columns=["src_img", "tgt_img"],
         )
         
-        image_columns = getattr(dataset, 'image_columns', None)
-        assert image_columns is not None
-        assert image_columns == ["src_img", "tgt_img"]
+        data_columns = getattr(dataset, 'data_columns', None)
+        assert data_columns is not None
+        assert data_columns == ["src_img", "tgt_img"]
 
-    def test_image_columns_filters_to_existing(self):
-        """Test that image_columns are filtered to those that exist in dataframe."""
-        # Simulate the logic from download.py
-        image_columns_config = ["src_img", "tgt_img", "nonexistent"]
+    def test_data_columns_filters_to_existing(self):
+        """Test that data_columns are filtered to those that exist in dataframe."""
+        data_columns_config = ["src_img", "tgt_img", "nonexistent"]
         df_columns = ["src_img", "tgt_img", "caption", "id"]
         
-        media_col = [c for c in image_columns_config if c in df_columns]
+        media_col = [c for c in data_columns_config if c in df_columns]
         
         assert len(media_col) == 2
         assert "src_img" in media_col

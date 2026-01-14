@@ -246,6 +246,7 @@ async def run_video_benchmark(
     crop_prob: float = 0.0,
     records_parquet_path: Optional[str] = None,
     run_id: Optional[str] = None,
+    dataset_filters: Optional[list] = None,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -274,6 +275,7 @@ async def run_video_benchmark(
             crop_prob=crop_prob or 0.0,
             records_parquet_path=records_parquet_path,
             run_id=run_id,
+            dataset_filters=dataset_filters,
         )
         plan = build_plan(logger, run_config, input_specs)
         if not plan:

@@ -289,17 +289,6 @@ class DatasetIterator:
 
         return best_file
 
-    def _cleanup_temp_downloads(self):
-        """Clean up the temp_downloads directory to free disk space."""
-        import shutil
-        temp_dir = f"{self.cache_dir}/temp_downloads"
-        if os.path.exists(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-                logger.debug(f"Cleaned up temp_downloads directory: {temp_dir}")
-            except Exception as e:
-                logger.warning(f"Failed to clean up temp_downloads: {e}")
-
     def _download_and_cache_week(
         self, week_str: str, week_dir: str, downloaded_archives: set
     ):
@@ -441,8 +430,6 @@ class DatasetIterator:
         elif sample_count <= 0:
             logger.warning(f"No samples cached for week {week_str}")
 
-        self._cleanup_temp_downloads()
-
     def _download_and_cache(self):
         """Download samples and save them to cache with incremental checkpointing.
 
@@ -556,8 +543,6 @@ class DatasetIterator:
                 )
         else:
             logger.warning(f"No samples were downloaded for {self.config.name}")
-
-        self._cleanup_temp_downloads()
 
     def _has_cached_dataset(self) -> bool:
         """Check if dataset has any cached data (even if incomplete)."""

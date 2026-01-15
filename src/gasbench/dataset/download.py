@@ -570,25 +570,28 @@ def _process_gasstation(
         f"Extracting archive filenames from {len(downloaded_parquets)} parquet files"
     )
 
-    all_archive_filenames = set()
+    archive_to_week = {}
     parquet_metadata_maps = {}
     processed_parquet_basenames = []
 
-    for parquet_path in downloaded_parquets:
+    for parquet_path, parquet_url in zip(downloaded_parquets, parquet_urls):
         if not parquet_path or not parquet_path.exists():
             continue
 
         try:
             processed_parquet_basenames.append(parquet_path.name)
 
+            iso_week = extract_iso_week_from_path(parquet_url)
+            
             archive_filenames = _extract_unique_archive_filenames(parquet_path)
-            all_archive_filenames.update(archive_filenames)
+            for archive_filename in archive_filenames:
+                if archive_filename not in archive_to_week and iso_week:
+                    archive_to_week[archive_filename] = iso_week
 
             metadata_map = _build_parquet_metadata_map(parquet_path)
             for key, value in metadata_map.items():
                 parquet_metadata_maps[key] = value
 
-            iso_week = extract_iso_week_from_path(str(parquet_path))
             if iso_week:
                 for key in metadata_map.keys():
                     if key in parquet_metadata_maps:
@@ -598,29 +601,20 @@ def _process_gasstation(
             continue
 
     logger.info(
-        f"Found {len(all_archive_filenames)} unique archive files referenced in parquet metadata"
+        f"Found {len(archive_to_week)} unique archive files referenced in parquet metadata"
     )
     logger.info(f"Built metadata map with {len(parquet_metadata_maps)} entries")
 
-    if not all_archive_filenames:
+    if not archive_to_week:
         logger.warning("No archive filenames found in parquet metadata")
         return
 
-    # Get ISO week from original parquet URLs (not temp download paths)
-    iso_week = None
-    for url in parquet_urls:
-        iso_week = extract_iso_week_from_path(url)
-        if iso_week:
-            break
+    archive_paths = [
+        f"archives/{week}/{basename}" for basename, week in archive_to_week.items()
+    ]
     
-    if not iso_week:
-        logger.warning("Could not determine ISO week for archive paths from parquet URLs")
-        return
-    
-    # Prepend archives/{week}/ to basenames
-    archive_paths = [f"archives/{iso_week}/{basename}" for basename in all_archive_filenames]
-    
-    logger.info(f"Downloading {len(archive_paths)} tar archives from archives/{iso_week}/")
+    weeks_in_batch = set(archive_to_week.values())
+    logger.info(f"Downloading {len(archive_paths)} tar archives from {len(weeks_in_batch)} week(s): {sorted(weeks_in_batch)}")
 
     archive_urls = _get_download_urls(dataset.path, archive_paths, source)
 

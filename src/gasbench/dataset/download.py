@@ -19,6 +19,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 import requests
 import huggingface_hub as hf_hub
+from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError
 import numpy as np
 from PIL import Image
 from modelscope.hub.api import HubApi as MSHubApi
@@ -31,6 +32,12 @@ from .utils.gasstation_utils import (
     filter_files_by_current_week,
     filter_files_by_recent_weeks,
 )
+
+
+class DatasetAccessError(Exception):
+    """Raised when a dataset cannot be accessed (gated, not found, or permission denied)."""
+
+    pass
 
 logger = get_logger(__name__)
 
@@ -139,18 +146,25 @@ def download_and_extract(
             )
             max_files_to_list = n_files if n_files > 0 else None
 
-            filenames = _list_remote_dataset_files(
-                dataset.path,
-                dataset.source_format,
-                current_week_only,
-                num_weeks,
-                target_week,
-                include_paths,
-                exclude_paths,
-                source,
-                hf_token,
-                max_files=max_files_to_list,
-            )
+            try:
+                filenames = _list_remote_dataset_files(
+                    dataset.path,
+                    dataset.source_format,
+                    current_week_only,
+                    num_weeks,
+                    target_week,
+                    include_paths,
+                    exclude_paths,
+                    source,
+                    hf_token,
+                    max_files=max_files_to_list,
+                )
+            except DatasetAccessError as e:
+                logger.warning(
+                    f"Skipping dataset {dataset.name}: {e}"
+                )
+                return
+
             if not filenames:
                 is_gasstation = "gasstation" in dataset.name.lower()
                 if is_gasstation:
@@ -171,18 +185,24 @@ def download_and_extract(
                         logger.info(
                             f"Trying fallback format {fallback_format} for {dataset.path}"
                         )
-                        filenames = _list_remote_dataset_files(
-                            dataset.path,
-                            fallback_format,
-                            current_week_only,
-                            num_weeks,
-                            target_week,
-                            include_paths,
-                            exclude_paths,
-                            source,
-                            hf_token,
-                            max_files=max_files_to_list,
-                        )
+                        try:
+                            filenames = _list_remote_dataset_files(
+                                dataset.path,
+                                fallback_format,
+                                current_week_only,
+                                num_weeks,
+                                target_week,
+                                include_paths,
+                                exclude_paths,
+                                source,
+                                hf_token,
+                                max_files=max_files_to_list,
+                            )
+                        except DatasetAccessError as e:
+                            logger.warning(
+                                f"Skipping dataset {dataset.name}: {e}"
+                            )
+                            return
                         if filenames:
                             logger.info(
                                 f"Found {len(filenames)} files with format {fallback_format}"
@@ -570,25 +590,28 @@ def _process_gasstation(
         f"Extracting archive filenames from {len(downloaded_parquets)} parquet files"
     )
 
-    all_archive_filenames = set()
+    archive_to_week = {}
     parquet_metadata_maps = {}
     processed_parquet_basenames = []
 
-    for parquet_path in downloaded_parquets:
+    for parquet_path, parquet_url in zip(downloaded_parquets, parquet_urls):
         if not parquet_path or not parquet_path.exists():
             continue
 
         try:
             processed_parquet_basenames.append(parquet_path.name)
 
+            iso_week = extract_iso_week_from_path(parquet_url)
+            
             archive_filenames = _extract_unique_archive_filenames(parquet_path)
-            all_archive_filenames.update(archive_filenames)
+            for archive_filename in archive_filenames:
+                if archive_filename not in archive_to_week and iso_week:
+                    archive_to_week[archive_filename] = iso_week
 
             metadata_map = _build_parquet_metadata_map(parquet_path)
             for key, value in metadata_map.items():
                 parquet_metadata_maps[key] = value
 
-            iso_week = extract_iso_week_from_path(str(parquet_path))
             if iso_week:
                 for key in metadata_map.keys():
                     if key in parquet_metadata_maps:
@@ -598,29 +621,20 @@ def _process_gasstation(
             continue
 
     logger.info(
-        f"Found {len(all_archive_filenames)} unique archive files referenced in parquet metadata"
+        f"Found {len(archive_to_week)} unique archive files referenced in parquet metadata"
     )
     logger.info(f"Built metadata map with {len(parquet_metadata_maps)} entries")
 
-    if not all_archive_filenames:
+    if not archive_to_week:
         logger.warning("No archive filenames found in parquet metadata")
         return
 
-    # Get ISO week from original parquet URLs (not temp download paths)
-    iso_week = None
-    for url in parquet_urls:
-        iso_week = extract_iso_week_from_path(url)
-        if iso_week:
-            break
+    archive_paths = [
+        f"archives/{week}/{basename}" for basename, week in archive_to_week.items()
+    ]
     
-    if not iso_week:
-        logger.warning("Could not determine ISO week for archive paths from parquet URLs")
-        return
-    
-    # Prepend archives/{week}/ to basenames
-    archive_paths = [f"archives/{iso_week}/{basename}" for basename in all_archive_filenames]
-    
-    logger.info(f"Downloading {len(archive_paths)} tar archives from archives/{iso_week}/")
+    weeks_in_batch = set(archive_to_week.values())
+    logger.info(f"Downloading {len(archive_paths)} tar archives from {len(weeks_in_batch)} week(s): {sorted(weeks_in_batch)}")
 
     archive_urls = _get_download_urls(dataset.path, archive_paths, source)
 
@@ -1260,6 +1274,9 @@ def list_hf_files(
 
     Returns:
         List of files in the repository
+
+    Raises:
+        DatasetAccessError: If the repository is gated/private without access, or not found
     """
     files = []
     if extension:
@@ -1282,6 +1299,15 @@ def list_hf_files(
             if max_files and len(files) >= max_files:
                 logger.info(f"Early termination: collected {max_files} files from {repo_id}")
                 break
+    except GatedRepoError:
+        raise DatasetAccessError(
+            f"Dataset {repo_id} is gated and requires access approval. "
+            "Visit the dataset page on HuggingFace to request access."
+        )
+    except RepositoryNotFoundError:
+        raise DatasetAccessError(
+            f"Dataset {repo_id} not found. It may not exist or may be private."
+        )
     except Exception as e:
         logger.error(f"Failed to list files of type {extension} in {repo_id}: {e}")
     return files

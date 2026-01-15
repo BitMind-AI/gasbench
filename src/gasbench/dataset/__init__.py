@@ -21,7 +21,7 @@ from .config import (
 )
 from .iterator import DatasetIterator, CACHE_MAX_SAMPLES, GASSTATION_CACHE_MAX_SAMPLES
 from .cache import check_dataset_cache, save_sample_to_cache
-from .download import download_and_extract
+from .download import download_and_extract, DatasetAccessError
 
 __all__ = [
     "BenchmarkDatasetConfig",
@@ -40,4 +40,5 @@ __all__ = [
     "check_dataset_cache",
     "save_sample_to_cache", 
     "download_and_extract",
+    "DatasetAccessError",
 ]

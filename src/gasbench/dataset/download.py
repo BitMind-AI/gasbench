@@ -19,6 +19,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 import requests
 import huggingface_hub as hf_hub
+from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError
 import numpy as np
 from PIL import Image
 from modelscope.hub.api import HubApi as MSHubApi
@@ -31,6 +32,12 @@ from .utils.gasstation_utils import (
     filter_files_by_current_week,
     filter_files_by_recent_weeks,
 )
+
+
+class DatasetAccessError(Exception):
+    """Raised when a dataset cannot be accessed (gated, not found, or permission denied)."""
+
+    pass
 
 logger = get_logger(__name__)
 
@@ -139,18 +146,25 @@ def download_and_extract(
             )
             max_files_to_list = n_files if n_files > 0 else None
 
-            filenames = _list_remote_dataset_files(
-                dataset.path,
-                dataset.source_format,
-                current_week_only,
-                num_weeks,
-                target_week,
-                include_paths,
-                exclude_paths,
-                source,
-                hf_token,
-                max_files=max_files_to_list,
-            )
+            try:
+                filenames = _list_remote_dataset_files(
+                    dataset.path,
+                    dataset.source_format,
+                    current_week_only,
+                    num_weeks,
+                    target_week,
+                    include_paths,
+                    exclude_paths,
+                    source,
+                    hf_token,
+                    max_files=max_files_to_list,
+                )
+            except DatasetAccessError as e:
+                logger.warning(
+                    f"Skipping dataset {dataset.name}: {e}"
+                )
+                return
+
             if not filenames:
                 is_gasstation = "gasstation" in dataset.name.lower()
                 if is_gasstation:
@@ -171,18 +185,24 @@ def download_and_extract(
                         logger.info(
                             f"Trying fallback format {fallback_format} for {dataset.path}"
                         )
-                        filenames = _list_remote_dataset_files(
-                            dataset.path,
-                            fallback_format,
-                            current_week_only,
-                            num_weeks,
-                            target_week,
-                            include_paths,
-                            exclude_paths,
-                            source,
-                            hf_token,
-                            max_files=max_files_to_list,
-                        )
+                        try:
+                            filenames = _list_remote_dataset_files(
+                                dataset.path,
+                                fallback_format,
+                                current_week_only,
+                                num_weeks,
+                                target_week,
+                                include_paths,
+                                exclude_paths,
+                                source,
+                                hf_token,
+                                max_files=max_files_to_list,
+                            )
+                        except DatasetAccessError as e:
+                            logger.warning(
+                                f"Skipping dataset {dataset.name}: {e}"
+                            )
+                            return
                         if filenames:
                             logger.info(
                                 f"Found {len(filenames)} files with format {fallback_format}"
@@ -1254,6 +1274,9 @@ def list_hf_files(
 
     Returns:
         List of files in the repository
+
+    Raises:
+        DatasetAccessError: If the repository is gated/private without access, or not found
     """
     files = []
     if extension:
@@ -1276,6 +1299,15 @@ def list_hf_files(
             if max_files and len(files) >= max_files:
                 logger.info(f"Early termination: collected {max_files} files from {repo_id}")
                 break
+    except GatedRepoError:
+        raise DatasetAccessError(
+            f"Dataset {repo_id} is gated and requires access approval. "
+            "Visit the dataset page on HuggingFace to request access."
+        )
+    except RepositoryNotFoundError:
+        raise DatasetAccessError(
+            f"Dataset {repo_id} not found. It may not exist or may be private."
+        )
     except Exception as e:
         logger.error(f"Failed to list files of type {extension} in {repo_id}: {e}")
     return files

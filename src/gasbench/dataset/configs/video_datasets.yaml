@@ -86,7 +86,7 @@ datasets:
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
-    include_paths: ["t2v/"]
+    include_paths: ["T2V/"]
 
   - name: fakeparts-faceswap
     path: hi-paris/FakeParts
@@ -95,7 +95,7 @@ datasets:
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
-    include_paths: ["faceswap/"]
+    include_paths: ["Faceswap/"]
 
   - name: fakeparts-inpainting
     path: hi-paris/FakeParts
@@ -104,7 +104,7 @@ datasets:
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
-    include_paths: ["inpainting/"]
+    include_paths: ["Inpainting/"]
 
   - name: fakeparts-outpainting
     path: hi-paris/FakeParts
@@ -113,7 +113,7 @@ datasets:
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
-    include_paths: ["outpainting/"]
+    include_paths: ["Outpainting/"]
 
   - name: fakeparts-stylechange
     path: hi-paris/FakeParts
@@ -122,7 +122,7 @@ datasets:
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
-    include_paths: ["stylechange/"]
+    include_paths: ["Change_of_style/"]
 
   # DeepAction v1 dataset - split by subdirectory and media type.
   # 2600 total videos, so just take all from each subdir

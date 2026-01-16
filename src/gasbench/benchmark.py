@@ -362,14 +362,15 @@ def print_benchmark_summary(benchmark_results: Dict):
 
 
 def save_results_to_json(
-    benchmark_results: Dict, output_dir: Optional[str] = None
+    benchmark_results: Dict, output_dir: Optional[str] = None, run_name: Optional[str] = None
 ) -> str:
     """
-    Save benchmark results to a timestamped JSON file.
+    Save benchmark results to a JSON file.
 
     Args:
         benchmark_results: Dictionary containing all benchmark results
         output_dir: Directory to save the JSON file (defaults to current directory)
+        run_name: Optional name for this run (used in filename instead of timestamp)
 
     Returns:
         Path to the saved JSON file
@@ -377,14 +378,15 @@ def save_results_to_json(
     if output_dir is None:
         output_dir = "."
 
-    # Create output directory if it doesn't exist
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Generate timestamped filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     modality = benchmark_results.get("modality", "unknown")
-    filename = f"gasbench_results_{modality}_{timestamp}.json"
+    if run_name:
+        filename = f"gasbench_results_{modality}_{run_name}.json"
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"gasbench_results_{modality}_{timestamp}.json"
     filepath = output_path / filename
 
     # Prepare results for JSON serialization
@@ -416,7 +418,6 @@ def save_results_to_json(
         if results_key in benchmark_results:
             results = benchmark_results[results_key]
 
-            # Extract detailed metrics
             output_data["results"] = {
                 "total_samples": results.get("total_samples", 0),
                 "correct_predictions": results.get("correct_predictions", 0),
@@ -428,11 +429,22 @@ def save_results_to_json(
                 "sn34_score": results.get("sn34_score", 0.0),
             }
 
-            # Per-source accuracy
-            # Accuracy by media type (real/synthetic/semisynthetic)
             per_dataset = results.get("per_dataset_results", {})
             dataset_info = results.get("dataset_info", {})
             dataset_types = dataset_info.get("dataset_media_types", {})
+
+            # Per-dataset performance
+            if per_dataset:
+                output_data["per_dataset"] = {
+                    ds_name: {
+                        "correct": int(ds_stats.get("correct", 0)),
+                        "total": int(ds_stats.get("total", 0)),
+                        "accuracy": ds_stats.get("accuracy", 0.0),
+                    }
+                    for ds_name, ds_stats in per_dataset.items()
+                }
+
+            # Accuracy by media type (real/synthetic/semisynthetic)
             if per_dataset and dataset_types:
                 by_type = {}
                 for ds_name, ds_stats in per_dataset.items():
@@ -450,11 +462,6 @@ def save_results_to_json(
                     }
                     for t, v in by_type.items()
                 }
-
-            # Dataset info
-            dataset_info = results.get("dataset_info", {})
-            if dataset_info:
-                output_data["dataset_info"] = dataset_info
 
     # Write to JSON file
     with open(filepath, "w") as f:

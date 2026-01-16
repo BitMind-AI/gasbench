@@ -362,14 +362,15 @@ def print_benchmark_summary(benchmark_results: Dict):
 
 
 def save_results_to_json(
-    benchmark_results: Dict, output_dir: Optional[str] = None
+    benchmark_results: Dict, output_dir: Optional[str] = None, run_name: Optional[str] = None
 ) -> str:
     """
-    Save benchmark results to a timestamped JSON file.
+    Save benchmark results to a JSON file.
 
     Args:
         benchmark_results: Dictionary containing all benchmark results
         output_dir: Directory to save the JSON file (defaults to current directory)
+        run_name: Optional name for this run (used in filename instead of timestamp)
 
     Returns:
         Path to the saved JSON file
@@ -377,14 +378,15 @@ def save_results_to_json(
     if output_dir is None:
         output_dir = "."
 
-    # Create output directory if it doesn't exist
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Generate timestamped filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     modality = benchmark_results.get("modality", "unknown")
-    filename = f"gasbench_results_{modality}_{timestamp}.json"
+    if run_name:
+        filename = f"gasbench_results_{modality}_{run_name}.json"
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"gasbench_results_{modality}_{timestamp}.json"
     filepath = output_path / filename
 
     # Prepare results for JSON serialization

@@ -90,8 +90,12 @@ def command_run(args):
     results_dir = args.results_dir if args.results_dir else "results"
     results_path = Path(results_dir)
     results_path.mkdir(parents=True, exist_ok=True)
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    parquet_path = str(results_path / f"records_{modality}_{timestamp}.parquet")
+    run_name = getattr(args, "run_name", None)
+    if run_name:
+        parquet_path = str(results_path / f"records_{modality}_{run_name}.parquet")
+    else:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        parquet_path = str(results_path / f"records_{modality}_{timestamp}.parquet")
 
     config = {
         "model": str(model_path),
@@ -127,7 +131,7 @@ def command_run(args):
 
         print_benchmark_summary(results)
 
-        output_path = save_results_to_json(results, output_dir=results_dir)
+        output_path = save_results_to_json(results, output_dir=results_dir, run_name=run_name)
         print(f"\n📊 Results saved to: {results_dir}")
         print(f"  - JSON summary: {output_path}")
         res_key = f"{modality}_results"
@@ -466,6 +470,12 @@ Custom Model Directory Structure:
         type=str,
         metavar="PATH",
         help="Path to private holdout YAML with additional datasets (names will be obfuscated)",
+    )
+    run_parser.add_argument(
+        "--run-name",
+        type=str,
+        metavar="NAME",
+        help="Name for this run (used in output filenames instead of timestamp)",
     )
 
     run_parser.set_defaults(func=command_run)

@@ -416,7 +416,6 @@ def save_results_to_json(
         if results_key in benchmark_results:
             results = benchmark_results[results_key]
 
-            # Extract detailed metrics
             output_data["results"] = {
                 "total_samples": results.get("total_samples", 0),
                 "correct_predictions": results.get("correct_predictions", 0),
@@ -428,11 +427,22 @@ def save_results_to_json(
                 "sn34_score": results.get("sn34_score", 0.0),
             }
 
-            # Per-source accuracy
-            # Accuracy by media type (real/synthetic/semisynthetic)
             per_dataset = results.get("per_dataset_results", {})
             dataset_info = results.get("dataset_info", {})
             dataset_types = dataset_info.get("dataset_media_types", {})
+
+            # Per-dataset performance
+            if per_dataset:
+                output_data["per_dataset"] = {
+                    ds_name: {
+                        "correct": int(ds_stats.get("correct", 0)),
+                        "total": int(ds_stats.get("total", 0)),
+                        "accuracy": ds_stats.get("accuracy", 0.0),
+                    }
+                    for ds_name, ds_stats in per_dataset.items()
+                }
+
+            # Accuracy by media type (real/synthetic/semisynthetic)
             if per_dataset and dataset_types:
                 by_type = {}
                 for ds_name, ds_stats in per_dataset.items():
@@ -450,11 +460,6 @@ def save_results_to_json(
                     }
                     for t, v in by_type.items()
                 }
-
-            # Dataset info
-            dataset_info = results.get("dataset_info", {})
-            if dataset_info:
-                output_data["dataset_info"] = dataset_info
 
     # Write to JSON file
     with open(filepath, "w") as f:

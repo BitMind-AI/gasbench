@@ -42,8 +42,7 @@ datasets:
     source_format: parquet
     media_per_archive: 200
     archives_per_dataset: 5
-    notes: "AMI Meeting Corpus - diverse speakers, natural speech"
-    include_paths: ["audio"]
+    include_paths: ["ihm/", "sdm/"]
 
   # 1600+ languages (Facebook research)
   - name: omnilingual-asr-corpus

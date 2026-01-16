@@ -83,7 +83,7 @@ datasets:
     path: hi-paris/FakeParts
     modality: video
     media_type: synthetic
-    source_format: mp4
+    source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["t2v/"]
@@ -92,7 +92,7 @@ datasets:
     path: hi-paris/FakeParts
     modality: video
     media_type: semisynthetic
-    source_format: mp4
+    source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["faceswap/"]
@@ -101,7 +101,7 @@ datasets:
     path: hi-paris/FakeParts
     modality: video
     media_type: semisynthetic
-    source_format: mp4
+    source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["inpainting/"]
@@ -110,7 +110,7 @@ datasets:
     path: hi-paris/FakeParts
     modality: video
     media_type: semisynthetic
-    source_format: mp4
+    source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["outpainting/"]
@@ -119,7 +119,7 @@ datasets:
     path: hi-paris/FakeParts
     modality: video
     media_type: semisynthetic
-    source_format: mp4
+    source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
     include_paths: ["stylechange/"]

@@ -39,11 +39,10 @@ datasets:
     path: edinburghcstr/ami
     modality: audio
     media_type: real
-    source_format: tar.gz
+    source_format: parquet
     media_per_archive: 200
-    archives_per_dataset: 10
-    notes: "AMI Meeting Corpus - diverse speakers, natural speech"
-    include_paths: ["audio"]
+    archives_per_dataset: 5
+    include_paths: ["ihm/", "sdm/"]
 
   # 1600+ languages (Facebook research)
   - name: omnilingual-asr-corpus

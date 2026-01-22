@@ -103,6 +103,7 @@ def command_run(args):
         "mode": mode.upper(),
         "gasstation_only": args.gasstation_only,
         "download_latest_gasstation_data": args.download_latest_gasstation_data,
+        "skip_missing": getattr(args, "skip_missing", False),
         "results_directory": results_dir,
     }
     if args.cache_dir:
@@ -126,6 +127,7 @@ def command_run(args):
                 dataset_config=args.dataset_config,
                 holdout_config=getattr(args, "holdout_config", None),
                 records_parquet_path=parquet_path,
+                skip_missing=getattr(args, "skip_missing", False),
             )
         )
 
@@ -476,6 +478,11 @@ Custom Model Directory Structure:
         type=str,
         metavar="NAME",
         help="Name for this run (used in output filenames instead of timestamp)",
+    )
+    run_parser.add_argument(
+        "--skip-missing",
+        action="store_true",
+        help="Skip datasets that are not already cached (do not download missing datasets)",
     )
 
     run_parser.set_defaults(func=command_run)

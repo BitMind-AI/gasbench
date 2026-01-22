@@ -247,6 +247,7 @@ async def run_video_benchmark(
     records_parquet_path: Optional[str] = None,
     run_id: Optional[str] = None,
     dataset_filters: Optional[list] = None,
+    skip_missing: bool = False,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -303,9 +304,12 @@ async def run_video_benchmark(
 
                 try:
                     is_gasstation = "gasstation" in dataset_config.name.lower()
-                    should_download = (
-                        download_latest_gasstation_data if is_gasstation else True
-                    )
+                    if skip_missing:
+                        should_download = False
+                    else:
+                        should_download = (
+                            download_latest_gasstation_data if is_gasstation else True
+                        )
 
                     dataset_iterator = DatasetIterator(
                         dataset_config,
@@ -316,6 +320,10 @@ async def run_video_benchmark(
                         hf_token=hf_token,
                         seed=seed,
                     )
+
+                    if skip_missing and dataset_iterator.get_total_cached_count() == 0:
+                        logger.warning(f"Skipping {dataset_config.name} (not cached, --skip-missing enabled)")
+                        continue
 
                     pipeline = VideoPrefetchPipeline(
                         dataset_iterator=dataset_iterator,

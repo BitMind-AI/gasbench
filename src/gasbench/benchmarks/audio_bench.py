@@ -101,6 +101,7 @@ async def run_audio_benchmark(
     records_parquet_path: Optional[str] = None,
     run_id: Optional[str] = None,
     dataset_filters: Optional[list] = None,
+    skip_missing: bool = False,
 ) -> pd.DataFrame:
     """Test model on benchmark audio datasets for AI-generated content detection.
     
@@ -159,11 +160,13 @@ async def run_audio_benchmark(
             )
 
             try:
-                # Download gasstation datasets only if flag is set
                 is_gasstation = "gasstation" in dataset_cfg.name.lower()
-                should_download = (
-                    download_latest_gasstation_data if is_gasstation else True
-                )
+                if skip_missing:
+                    should_download = False
+                else:
+                    should_download = (
+                        download_latest_gasstation_data if is_gasstation else True
+                    )
 
                 dataset_iterator = DatasetIterator(
                     dataset_cfg,
@@ -174,6 +177,10 @@ async def run_audio_benchmark(
                     hf_token=hf_token,
                     seed=seed,
                 )
+
+                if skip_missing and dataset_iterator.get_total_cached_count() == 0:
+                    logger.warning(f"Skipping {dataset_cfg.name} (not cached, --skip-missing enabled)")
+                    continue
 
                 batch_audio = []
                 batch_metadata = []

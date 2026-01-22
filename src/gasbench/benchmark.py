@@ -33,6 +33,7 @@ async def run_benchmark(
     records_parquet_path: Optional[str] = None,
     run_id: Optional[str] = None,
     dataset_filters: Optional[list] = None,
+    skip_missing: bool = False,
 ) -> Dict:
     """
     Args:
@@ -47,6 +48,7 @@ async def run_benchmark(
         batch_size: Batch size for model inference (default: 8)
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
         dataset_filters: Optional list of dataset name patterns to filter by (case-insensitive partial matches)
+        skip_missing: If True, skip datasets that are not already cached (do not download)
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -103,6 +105,7 @@ async def run_benchmark(
             records_parquet_path,
             run_id,
             dataset_filters,
+            skip_missing,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -195,10 +198,11 @@ async def execute_benchmark(
     records_parquet_path: Optional[str] = None,
     run_id: Optional[str] = None,
     dataset_filters: Optional[list] = None,
+    skip_missing: bool = False,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing})")
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
@@ -218,6 +222,7 @@ async def execute_benchmark(
             records_parquet_path=records_parquet_path,
             run_id=run_id,
             dataset_filters=dataset_filters,
+            skip_missing=skip_missing,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -237,6 +242,7 @@ async def execute_benchmark(
             records_parquet_path=records_parquet_path,
             run_id=run_id,
             dataset_filters=dataset_filters,
+            skip_missing=skip_missing,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
@@ -256,6 +262,7 @@ async def execute_benchmark(
             records_parquet_path=records_parquet_path,
             run_id=run_id,
             dataset_filters=dataset_filters,
+            skip_missing=skip_missing,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:
@@ -433,13 +440,14 @@ def save_results_to_json(
             dataset_info = results.get("dataset_info", {})
             dataset_types = dataset_info.get("dataset_media_types", {})
 
-            # Per-dataset performance
+            # Per-dataset performance (include predictions for per_source_accuracy reconstruction)
             if per_dataset:
                 output_data["per_dataset"] = {
                     ds_name: {
                         "correct": int(ds_stats.get("correct", 0)),
                         "total": int(ds_stats.get("total", 0)),
                         "accuracy": ds_stats.get("accuracy", 0.0),
+                        "predictions": ds_stats.get("predictions", {}),
                     }
                     for ds_name, ds_stats in per_dataset.items()
                 }
@@ -462,6 +470,10 @@ def save_results_to_json(
                     }
                     for t, v in by_type.items()
                 }
+                output_data["dataset_media_types"] = dataset_types
+
+            # Per-source accuracy (detailed breakdown by media type AND dataset)
+            output_data["per_source_accuracy"] = results.get("per_source_accuracy", {})
 
     # Write to JSON file
     with open(filepath, "w") as f:

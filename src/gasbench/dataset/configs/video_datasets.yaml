@@ -417,14 +417,6 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["style_transfer_upload"]
 
-  - name: klingai
-    path: nyuuzyou/klingai
-    modality: video
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 1000
-    archives_per_dataset: 1
-
   - name: FreeTacMan
     path: OpenDriveLab/FreeTacMan
     modality: video

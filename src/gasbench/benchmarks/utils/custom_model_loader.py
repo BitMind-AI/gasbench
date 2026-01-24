@@ -72,19 +72,28 @@ def load_custom_model(model_dir: Path) -> Tuple[torch.nn.Module, Dict[str, Any]]
             "model.py must define a load_model(weights_path, num_classes) function"
         )
 
-    # Get weights path and num_classes from config
-    weights_file = config.get("model", {}).get("weights_file", "model.safetensors")
+    # Get model config - all params will be passed to load_model()
+    model_config = config.get("model", {}).copy()
+    
+    # Extract required params (not passed to load_model)
+    weights_file = model_config.pop("weights_file", "model.safetensors")
     weights_path = model_dir / weights_file
     
     if not weights_path.exists():
         raise FileNotFoundError(f"Weights file not found: {weights_path}")
     
-    num_classes = config.get("model", {}).get("num_classes", 2)
+    # All remaining params in model_config are passed as **kwargs
+    logger.info(f"Loading model from {weights_path}")
+    if model_config:
+        logger.info(f"Model params: {model_config}")
 
-    logger.info(f"Loading model with {num_classes} classes from {weights_path}")
-
-    # Call the miner's load_model function
+    # Call load_model with weights_path and all config params as kwargs
     try:
+        model = module.load_model(str(weights_path), **model_config)
+    except TypeError as e:
+        # Fallback for minimal load_model signature
+        logger.warning(f"load_model kwargs failed ({e}), trying minimal signature")
+        num_classes = model_config.get("num_classes", 2)
         model = module.load_model(str(weights_path), num_classes=num_classes)
     except Exception as e:
         raise ValueError(f"Failed to load model: {e}")

@@ -86,16 +86,15 @@ def command_run(args):
         print(f"Got: {model_path}")
         return 1
 
-    # Print configuration as JSON for clarity
-    results_dir = args.results_dir if args.results_dir else "results"
-    results_path = Path(results_dir)
-    results_path.mkdir(parents=True, exist_ok=True)
+    # Create run-specific subdirectory for all output files
+    results_base = args.results_dir if args.results_dir else "results"
     run_name = getattr(args, "run_name", None)
-    if run_name:
-        parquet_path = str(results_path / f"records_{modality}_{run_name}.parquet")
-    else:
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        parquet_path = str(results_path / f"records_{modality}_{timestamp}.parquet")
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    run_dir_name = run_name if run_name else f"{modality}_{timestamp}"
+    results_path = Path(results_base) / run_dir_name
+    results_path.mkdir(parents=True, exist_ok=True)
+    
+    parquet_path = str(results_path / "records.parquet")
 
     config = {
         "model": str(model_path),
@@ -104,7 +103,7 @@ def command_run(args):
         "gasstation_only": args.gasstation_only,
         "download_latest_gasstation_data": args.download_latest_gasstation_data,
         "skip_missing": getattr(args, "skip_missing", False),
-        "results_directory": results_dir,
+        "results_directory": str(results_path),
     }
     if args.cache_dir:
         config["cache_directory"] = args.cache_dir
@@ -134,13 +133,19 @@ def command_run(args):
 
         print_benchmark_summary(results)
 
-        output_path = save_results_to_json(results, output_dir=results_dir, run_name=run_name)
-        print(f"\n📊 Results saved to: {results_dir}")
-        print(f"  - JSON summary: {output_path}")
-        res_key = f"{modality}_results"
-        ppath = results.get(res_key, {}).get("parquet_path")
-        if ppath:
-            print(f"  - Parquet records: {ppath}")
+        # Save all output files to run subdirectory
+        save_results_to_json(results, output_dir=str(results_path), filename="results.json")
+        
+        # Save summary text file
+        summary_path = str(results_path / "summary.txt")
+        from gasbench.benchmark import format_benchmark_summary
+        with open(summary_path, "w") as f:
+            f.write(format_benchmark_summary(results))
+        
+        print(f"\n📊 Results saved to: {results_path}")
+        print(f"  - JSON:    results.json")
+        print(f"  - Parquet: records.parquet")
+        print(f"  - Summary: summary.txt")
 
         if results.get("benchmark_completed"):
             print("\n✅ Benchmark completed successfully")

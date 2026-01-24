@@ -271,66 +271,65 @@ async def execute_benchmark(
     return benchmark_score
 
 
-def print_benchmark_summary(benchmark_results: Dict):
-    """Print a comprehensive summary of benchmark results."""
+def format_benchmark_summary(benchmark_results: Dict) -> str:
+    """Format a comprehensive summary of benchmark results as a string."""
+    lines = []
+    
+    lines.append("=" * 80)
+    lines.append("BENCHMARK RESULTS SUMMARY")
+    lines.append("=" * 80)
 
-    print("\n" + "=" * 80)
-    print("BENCHMARK RESULTS SUMMARY")
-    print("=" * 80)
-
-    print(f"Model Path: {benchmark_results.get('model_path', 'N/A')}")
-    print(f"Modality: {benchmark_results.get('modality', 'N/A').upper()}")
-    print(f"Run ID: {benchmark_results.get('run_id', 'N/A')}")
-    print(f"Mode: {benchmark_results.get('mode', 'full').upper()}")
-    print(f"Gasstation Only: {benchmark_results.get('gasstation_only', False)}")
-    print(f"Completed: {benchmark_results.get('benchmark_completed', False)}")
+    lines.append(f"Model Path: {benchmark_results.get('model_path', 'N/A')}")
+    lines.append(f"Modality: {benchmark_results.get('modality', 'N/A').upper()}")
+    lines.append(f"Run ID: {benchmark_results.get('run_id', 'N/A')}")
+    lines.append(f"Mode: {benchmark_results.get('mode', 'full').upper()}")
+    lines.append(f"Gasstation Only: {benchmark_results.get('gasstation_only', False)}")
+    lines.append(f"Completed: {benchmark_results.get('benchmark_completed', False)}")
     duration = benchmark_results.get("metrics", {}).get("benchmark_duration_seconds", 0)
-    print(f"Duration: {duration:.2f} seconds")
+    lines.append(f"Duration: {duration:.2f} seconds")
 
     score = benchmark_results.get("benchmark_score", 0.0)
-    print(f"\n🎯 OVERALL SCORE: {score:.2%}")
+    lines.append(f"\n🎯 OVERALL SCORE: {score:.2%}")
 
-    # Modality-specific results
     modality = benchmark_results.get("modality")
     if modality:
         results_key = f"{modality}_results"
         if results_key in benchmark_results:
             results = benchmark_results[results_key]
 
-            print(f"\n📊 {modality.upper()} RESULTS:")
-            print(f"  Total Samples: {results.get('total_samples', 0)}")
-            print(f"  Correct Predictions: {results.get('correct_predictions', 0)}")
-            print(f"  Accuracy: {results.get('benchmark_score', 0.0):.2%}")
+            lines.append(f"\n📊 {modality.upper()} RESULTS:")
+            lines.append(f"  Total Samples: {results.get('total_samples', 0)}")
+            lines.append(f"  Correct Predictions: {results.get('correct_predictions', 0)}")
+            lines.append(f"  Accuracy: {results.get('benchmark_score', 0.0):.2%}")
 
             avg_time = results.get("avg_inference_time_ms", 0)
             p95_time = results.get("p95_inference_time_ms", 0)
             if avg_time > 0:
-                print(f"  Avg Inference Time: {avg_time:.1f}ms")
+                lines.append(f"  Avg Inference Time: {avg_time:.1f}ms")
             if p95_time > 0:
-                print(f"  P95 Inference Time: {p95_time:.1f}ms")
+                lines.append(f"  P95 Inference Time: {p95_time:.1f}ms")
 
             sn34_score = results.get("sn34_score", 0.0)
             if sn34_score != 0.0:
-                print(f"  SN34 Score: {sn34_score:.4f}")
+                lines.append(f"  SN34 Score: {sn34_score:.4f}")
 
             binary_mcc = results.get("binary_mcc", 0.0)
             if binary_mcc != 0.0:
-                print(f"  Binary MCC: {binary_mcc:.4f}")
+                lines.append(f"  Binary MCC: {binary_mcc:.4f}")
 
             binary_ce = results.get("binary_cross_entropy", 0.0)
             if binary_ce != 0.0:
-                print(f"  Binary Cross-Entropy: {binary_ce:.4f}")
+                lines.append(f"  Binary Cross-Entropy: {binary_ce:.4f}")
 
             per_dataset = results.get("per_dataset_results", {})
             if per_dataset:
-                print(f"\n📋 PER-DATASET RESULTS:")
+                lines.append(f"\n📋 PER-DATASET RESULTS:")
                 for dataset_name, dataset_results in per_dataset.items():
                     accuracy = dataset_results.get("accuracy", 0.0)
                     total = dataset_results.get("total", 0)
                     correct = dataset_results.get("correct", 0)
-                    print(f"  {dataset_name}: {accuracy:.2%} ({correct}/{total})")
+                    lines.append(f"  {dataset_name}: {accuracy:.2%} ({correct}/{total})")
 
-            # Accuracy by media type (real/synthetic/semisynthetic)
             dataset_info = results.get("dataset_info", {})
             dataset_types = dataset_info.get("dataset_media_types", {})
             if per_dataset and dataset_types:
@@ -343,33 +342,43 @@ def print_benchmark_summary(benchmark_results: Dict):
                     entry["samples"] += int(ds_stats.get("total", 0))
                     entry["correct"] += int(ds_stats.get("correct", 0))
                 if by_type:
-                    print(f"\n🎭 ACCURACY BY MEDIA TYPE:")
+                    lines.append(f"\n🎭 ACCURACY BY MEDIA TYPE:")
                     for mtype, v in by_type.items():
                         samples = v["samples"]
                         correct = v["correct"]
                         acc = (correct / samples) if samples > 0 else 0.0
-                        print(f"  {mtype}: {acc:.2%} ({correct}/{samples})")
+                        lines.append(f"  {mtype}: {acc:.2%} ({correct}/{samples})")
 
     validation = benchmark_results.get("validation", {})
     if validation:
-        print(f"\n🔍 MODEL VALIDATION:")
-        print(f"  Input Shape: {validation.get('input_shape', 'N/A')}")
-        print(f"  Input Type: {validation.get('input_type', 'N/A')}")
-        print(f"  Output Shape: {validation.get('output_shape', 'N/A')}")
+        lines.append(f"\n🔍 MODEL VALIDATION:")
+        lines.append(f"  Input Shape: {validation.get('input_shape', 'N/A')}")
+        lines.append(f"  Input Type: {validation.get('input_type', 'N/A')}")
+        lines.append(f"  Output Shape: {validation.get('output_shape', 'N/A')}")
 
     errors = benchmark_results.get("errors", [])
     if errors:
-        print(f"\nERRORS ({len(errors)}):")
+        lines.append(f"\nERRORS ({len(errors)}):")
         for i, error in enumerate(errors[:5], 1):
-            print(f"  {i}. {error}")
+            lines.append(f"  {i}. {error}")
         if len(errors) > 5:
-            print(f"  ... and {len(errors) - 5} more errors")
+            lines.append(f"  ... and {len(errors) - 5} more errors")
 
-    print("=" * 80)
+    lines.append("=" * 80)
+    
+    return "\n".join(lines)
+
+
+def print_benchmark_summary(benchmark_results: Dict):
+    """Print a comprehensive summary of benchmark results."""
+    print("\n" + format_benchmark_summary(benchmark_results))
 
 
 def save_results_to_json(
-    benchmark_results: Dict, output_dir: Optional[str] = None, run_name: Optional[str] = None
+    benchmark_results: Dict,
+    output_dir: Optional[str] = None,
+    run_name: Optional[str] = None,
+    filename: Optional[str] = None,
 ) -> str:
     """
     Save benchmark results to a JSON file.
@@ -378,6 +387,7 @@ def save_results_to_json(
         benchmark_results: Dictionary containing all benchmark results
         output_dir: Directory to save the JSON file (defaults to current directory)
         run_name: Optional name for this run (used in filename instead of timestamp)
+        filename: Optional explicit filename (overrides run_name-based naming)
 
     Returns:
         Path to the saved JSON file
@@ -388,10 +398,13 @@ def save_results_to_json(
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    modality = benchmark_results.get("modality", "unknown")
-    if run_name:
+    if filename:
+        pass
+    elif run_name:
+        modality = benchmark_results.get("modality", "unknown")
         filename = f"gasbench_results_{modality}_{run_name}.json"
     else:
+        modality = benchmark_results.get("modality", "unknown")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"gasbench_results_{modality}_{timestamp}.json"
     filepath = output_path / filename

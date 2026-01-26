@@ -1,0 +1,61 @@
+
+images:
+  - name: 47-plant-species
+    path: bm-images/benchmarks/v12/Real/47-plant-species
+    modality: image
+    media_type: real
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+
+  # Wasabi S3 datasets (commented out for now)
+  - name: Birds-525-species
+    path: bm-images/benchmarks/v12/Real/Birds-525-species
+    modality: image
+    media_type: real
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+  
+  # Wasabi S3 datasets (commented out for now)
+  - name: CUB_200_2011
+    path: bm-images/benchmarks/v12/Real/CUB_200_2011
+    modality: image
+    media_type: real
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # Wasabi S3 datasets (commented out for now)
+  - name: fruits-vegetables
+    path: bm-images/benchmarks/v12/Real/fruits-vegetables
+    modality: image
+    media_type: real
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # Wasabi S3 datasets (commented out for now)
+  - name: google-streetview-images-by-country
+    path: bm-images/benchmarks/v12/Real/google-streetview-images-by-country
+    modality: image
+    media_type: real
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # Wasabi S3 datasets (commented out for now)
+  - name: sea-animals-image
+    path: bm-images/benchmarks/v12/Real/sea-animals-image
+    modality: image
+    media_type: real
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1

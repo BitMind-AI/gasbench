@@ -1,0 +1,49 @@
+videos:
+  - name: Anti-Spoofing-video
+    path: bm-videos/benchmarks/11/Real/Anti-Spoofing-video
+    modality: video
+    media_type: Real
+    source: s3
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+
+  - name: iBeta
+    path: bm-videos/benchmarks/11/Real/iBeta
+    modality: video
+    media_type: Real
+    source: s3
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # uadfv - split into fake and real
+  - name: Latest-Mask
+    path:  bm-videos/benchmarks/11/Real/Latest-Mask
+    modality: video
+    media_type: Real
+    source: s3
+    source_format: frames
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: real_video
+    path: bm-videos/benchmarks/11/Real/Latest-Mask/real-video
+    modality: video
+    media_type: real
+    source: s3
+    source_format: frames
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # Wasabi S3 datasets (commented out for now)
+  - name: Real-Life-Violence-Dataset
+    path: bm-videos/benchmarks/11/Real/Latest-Mask/Real-Life-Violence-Dataset
+    modality: video
+    media_type: real
+    source: s3
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+

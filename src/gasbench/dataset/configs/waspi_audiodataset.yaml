@@ -1,0 +1,52 @@
+
+audios:
+  - name: Pansori-TEDxKR
+    path: bm-audio/benchmarks/v1/Real/Pansori-TEDxKR
+    modality: audio
+    media_type: real
+    source: s3
+    source_format: flac
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+
+  
+  - name: slr45
+    path: bm-audio/benchmarks/v1/Real/slr45
+    modality: audio
+    media_type: real
+    source: s3
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+  
+  # Wasabi S3 datasets (commented out for now)
+  - name: slr70
+    path: bm-audio/benchmarks/v1/Real/slr70
+    modality: audio
+    media_type: real
+    source: s3
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    
+
+  # Wasabi S3 datasets (commented out for now)
+  - name: slr71
+    path: bm-audio/benchmarks/v1/Real/slr71
+    modality: audio
+    media_type: real
+    source: s3
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # Wasabi S3 datasets (commented out for now)
+  - name: Tamil-Slr65
+    path: bm-audio/benchmarks/v1/Real/Tamil-Slr65
+    modality: audio
+    media_type: real
+    source: s3
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1

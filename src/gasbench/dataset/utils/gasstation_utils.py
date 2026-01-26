@@ -4,6 +4,7 @@ This module handles the special caching logic for gasstation datasets:
 - ISO week-based hierarchical directory structure
 - Per-week archive tracking to avoid re-downloads
 - Detection of new archives for incremental updates
+- Automatic fallback to previous week on first day of week (Monday)
 """
 
 import os
@@ -20,8 +21,11 @@ logger = get_logger(__name__)
 def calculate_target_weeks(num_weeks: Optional[int] = None) -> List[str]:
     """Calculate target ISO weeks for download.
     
+    On Monday (first day of ISO week), automatically includes the previous week
+    since the current week won't have enough data yet.
+    
     Args:
-        num_weeks: Number of recent weeks to include (None = current week only)
+        num_weeks: Number of recent weeks to include (None = auto-detect)
         
     Returns:
         List of ISO week strings (e.g., ["2025W39", "2025W40"])
@@ -36,10 +40,19 @@ def calculate_target_weeks(num_weeks: Optional[int] = None) -> List[str]:
             week_str = f"{year}W{week:02d}"
             target_weeks.append(week_str)
     else:
-        # Default to current week only
-        year, week, _ = now.isocalendar()
-        week_str = f"{year}W{week:02d}"
-        target_weeks = [week_str]
+        current_year, current_week, weekday = now.isocalendar()
+        current_week_str = f"{current_year}W{current_week:02d}"
+        target_weeks = [current_week_str]
+        
+        if weekday == 1:
+            prev_date = now - timedelta(weeks=1)
+            prev_year, prev_week, _ = prev_date.isocalendar()
+            prev_week_str = f"{prev_year}W{prev_week:02d}"
+            target_weeks.append(prev_week_str)
+            logger.info(
+                f"Monday detected, including previous week {prev_week_str} "
+                f"along with current week {current_week_str}"
+            )
     
     target_weeks.sort()
     return target_weeks

@@ -83,6 +83,8 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
                             f"Skipping frame with invalid dimensions: {frame.shape if frame is not None else 'None'}"
                         )
                         continue
+                    # Convert BGR (OpenCV default) to RGB
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     frames.append(frame)
                     frames_read += 1
 
@@ -141,14 +143,24 @@ def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
         for frame_data in frames_data[:max_frames]:
             try:
                 if isinstance(frame_data, (str, Path)):
-                    image = Image.open(frame_data).convert("RGB")
+                    frame_array = cv2.imread(str(frame_data))
+                    if frame_array is None:
+                        logger.warning(f"Failed to load frame: {frame_data}")
+                        continue
+                    # Convert BGR (OpenCV default) to RGB
+                    frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
                 elif isinstance(frame_data, bytes):
-                    image = Image.open(BytesIO(frame_data)).convert("RGB")
+                    nparr = np.frombuffer(frame_data, np.uint8)
+                    frame_array = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                    if frame_array is None:
+                        logger.warning(f"Failed to decode frame bytes")
+                        continue
+                    # Convert BGR (OpenCV default) to RGB
+                    frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
                 else:
                     logger.warning(f"Unsupported frame data type: {type(frame_data)}")
                     continue
 
-                frame_array = np.array(image, dtype=np.uint8)
                 frames.append(frame_array)
 
             except Exception as e:

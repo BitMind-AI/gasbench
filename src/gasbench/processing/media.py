@@ -3,8 +3,9 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 
-import numpy as np
 import cv2
+import numpy as np
+from decord import VideoReader, cpu
 from io import BytesIO
 from PIL import Image
 import torchaudio
@@ -36,7 +37,11 @@ def configure_huggingface_cache(volume_dir: str = "/benchmark_data"):
 
 
 def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
-    """Process a video sample that contains raw video bytes. Returns uint8 data for ONNX models."""
+    """Process a video sample that contains raw video bytes using decord.
+    
+    Returns uint8 data for ONNX models in RGB format.
+    Decord outputs RGB directly (no BGR→RGB conversion needed).
+    """
     try:
         video_bytes = sample.get("video_bytes")
         if not video_bytes:
@@ -58,51 +63,35 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
             temp_video.flush()
             temp_video.close()
 
-            cap = cv2.VideoCapture(temp_video_path)
-            if not cap.isOpened():
-                logger.warning(f"Failed to open temporary video: {temp_video_path}")
+            vr = VideoReader(temp_video_path, ctx=cpu(0), num_threads=1)
+            total_frames = len(vr)
+            
+            if total_frames == 0:
+                logger.warning(f"No frames in video")
                 return None, None
 
-            try:
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                max_frames = 16
-                frames = []
-                frames_read = 0
+            max_frames = 16
+            frames = []
+            
+            for i in range(min(max_frames, total_frames)):
+                frame = vr[i].asnumpy()  # Already RGB, shape (H, W, C)
+                if frame is None or frame.size == 0:
+                    logger.warning(f"Skipping invalid frame at index {i}")
+                    continue
+                frames.append(frame)
 
-                while frames_read < max_frames:
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-                    if (
-                        frame is None
-                        or frame.size == 0
-                        or frame.shape[0] == 0
-                        or frame.shape[1] == 0
-                    ):
-                        logger.warning(
-                            f"Skipping frame with invalid dimensions: {frame.shape if frame is not None else 'None'}"
-                        )
-                        continue
-                    # Convert BGR (OpenCV default) to RGB
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frames.append(frame)
-                    frames_read += 1
+            if len(frames) == 0:
+                logger.warning(f"No frames extracted from video")
+                return None, None
 
-                if frames_read == 0:
-                    logger.warning(f"No frames extracted from video")
-                    return None, None
+            if len(frames) < max_frames:
+                last_frame = frames[-1]
+                for i in range(len(frames), max_frames):
+                    frames.append(last_frame)
 
-                if frames_read < max_frames:
-                    last_frame = frames[-1]
-                    for i in range(frames_read, max_frames):
-                        frames.append(last_frame)
+            video_array = np.array(frames, dtype=np.uint8)  # THWC uint8 RGB
 
-                video_array = np.array(frames, dtype=np.uint8)  # THWC uint8
-
-                return video_array, label
-
-            finally:
-                cap.release()
+            return video_array, label
 
         finally:
             try:
@@ -120,6 +109,8 @@ def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
 
     This is used for datasets where frames are already extracted (e.g., PNG files in directories).
     Returns the same format as process_video_bytes_sample: (T, H, W, C) uint8 numpy array with T=16 frames.
+    
+    Uses cv2 for fast image loading, converts BGR to RGB.
 
     Args:
         sample: Dict containing either:
@@ -127,7 +118,7 @@ def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
             - 'media_type': 'real', 'synthetic', or 'semisynthetic'
 
     Returns:
-        Tuple of (video_array, label) where video_array is (16, H, W, 3) uint8 numpy array
+        Tuple of (video_array, label) where video_array is (16, H, W, 3) uint8 numpy array in RGB
     """
     try:
         frames_data = sample.get("video_frames")
@@ -147,7 +138,6 @@ def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
                     if frame_array is None:
                         logger.warning(f"Failed to load frame: {frame_data}")
                         continue
-                    # Convert BGR (OpenCV default) to RGB
                     frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
                 elif isinstance(frame_data, bytes):
                     nparr = np.frombuffer(frame_data, np.uint8)
@@ -155,7 +145,6 @@ def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
                     if frame_array is None:
                         logger.warning(f"Failed to decode frame bytes")
                         continue
-                    # Convert BGR (OpenCV default) to RGB
                     frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
                 else:
                     logger.warning(f"Unsupported frame data type: {type(frame_data)}")

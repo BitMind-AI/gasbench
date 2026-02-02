@@ -323,7 +323,23 @@ def build_sample_id(row: Dict[str, Any]) -> str:
     return hashlib.sha256(id_string.encode()).hexdigest()[:16]
 
 
-def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
+def compute_metrics_from_df(
+    df: pd.DataFrame, holdout_weight: float = 1.0
+) -> Dict[str, Any]:
+    """Compute benchmark metrics from a DataFrame of results.
+
+    Args:
+        df: DataFrame containing benchmark results with 'status', 'correct',
+            'dataset_name', etc.
+        holdout_weight: Weight multiplier for holdout dataset samples when
+            computing the benchmark_score. Holdout datasets are identified by
+            having '-holdout-' in their name. Regular datasets get weight=1.0,
+            holdout datasets get weight=holdout_weight. Default is 1.0 (equal
+            weighting).
+
+    Returns:
+        Dict with benchmark_score, timing metrics, and other computed metrics.
+    """
     result: Dict[str, Any] = {}
     if df is None or df.empty:
         return {
@@ -346,7 +362,22 @@ def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
             "sn34_score": 0.0,
         }
 
-    accuracy = float(ok_df["correct"].mean()) if "correct" in ok_df else 0.0
+    # Compute weighted accuracy based on holdout_weight
+    # Holdout datasets are identified by having '-holdout-' in the name
+    if holdout_weight != 1.0 and "dataset_name" in ok_df.columns:
+        # Assign weights: holdout datasets get holdout_weight, others get 1.0
+        is_holdout = ok_df["dataset_name"].str.contains("-holdout-", na=False)
+        weights = np.where(is_holdout, holdout_weight, 1.0)
+        
+        # Weighted accuracy: sum(correct * weight) / sum(weight)
+        correct_arr = ok_df["correct"].astype(float).values
+        weighted_correct = (correct_arr * weights).sum()
+        total_weight = weights.sum()
+        accuracy = float(weighted_correct / total_weight) if total_weight > 0 else 0.0
+    else:
+        # Standard unweighted accuracy
+        accuracy = float(ok_df["correct"].mean()) if "correct" in ok_df else 0.0
+
     times = ok_df.get("inference_time_ms")
     avg_time = float(times.mean()) if times is not None else 0.0
     p95_time = float(np.percentile(times, 95)) if times is not None else 0.0

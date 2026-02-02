@@ -39,6 +39,7 @@ class BenchmarkRunConfig:
     records_parquet_path: Optional[str]
     run_id: Optional[str] = None
     dataset_filters: Optional[List[str]] = None
+    holdout_weight: float = 1.0  # Weight multiplier for holdout datasets in final score
 
 
 @dataclass
@@ -185,7 +186,7 @@ def finalize_run(
 ):
     logger = get_logger(__name__)
     df = tracker.to_dataframe()
-    metric_pack = compute_metrics_from_df(df)
+    metric_pack = compute_metrics_from_df(df, holdout_weight=config.holdout_weight)
     per_dataset_results = compute_per_dataset_from_df(df)
     per_source_accuracy = calculate_per_source_accuracy(
         plan.available_datasets, per_dataset_results

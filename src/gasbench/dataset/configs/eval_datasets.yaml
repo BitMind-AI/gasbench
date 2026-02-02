@@ -1,0 +1,38 @@
+benchmark_size: 10000
+
+datasets:
+  - name: yanez-data
+    path: workspace/yanez-data
+    modality: image
+    media_type: synthetic
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: real-scraper
+    path: bm-images/archive/real-scraper
+    modality: image
+    media_type: real
+    source: s3
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+  
+  - name: organics-fake
+    path: organics/images/fake
+    modality: image
+    media_type: synthetic
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: organics-real
+    path: organics/images/real
+    modality: image
+    media_type: synthetic
+    source: s3
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  

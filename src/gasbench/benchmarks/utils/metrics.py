@@ -56,7 +56,7 @@ class Metrics:
         return numerator / denominator if denominator > 0 else 0.0
 
     def calculate_binary_cross_entropy(self) -> float:
-        """Calculate binary cross-entropy loss."""
+        """Calculate binary cross-entropy loss (kept for backward compatibility/logging)."""
         if len(self.binary_y_true) == 0 or len(self.binary_probs) == 0:
             return 0.0
 
@@ -65,55 +65,67 @@ class Metrics:
 
         loss = -np.mean(y_true * np.log(y_prob) + (1 - y_true) * np.log(1 - y_prob))
         return float(loss)
-    
-    def compute_sn34_score(self, alpha: float = 1.0, beta: float = 1.0,
-                        agg: str = "geomean") -> float:
-        """
-        Combined SN34 score from binary MCC and Cross-Entropy with principled normalization.
 
-        - MCC in [-1,1] -> mcc_score in [0,1] via (mcc+1)/2, then sharpen via alpha.
-        - CE -> exp(-CE) = 1/perplexity; rescale so random=0 and perfect=1:
-            ce_score = (exp(-CE) - 1/K) / (1 - 1/K), then sharpen via beta.
-        - Combine MCC and CE via geometric mean (default) to penalize imbalance.
+    def calculate_brier(self) -> float:
+        """
+        Calculate Brier score: mean squared error between predicted probs and true labels.
+        
+        Brier score directly measures calibration:
+        - Perfect calibration: 0.0
+        - Random baseline (p=0.5 always): 0.25
+        - Worst case (always wrong with p=1.0): 1.0
+        
+        Unlike CE, Brier penalizes overconfident wrong predictions more severely,
+        incentivizing miners to submit calibrated probabilities instead of binary 0/1.
+        """
+        if len(self.binary_y_true) == 0 or len(self.binary_probs) == 0:
+            return 0.25  # random baseline
+        
+        y_true = np.array(self.binary_y_true)
+        y_prob = np.clip(np.array(self.binary_probs), 1e-7, 1 - 1e-7)
+        
+        return float(np.mean((y_prob - y_true) ** 2))
+
+    def compute_sn34_score(
+        self,
+        alpha: float = 1.2,
+        beta: float = 1.8,
+        agg: str = "geomean"
+    ) -> float:
+        """
+        Combined SN34 score from binary MCC and Brier Score.
+
+        - MCC in [-1,1] -> mcc_norm in [0,1] via (mcc+1)/2, then sharpen via alpha.
+        - Brier in [0,0.25] -> brier_score in [0,1] via (0.25-brier)/0.25, then sharpen via beta.
+        - Geometric mean penalizes imbalance between discrimination (MCC) and calibration (Brier).
 
         Args:
-            alpha: exponent on MCC score (>=1 boosts top-end separation).
-            beta: exponent on CE score (>=1 boosts top-end separation).
-            agg: "geomean" | "harmmean" | "mean" for combining MCC vs CE.
+            alpha: exponent on MCC score (>=1 boosts top-end separation). Default 1.2.
+            beta: exponent on Brier score (>=1 boosts calibration emphasis). Default 1.8.
+            agg: "geomean" | "harmmean" | "mean" for combining MCC vs Brier.
 
         Returns:
             float in [0,1].
         """
         import math
-        
+
+        # Normalize MCC: [-1, 1] -> [0, 1]
         bin_mcc = float(self.calculate_binary_mcc())
-        bin_ce = float(self.calculate_binary_cross_entropy())
+        mcc_norm = max(0.0, min((bin_mcc + 1.0) / 2.0, 1.0)) ** alpha
 
-        def safe_exp_neg(x):
-            x = max(0.0, min(x, 20.0))
-            return math.exp(-x)
-
-        mcc_score = max(0.0, min((bin_mcc + 1.0) / 2.0, 1.0))
-        mcc_score = mcc_score ** alpha
-
-        def ce_to_score(ce: float, K: int) -> float:
-            base = 1.0 / K
-            val = safe_exp_neg(ce)
-            if K <= 1:
-                return 1.0 if ce == 0.0 else 0.0
-            num = max(0.0, val - base)
-            den = 1.0 - base
-            return max(0.0, min(num / den, 1.0))
-
-        ce_score = ce_to_score(bin_ce, K=2) ** beta
+        # Normalize Brier: [0, 0.25] -> [1, 0] (inverted, lower is better)
+        # Then apply beta exponent
+        brier = self.calculate_brier()
+        # random=0.25 -> 0, perfect=0 -> 1
+        brier_score = max(0.0, (0.25 - brier) / 0.25) ** beta
 
         if agg == "geomean":
-            final = math.sqrt(max(1e-12, mcc_score * ce_score))
+            final = (max(1e-12, mcc_norm * brier_score)) ** 0.5
         elif agg == "harmmean":
-            denom = max(1e-12, (mcc_score + ce_score))
-            final = 2.0 * mcc_score * ce_score / denom
+            denom = max(1e-12, mcc_norm + brier_score)
+            final = 2.0 * mcc_norm * brier_score / denom
         else:
-            final = 0.5 * (mcc_score + ce_score)
+            final = 0.5 * (mcc_norm + brier_score)
 
         return float(max(0.0, min(final, 1.0)))
 

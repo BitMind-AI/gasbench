@@ -379,6 +379,7 @@ def compute_metrics_from_df(df: pd.DataFrame) -> Dict[str, Any]:
             "p95_inference_time_ms": p95_time,
             "binary_mcc": metrics.calculate_binary_mcc(),
             "binary_cross_entropy": metrics.calculate_binary_cross_entropy(),
+            "binary_brier": metrics.calculate_brier(),
             "sn34_score": metrics.compute_sn34_score(),
         }
     )

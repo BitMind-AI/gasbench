@@ -128,6 +128,7 @@ def command_run(args):
                 records_parquet_path=parquet_path,
                 skip_missing=getattr(args, "skip_missing", False),
                 run_id=getattr(args, "run_id", None),
+                holdout_weight=getattr(args, "holdout_weight", 1.0),
             )
         )
 
@@ -495,6 +496,14 @@ Custom Model Directory Structure:
         type=str,
         metavar="UUID",
         help="Run ID for tracking (used in parquet records to match with external systems)",
+    )
+    run_parser.add_argument(
+        "--holdout-weight",
+        type=float,
+        default=1.0,
+        metavar="WEIGHT",
+        help="Weight multiplier for holdout datasets in final score. Higher values give "
+             "holdout datasets more impact on benchmark_score. Default: 1.0 (equal weighting)",
     )
 
     run_parser.set_defaults(func=command_run)

@@ -56,7 +56,12 @@ class DatasetIterator:
             self.cache_policy = load_cache_policy(cache_policy)
 
         if self.is_gasstation:
-            self.target_weeks = gasstation_utils.calculate_target_weeks(num_weeks)
+            self.target_weeks = gasstation_utils.calculate_target_weeks(
+                num_weeks,
+                dataset_path=dataset_config.path,
+                source_format=dataset_config.source_format,
+                modality=dataset_config.modality,
+            )
             self.week_dirs = gasstation_utils.get_week_directories(
                 dataset_config.name, cache_dir, self.target_weeks
             )

@@ -43,7 +43,7 @@ logger = get_logger(__name__)
 
 
 IMAGE_FILE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
-VIDEO_FILE_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v"}
+VIDEO_FILE_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v", ".mpeg", ".mpg"}
 AUDIO_FILE_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}
 
 
@@ -1432,7 +1432,7 @@ def download_files(
 def download_single_file(
     url: str, output_dir: Path, chunk_size: int, hf_token: Optional[str] = None
 ) -> Optional[Path]:
-    """Download a single file synchronously
+    """Download a single file synchronously with resume and retry support
 
     Args:
         url: URL to download (supports http/https and s3: schemes)
@@ -1480,33 +1480,81 @@ def download_single_file(
         name, ext = os.path.splitext(base_filename)
         filename = f"{name}_{url_hash}{ext}"
         filepath = output_dir / filename
+        partial_filepath = Path(str(filepath) + ".partial")
 
         logger.debug(f"Downloading {url}")
-        headers = {}
-        if hf_token and "huggingface.co" in url:
-            headers["Authorization"] = f"Bearer {hf_token}"
 
-        response = requests.get(url, stream=True, timeout=3600, headers=headers)
-        if response.status_code != 200:
-            logger.error(f"Failed to download {url}: Status {response.status_code}")
-            return None
+        max_retries = 5
+        effective_chunk_size = max(chunk_size, 1024 * 1024)
 
-        total_size = int(response.headers.get("content-length", 0))
+        for attempt in range(max_retries):
+            try:
+                headers = {}
+                if hf_token and "huggingface.co" in url:
+                    headers["Authorization"] = f"Bearer {hf_token}"
 
-        with open(filepath, "wb") as f:
-            for chunk in response.iter_content(chunk_size=max(chunk_size, 1024 * 1024)):
-                if chunk:
-                    f.write(chunk)
+                downloaded_size = 0
+                if partial_filepath.exists():
+                    downloaded_size = partial_filepath.stat().st_size
+                    headers["Range"] = f"bytes={downloaded_size}-"
+                    logger.info(f"Resuming download from {downloaded_size} bytes")
 
-        if total_size > 0:
-            actual_size = filepath.stat().st_size
-            if actual_size != total_size:
-                logger.error(
-                    f"Download incomplete: expected {total_size} bytes, got {actual_size} bytes"
+                response = requests.get(
+                    url, stream=True, timeout=(30, 300), headers=headers
                 )
-                return None
 
-        return filepath
+                if response.status_code == 416:
+                    logger.info("Server returned 416 (range not satisfiable), restarting download")
+                    partial_filepath.unlink(missing_ok=True)
+                    downloaded_size = 0
+                    del headers["Range"]
+                    response = requests.get(
+                        url, stream=True, timeout=(30, 300), headers=headers
+                    )
+
+                if response.status_code not in (200, 206):
+                    logger.error(f"Failed to download {url}: Status {response.status_code}")
+                    return None
+
+                if response.status_code == 200 and downloaded_size > 0:
+                    logger.info("Server doesn't support resume, restarting download")
+                    partial_filepath.unlink(missing_ok=True)
+                    downloaded_size = 0
+
+                total_size = int(response.headers.get("content-length", 0))
+                if response.status_code == 200:
+                    expected_total = total_size
+                else:
+                    expected_total = downloaded_size + total_size
+
+                mode = "ab" if downloaded_size > 0 else "wb"
+                with open(partial_filepath, mode) as f:
+                    for chunk in response.iter_content(chunk_size=effective_chunk_size):
+                        if chunk:
+                            f.write(chunk)
+
+                actual_size = partial_filepath.stat().st_size
+                if expected_total > 0 and actual_size != expected_total:
+                    raise IOError(
+                        f"Download incomplete: expected {expected_total} bytes, got {actual_size} bytes"
+                    )
+
+                partial_filepath.rename(filepath)
+                return filepath
+
+            except (requests.exceptions.RequestException, IOError) as e:
+                wait_time = min(30 * (2 ** attempt), 300)
+                logger.warning(
+                    f"Download attempt {attempt + 1}/{max_retries} failed: {e}. "
+                    f"Retrying in {wait_time}s..."
+                )
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(wait_time)
+                else:
+                    raise
+
+        return None
 
     except Exception as e:
         logger.error(f"Error downloading {url}: {str(e)}")

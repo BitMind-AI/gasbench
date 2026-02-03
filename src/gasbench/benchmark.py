@@ -34,6 +34,7 @@ async def run_benchmark(
     run_id: Optional[str] = None,
     dataset_filters: Optional[list] = None,
     skip_missing: bool = False,
+    holdout_weight: float = 1.0,
 ) -> Dict:
     """
     Args:
@@ -49,6 +50,10 @@ async def run_benchmark(
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
         dataset_filters: Optional list of dataset name patterns to filter by (case-insensitive partial matches)
         skip_missing: If True, skip datasets that are not already cached (do not download)
+        holdout_weight: Weight multiplier for holdout datasets in final score calculation.
+            Holdout datasets (identified by '-holdout-' in name) get this weight, regular
+            datasets get weight=1.0. Higher values give holdout datasets more impact on
+            the benchmark_score. Default is 1.0 (equal weighting).
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -106,6 +111,7 @@ async def run_benchmark(
             run_id,
             dataset_filters,
             skip_missing,
+            holdout_weight,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -199,10 +205,11 @@ async def execute_benchmark(
     run_id: Optional[str] = None,
     dataset_filters: Optional[list] = None,
     skip_missing: bool = False,
+    holdout_weight: float = 1.0,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight})")
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
@@ -223,6 +230,7 @@ async def execute_benchmark(
             run_id=run_id,
             dataset_filters=dataset_filters,
             skip_missing=skip_missing,
+            holdout_weight=holdout_weight,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -243,6 +251,7 @@ async def execute_benchmark(
             run_id=run_id,
             dataset_filters=dataset_filters,
             skip_missing=skip_missing,
+            holdout_weight=holdout_weight,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
@@ -263,6 +272,7 @@ async def execute_benchmark(
             run_id=run_id,
             dataset_filters=dataset_filters,
             skip_missing=skip_missing,
+            holdout_weight=holdout_weight,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

@@ -226,6 +226,7 @@ async def run_image_benchmark(
     run_id: Optional[str] = None,
     dataset_filters: Optional[list] = None,
     skip_missing: bool = False,
+    holdout_weight: float = 1.0,
 ) -> pd.DataFrame:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -255,6 +256,7 @@ async def run_image_benchmark(
             records_parquet_path=records_parquet_path,
             run_id=run_id,
             dataset_filters=dataset_filters,
+            holdout_weight=holdout_weight,
         )
 
         plan = build_plan(logger, run_config, input_specs)

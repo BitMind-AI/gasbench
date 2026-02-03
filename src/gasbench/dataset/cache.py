@@ -100,6 +100,8 @@ def save_sample_to_cache(
                     ".wmv",
                     ".webm",
                     ".m4v",
+                    ".mpeg",
+                    ".mpg",
                 }:
                     ext = ".mp4"
                 filename = f"vid_{sample_count:06d}{ext}"

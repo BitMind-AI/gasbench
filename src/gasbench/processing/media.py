@@ -52,7 +52,7 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
 
         src_name = str(sample.get("source_file", ""))
         ext = Path(src_name).suffix.lower() if src_name else ".mp4"
-        if ext not in (".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v"):
+        if ext not in (".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v", ".mpeg", ".mpg"):
             ext = ".mp4"
 
         temp_video = tempfile.NamedTemporaryFile(suffix=ext, delete=False)

@@ -17,8 +17,10 @@ This package provides a self-contained benchmark evaluation system for testing m
 - **Comprehensive Metrics**  
   Accuracy, MCC, cross-entropy, inference times, and per-dataset breakdowns
 
-For detailed ONNX model requirements for all three modalities, see the  
-👉 **[ONNX Model Specification](./docs/ONNX.md)**
+For model submission requirements, see the  
+👉 **[Safetensors Model Specification](./docs/Safetensors.md)** (required for competition)
+
+> **Note**: ONNX format is no longer accepted for competition. See [ONNX.md](./docs/ONNX.md) for legacy reference.
 
 ---
 
@@ -44,34 +46,29 @@ pip install -e .[cpu]
 ### Command Line Interface
 
 ```bash
-# Run image benchmark
-gasbench model.onnx image
+# Run image benchmark with safetensors model
+gasbench run --image-model ./my_image_model/ --debug
 
 # Run video benchmark
-gasbench model.onnx video
+gasbench run --video-model ./my_video_model/ --debug
 
 # Run audio benchmark
-gasbench model.onnx audio
+gasbench run --audio-model ./my_audio_model/ --debug
 
-# Debug mode (faster, smaller datasets)
-gasbench model.onnx image --debug
-gasbench model.onnx video --debug
-gasbench model.onnx audio --debug
+# Full benchmark (all datasets)
+gasbench run --image-model ./my_model/ --full
 
 # Custom cache directory
-gasbench model.onnx video --cache-dir /tmp/my_cache
+gasbench run --video-model ./my_model/ --cache-dir /tmp/my_cache
 
-# Save JSON results to a specific directory
-gasbench model.onnx image --output-dir ./results
-gasbench model.onnx video --output-dir ./results
-gasbench model.onnx audio --output-dir ./results
+# Save results to a specific directory
+gasbench run --image-model ./my_model/ --results-dir ./results
 
 # For SN34 miners: Use only gasstation datasets
-gasbench model.onnx image --gasstation-only
-gasbench model.onnx video --gasstation-only
-gasbench model.onnx audio --gasstation-only
-
+gasbench run --image-model ./my_model/ --gasstation-only
 ```
+
+Model directory must contain: `model_config.yaml`, `model.py`, `*.safetensors`
 
 Results are automatically saved to a timestamped JSON file.
 

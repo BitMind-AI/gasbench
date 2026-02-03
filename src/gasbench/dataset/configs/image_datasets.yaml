@@ -8,7 +8,7 @@ benchmark_size: 50000
 
 datasets:
   - name: gasstation-generated-images
-    path: gasstation/gs-images-v2
+    path: gasstation/gs-images-v3
     modality: image
     media_type: synthetic
     source_format: parquet

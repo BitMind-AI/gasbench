@@ -445,7 +445,12 @@ def _needs_download(
     is_gasstation = "gasstation" in dataset.name.lower()
     
     if is_gasstation:
-        target_weeks = gasstation_utils.calculate_target_weeks(num_weeks)
+        target_weeks = gasstation_utils.calculate_target_weeks(
+            num_weeks,
+            dataset_path=dataset.path,
+            source_format=dataset.source_format,
+            modality=dataset.modality,
+        )
         for week_str in target_weeks:
             week_dir = Path(cache_dir) / "datasets" / dataset.name / week_str
             # Week is considered complete only if cache exists AND there are no new upstream archives

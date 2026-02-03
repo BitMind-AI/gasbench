@@ -18,14 +18,22 @@ from ...logger import get_logger
 logger = get_logger(__name__)
 
 
-def calculate_target_weeks(num_weeks: Optional[int] = None) -> List[str]:
+def calculate_target_weeks(
+    num_weeks: Optional[int] = None,
+    dataset_path: Optional[str] = None,
+    source_format: Optional[str] = None,
+    modality: Optional[str] = None,
+) -> List[str]:
     """Calculate target ISO weeks for download.
     
-    On Monday (first day of ISO week), automatically includes the previous week
-    since the current week won't have enough data yet.
+    If the current week has no data available on HuggingFace, automatically
+    falls back to include the previous week(s) until data is found.
     
     Args:
         num_weeks: Number of recent weeks to include (None = auto-detect)
+        dataset_path: HuggingFace dataset path (for checking data availability)
+        source_format: Source file format (e.g., "parquet")
+        modality: Dataset modality ("image" or "video")
         
     Returns:
         List of ISO week strings (e.g., ["2025W39", "2025W40"])
@@ -40,22 +48,72 @@ def calculate_target_weeks(num_weeks: Optional[int] = None) -> List[str]:
             week_str = f"{year}W{week:02d}"
             target_weeks.append(week_str)
     else:
-        current_year, current_week, weekday = now.isocalendar()
+        current_year, current_week, _ = now.isocalendar()
         current_week_str = f"{current_year}W{current_week:02d}"
         target_weeks = [current_week_str]
         
-        if weekday == 1:
-            prev_date = now - timedelta(weeks=1)
-            prev_year, prev_week, _ = prev_date.isocalendar()
-            prev_week_str = f"{prev_year}W{prev_week:02d}"
-            target_weeks.append(prev_week_str)
-            logger.info(
-                f"Monday detected, including previous week {prev_week_str} "
-                f"along with current week {current_week_str}"
-            )
+        # Check if current week has data, if not fall back to previous weeks
+        if dataset_path and source_format and modality:
+            if not _week_has_data(dataset_path, current_week_str, source_format, modality):
+                logger.info(
+                    f"No data found for current week {current_week_str}, "
+                    f"checking previous weeks..."
+                )
+                # Look back up to 4 weeks to find data
+                for i in range(1, 5):
+                    prev_date = now - timedelta(weeks=i)
+                    prev_year, prev_week, _ = prev_date.isocalendar()
+                    prev_week_str = f"{prev_year}W{prev_week:02d}"
+                    
+                    if _week_has_data(dataset_path, prev_week_str, source_format, modality):
+                        target_weeks.append(prev_week_str)
+                        logger.info(
+                            f"Found data in week {prev_week_str}, "
+                            f"including it along with current week {current_week_str}"
+                        )
+                        break
+                    else:
+                        logger.debug(f"No data in week {prev_week_str} either, continuing...")
     
     target_weeks.sort()
     return target_weeks
+
+
+def _week_has_data(
+    dataset_path: str,
+    week_str: str,
+    source_format: str,
+    modality: str,
+) -> bool:
+    """Check if a week has any data files available on HuggingFace.
+    
+    Args:
+        dataset_path: HuggingFace dataset path
+        week_str: ISO week string (e.g., "2025W40")
+        source_format: Source file format (e.g., "parquet")
+        modality: Dataset modality ("image" or "video")
+        
+    Returns:
+        True if files exist for this week, False otherwise
+    """
+    try:
+        from ..download import list_hf_files
+        
+        src_fmt = str(source_format).lower().lstrip(".")
+        if not src_fmt:
+            src_fmt = ".parquet" if modality == "image" else ".zip"
+        else:
+            src_fmt = "." + src_fmt if not src_fmt.startswith(".") else src_fmt
+        
+        all_files = list_hf_files(repo_id=dataset_path, extension=src_fmt)
+        week_files = [f for f in all_files if week_str in f]
+        
+        return len(week_files) > 0
+        
+    except Exception as e:
+        logger.debug(f"Failed to check week data availability: {e}")
+        # If we can't check, assume data exists to avoid blocking
+        return True
 
 
 def get_week_directories(dataset_name: str, cache_dir: str, target_weeks: List[str]) -> List[str]:

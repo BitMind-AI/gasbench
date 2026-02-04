@@ -62,7 +62,7 @@ def command_run(args):
         print("Error: Must specify either --image-model, --video-model, or --audio-model")
         return 1
 
-    # Validate model path - can be .onnx file OR directory with model_config.yaml
+    # Validate model path - must be directory with model_config.yaml (safetensors format)
     if not model_path.exists():
         print(f"Error: Model path not found: {model_path}")
         return 1
@@ -79,10 +79,16 @@ def command_run(args):
             return 1
         print(f"📦 Using custom PyTorch model from: {model_path}")
     elif model_path.suffix.lower() == ".onnx":
-        # ONNX model file
-        print(f"📦 Using ONNX model: {model_path}")
+        # ONNX format no longer supported for competition
+        print(f"Error: ONNX format is no longer supported for competition.")
+        print(f"Please use a safetensors model directory containing:")
+        print(f"  - model_config.yaml")
+        print(f"  - model.py")
+        print(f"  - *.safetensors weights")
+        print(f"See docs/Safetensors.md for requirements.")
+        return 1
     else:
-        print(f"Error: Model must be .onnx file or directory with model_config.yaml")
+        print(f"Error: Model must be a directory with model_config.yaml, model.py, and *.safetensors")
         print(f"Got: {model_path}")
         return 1
 
@@ -397,23 +403,22 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Run image benchmark with ONNX model in debug mode
-  gasbench run --image-model model.onnx --debug
-  
-  # Run image benchmark with custom PyTorch model
-  gasbench run --image-model ./my_model/ --debug
+  # Run image benchmark with safetensors model in debug mode
+  gasbench run --image-model ./my_image_model/ --debug
   
   # Run video benchmark with custom cache directory and save results
-  gasbench run --video-model model.onnx --cache-dir /tmp/my_cache --results-dir ./results
+  gasbench run --video-model ./my_video_model/ --cache-dir /tmp/my_cache --results-dir ./results
   
   # Run only gasstation datasets
-  gasbench run --image-model model.onnx --gasstation-only
+  gasbench run --image-model ./my_model/ --gasstation-only
 
-Custom Model Directory Structure:
+Model Directory Structure (safetensors format required):
   my_model/
   ├── model_config.yaml    # Model metadata and preprocessing config
-  ├── model.py             # Custom architecture definition
+  ├── model.py             # Custom architecture with load_model() function
   └── model.safetensors    # Trained weights
+
+See docs/Safetensors.md for detailed requirements.
         """,
     )
 
@@ -423,19 +428,19 @@ Custom Model Directory Structure:
         "--image-model",
         type=str,
         metavar="PATH",
-        help="Path to image detection model (.onnx file or directory with model_config.yaml)",
+        help="Path to image detection model (directory with model_config.yaml, model.py, *.safetensors)",
     )
     model_group.add_argument(
         "--video-model",
         type=str,
         metavar="PATH",
-        help="Path to video detection model (.onnx file or directory with model_config.yaml)",
+        help="Path to video detection model (directory with model_config.yaml, model.py, *.safetensors)",
     )
     model_group.add_argument(
         "--audio-model",
         type=str,
         metavar="PATH",
-        help="Path to audio detection model (.onnx file or directory with model_config.yaml)",
+        help="Path to audio detection model (directory with model_config.yaml, model.py, *.safetensors)",
     )
 
     add_mode_args(run_parser)

@@ -13,11 +13,10 @@ Your submission must be a directory (or ZIP archive) containing:
 ```
 my_model/
 ├── model_config.yaml    # Model metadata and preprocessing config
+├── config.json          # (optional) Include if using AutoModel.from_pretrained()
 ├── model.py             # Model architecture with load_model() function
 └── model.safetensors    # Trained weights (or *.safetensors)
 ```
-
-All three files are **required**.
 
 ---
 
@@ -34,7 +33,7 @@ modality: "image"
 
 preprocessing:
   resize: [224, 224]       # Target [H, W] - must match model input
-  normalize:               # Optional - applied after uint8->float conversion
+  normalize:               # Optional params will beb passed to your load_model() fn in model.py
     mean: [0.485, 0.456, 0.406]
     std: [0.229, 0.224, 0.225]
 

@@ -1,5 +1,10 @@
 # ONNX Model Specification (Image, Video, Audio)
 
+> **⚠️ IMPORTANT**: ONNX format is no longer accepted for Subnet 34 competition submissions.
+> Please use **safetensors format** instead. See [Safetensors.md](Safetensors.md) for requirements.
+
+---
+
 This document defines the ONNX requirements for **image**, **video**, and **audio** discriminative models used with GASBench on Subnet 34.
 
 ---

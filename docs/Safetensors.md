@@ -134,7 +134,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 - Shape: `[batch_size, frames, 3, H, W]`
 - Data type: `uint8`
 - Value range: `[0, 255]`
-- Color format: BGR (as from cv2.VideoCapture)
+- Color format: RGB
 
 **Output:**
 - Shape: `[batch_size, num_classes]`
@@ -286,6 +286,57 @@ gascli d push --audio-model my_model.zip
 
 ---
 
+## 9. Allowed Packages
+
+Your `model.py` can import from the following packages:
+
+### ML Frameworks
+- `torch`, `torch.nn`, `torch.nn.functional`, `torch.cuda.amp`
+- `torchvision`, `torchvision.models`, `torchvision.transforms`
+- `torchaudio`
+- `transformers`
+- `safetensors`, `safetensors.torch`
+- `einops`
+- `timm`
+- `flash_attn` (efficient attention for transformers)
+
+### Image/Video Processing
+- `PIL`, `PIL.Image`
+- `cv2` (opencv-python)
+- `skimage` (scikit-image)
+- `decord` (video decoding)
+- `fvcore`
+
+### Scientific Computing
+- `numpy`
+- `scipy`, `scipy.ndimage`, `scipy.signal`
+
+### Python Standard Library
+- `math`, `functools`, `typing`, `collections`, `dataclasses`, `enum`, `abc`, `pathlib`
+
+---
+
+## 10. Blocked Packages
+
+The following packages are **not allowed** in `model.py`:
+
+| Package | Reason |
+|---------|--------|
+| `apex` | Training-only. Use `torch.cuda.amp` for mixed precision instead |
+| `deepspeed` | Training-only |
+| `tensorboard`, `tensorboardX` | Logging-only, not for inference |
+| `wandb`, `mlflow` | Logging/monitoring |
+| `os`, `sys`, `subprocess` | System access |
+| `requests`, `urllib`, `socket` | Network access |
+| `pickle`, `joblib` | Serialization (security risk) |
+| `numba`, `cython` | JIT compilation |
+| `boto3`, `google.cloud`, `azure` | Cloud SDKs |
+| `sqlite3`, `psycopg2`, `redis` | Database access |
+
+If your model uses a blocked package, the submission will be rejected with an error message.
+
+---
+
 ## Common Issues
 
 1. **Missing load_model function**: Ensure `model.py` has a `load_model(weights_path, num_classes)` function.
@@ -297,3 +348,5 @@ gascli d push --audio-model my_model.zip
 4. **Mismatched resize dimensions**: Ensure `preprocessing.resize` in config matches your model's expected input size.
 
 5. **ONNX format**: ONNX is no longer accepted. Convert your model to safetensors format.
+6. **Blocked import**: If you see "Blocked import" error, check that you're not using packages from the blocked list above. For mixed precision, use `torch.cuda.amp` instead of `apex`.
+

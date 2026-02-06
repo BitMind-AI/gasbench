@@ -82,7 +82,7 @@ from gasbench import run_benchmark, print_benchmark_summary, save_results_to_jso
 
 async def evaluate_model():
     results = await run_benchmark(
-        model_path="path/to/model.onnx",
+        model_path="./my_image_model/",
         modality="image",  # "image" | "video" | "audio"
         debug_mode=False,
         gasstation_only=False,
@@ -100,13 +100,13 @@ results = asyncio.run(evaluate_model())
 
 ## Model Requirements (High-Level)
 
-- Models must be exported as **ONNX classifiers** (image, video, or audio).
-- GASBench expects **batched inputs** and **logits outputs**.
-- Image/video preprocessing (resize/crop/augment) and audio preprocessing (mono/resample/crop) are handled by GASBench.
-- Both **binary (real vs synthetic)** and **3-class (real, semisynthetic, synthetic)** models are supported.
+- Models must be submitted in **safetensors format** (ONNX is deprecated)
+- Model directory must contain: `model_config.yaml`, `model.py`, `*.safetensors`
+- GASBench handles preprocessing (resize/crop for image/video, resample/crop for audio)
+- Both **binary (real vs synthetic)** and **multi-class** models are supported
 
-For exact ONNX requirements, see:  
-👉 **[ONNX Model Specification](./docs/ONNX.md)**
+For exact requirements, see:  
+👉 **[Safetensors Model Specification](./docs/Safetensors.md)**
 
 ---
 
@@ -136,7 +136,7 @@ A structured JSON summary is automatically generated after each run:
     "run_id": "64a8c5eb-560a-4822-9ae5-b51d27737831",
     "timestamp": 1765074390.323,
     "datetime": "2025-12-07T02:26:30.323068",
-    "model_path": "model.onnx",
+    "model_path": "./my_audio_model/",
     "modality": "audio",
     "mode": "full",
     "gasstation_only": false,
@@ -145,7 +145,7 @@ A structured JSON summary is automatically generated after each run:
   },
   "overall_score": 0.8523,
   "validation": {
-    "model_path": "model.onnx",
+    "model_path": "./my_audio_model/",
     "input_shape": "['batch_size', 96000]",
     "input_type": "tensor(float)",
     "output_shape": "['batch_size', 2]"

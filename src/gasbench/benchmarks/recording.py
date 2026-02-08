@@ -348,6 +348,7 @@ def compute_metrics_from_df(
             "p95_inference_time_ms": 0.0,
             "binary_mcc": 0.0,
             "binary_cross_entropy": 0.0,
+            "binary_brier": 0.25,  # random baseline
             "sn34_score": 0.0,
         }
 
@@ -359,6 +360,7 @@ def compute_metrics_from_df(
             "p95_inference_time_ms": 0.0,
             "binary_mcc": 0.0,
             "binary_cross_entropy": 0.0,
+            "binary_brier": 0.25,  # random baseline
             "sn34_score": 0.0,
         }
 

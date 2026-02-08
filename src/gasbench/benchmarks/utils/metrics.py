@@ -93,7 +93,7 @@ class Metrics:
         agg: str = "geomean"
     ) -> float:
         """
-        Combined SN34 score from binary MCC and Brier Score.
+        SN34 score: combined metric from binary MCC (discrimination) and Brier (calibration).
 
         - MCC in [-1,1] -> mcc_norm in [0,1] via (mcc+1)/2, then sharpen via alpha.
         - Brier in [0,0.25] -> brier_score in [0,1] via (0.25-brier)/0.25, then sharpen via beta.

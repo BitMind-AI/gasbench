@@ -77,11 +77,6 @@ class PyTorchInferenceSession:
         """Infer input shape from preprocessing config."""
         preproc = self.config.get("preprocessing", {})
         
-        # For image/video models
-        if "resize" in preproc:
-            h, w = preproc["resize"]
-            return [None, 3, h, w]  # NCHW format
-        
         # For audio models
         if "sample_rate" in preproc and "duration_seconds" in preproc:
             sr = preproc["sample_rate"]
@@ -89,7 +84,17 @@ class PyTorchInferenceSession:
             samples = int(sr * duration)
             return [None, samples]  # Batch, Samples
         
-        # Default for image
+        # For image/video models with resize config
+        if "resize" in preproc:
+            h, w = preproc["resize"]
+            if self.model_type == "video":
+                max_frames = preproc.get("max_frames", 16)
+                return [None, max_frames, 3, h, w]  # NTCHW format
+            return [None, 3, h, w]  # NCHW format
+        
+        # Defaults based on model type
+        if self.model_type == "video":
+            return [None, 16, 3, 224, 224]
         return [None, 3, 224, 224]
 
     def get_inputs(self) -> List[InputSpec]:

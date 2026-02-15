@@ -115,7 +115,7 @@ For full submission requirements, see:
 
 ## Metrics
 
-- **sn34_score** -- Primary competition metric. Geometric mean of normalized MCC and Brier score: $\sqrt{\text{MCC\_norm}^{1.2} \cdot \text{Brier\_norm}^{1.8}}$. Rewards both discrimination accuracy and probability calibration.
+- **sn34_score** -- Primary competition metric. Geometric mean of normalized MCC and Brier score: $\sqrt{MCC_{norm}^{1.2} \cdot Brier_{norm}^{1.8}}$. Rewards both discrimination accuracy and probability calibration.
 - **binary_mcc** -- Matthews Correlation Coefficient for binary real/synthetic classification (-1 to +1)
 - **binary_brier** -- Brier score measuring calibration quality (0 = perfect, 0.25 = random)
 - **binary_cross_entropy** -- Log-loss for predicted probabilities

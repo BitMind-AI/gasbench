@@ -849,7 +849,7 @@ def _process_tar_with_metadata(
                         media_obj = data_bytes
 
                     sample = create_sample(dataset, media_obj, archive_path, iso_week)
-                    sample["archive_filename"] = archive_basename
+                    sample["archive_filename"] = archive_basename_normalized
                     sample["member_path"] = member.name
 
                     metadata_key = (archive_basename_normalized, member.name)
@@ -947,7 +947,12 @@ def _process_zip_or_tar(
                         media_obj = data_bytes
 
                     sample = create_sample(dataset, media_obj, source_path, iso_week)
-                    sample["archive_filename"] = source_path.name
+                    # Normalize hash-appended filename back to original basename
+                    # (download_single_file appends _<hash> before extension)
+                    _normalized = re.sub(r"\.tar_[a-f0-9]{8}\.gz$", ".tar.gz", source_path.name)
+                    if _normalized == source_path.name:
+                        _normalized = re.sub(r"_[a-f0-9]{8}(\.\w+)$", r"\1", source_path.name)
+                    sample["archive_filename"] = _normalized
                     sample["member_path"] = get_name(entry)
 
                     yield sample

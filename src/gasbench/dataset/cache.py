@@ -328,13 +328,31 @@ def format_size_bytes(size_bytes: int) -> str:
 def scan_cache_directory(cache_dir: str = "/.cache/gasbench") -> List[Dict]:
     """Scan cache directory and return list of dataset information.
 
+    Accepts either:
+    - A base cache root (e.g. /workspace/modal-image-datasets): looks in
+      cache_dir/datasets/ for dataset subdirs.
+    - The datasets folder itself (e.g. /workspace/modal-image-datasets/datasets):
+      looks directly in cache_dir for dataset subdirs.
+
     Returns:
         List of dicts containing dataset metadata including name, modality,
         media_type, sample_count, size_bytes, etc.
     """
-    datasets_dir = Path(cache_dir) / "datasets"
+    root = Path(cache_dir)
+    candidates = [root / "datasets", root]
 
-    if not datasets_dir.exists():
+    datasets_dir = None
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_dir():
+            # Check if this looks like the datasets container (has subdirs with dataset_info.json)
+            for sub in candidate.iterdir():
+                if sub.is_dir() and (sub / "dataset_info.json").exists():
+                    datasets_dir = candidate
+                    break
+            if datasets_dir is not None:
+                break
+
+    if datasets_dir is None:
         return []
 
     datasets = []

@@ -319,17 +319,21 @@ def format_benchmark_summary(benchmark_results: Dict) -> str:
             if p95_time > 0:
                 lines.append(f"  P95 Inference Time: {p95_time:.1f}ms")
 
-            sn34_score = results.get("sn34_score", 0.0)
-            if sn34_score != 0.0:
-                lines.append(f"  SN34 Score: {sn34_score:.4f}")
-
             binary_mcc = results.get("binary_mcc", 0.0)
             if binary_mcc != 0.0:
                 lines.append(f"  Binary MCC: {binary_mcc:.4f}")
 
+            binary_brier = results.get("binary_brier")
+            if binary_brier is not None:
+                lines.append(f"  Binary Brier: {binary_brier:.4f}")
+
             binary_ce = results.get("binary_cross_entropy", 0.0)
             if binary_ce != 0.0:
                 lines.append(f"  Binary Cross-Entropy: {binary_ce:.4f}")
+
+            sn34_score = results.get("sn34_score", 0.0)
+            if sn34_score != 0.0:
+                lines.append(f"  SN34 Score: {sn34_score:.4f}")
 
             per_dataset = results.get("per_dataset_results", {})
             if per_dataset:
@@ -456,6 +460,7 @@ def save_results_to_json(
                 "p95_inference_time_ms": results.get("p95_inference_time_ms", 0),
                 "binary_mcc": results.get("binary_mcc", 0.0),
                 "binary_cross_entropy": results.get("binary_cross_entropy", 0.0),
+                "binary_brier": results.get("binary_brier", 0.25),
                 "sn34_score": results.get("sn34_score", 0.0),
             }
 

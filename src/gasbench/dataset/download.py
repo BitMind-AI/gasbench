@@ -434,31 +434,41 @@ def _list_remote_dataset_files(
     if source_format in [".tar", ".tar.gz", ".tgz"]:
         source_format = [".tar", ".tar.gz", ".tgz"]
 
+    # For gasstation datasets with week filtering, we must fetch ALL files before
+    # applying max_files. Otherwise early termination picks up files from older
+    # weeks (alphabetically first) and the subsequent week filter discards them all,
+    # resulting in zero files.
+    is_gasstation = "gasstation" in dataset_path.lower()
+    needs_week_filter = is_gasstation and (target_week or num_weeks or current_week_only)
+    listing_max = None if needs_week_filter else max_files
+
     if source == "modelscope":
         files = list_modelscope_files(repo_id=dataset_path, extension=source_format)
         if include_paths:
             files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
         if exclude_paths:
             files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
-        files = files[:max_files]
+        if not needs_week_filter:
+            files = files[:max_files]
     elif source == "s3":
         files = list_s3_files(path=dataset_path, extension=source_format)
         if include_paths:
             files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
         if exclude_paths:
             files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
-        files = files[:max_files]
+        if not needs_week_filter:
+            files = files[:max_files]
     else:  # hf - supports early termination natively
         files = list_hf_files(
             repo_id=dataset_path,
             extension=source_format,
             token=hf_token,
-            max_files=max_files,
+            max_files=listing_max,
             include_paths=include_paths,
             exclude_paths=exclude_paths,
         )
 
-    if "gasstation" in dataset_path.lower():
+    if is_gasstation:
         if target_week:
             files = [f for f in files if target_week in f]
             logger.info(
@@ -474,6 +484,10 @@ def _list_remote_dataset_files(
             logger.info(
                 f"Filtered to current week files for {dataset_path}: {len(files)} files"
             )
+
+        # Apply max_files limit AFTER week filtering
+        if needs_week_filter and max_files:
+            files = files[:max_files]
 
     return files
 

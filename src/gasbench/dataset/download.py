@@ -594,14 +594,26 @@ def _process_gasstation(
     parquet_metadata_maps = {}
     processed_parquet_basenames = []
 
-    for parquet_path, parquet_url in zip(downloaded_parquets, parquet_urls):
+    # Build reverse mapping: downloaded filename -> original URL.
+    # download_single_file() appends a URL hash to filenames (e.g., "file_abc12345.parquet"),
+    # but downloaded_archives.json must store original basenames (e.g., "file.parquet")
+    # to match HuggingFace file listings for cache completeness checks.
+    _downloaded_name_to_url = {}
+    for url in parquet_urls:
+        expected_name = _get_expected_download_filename(url)
+        _downloaded_name_to_url[expected_name] = url
+
+    for parquet_path in downloaded_parquets:
         if not parquet_path or not parquet_path.exists():
             continue
 
         try:
-            processed_parquet_basenames.append(parquet_path.name)
+            # Track original URL basename (not hash-appended) for archive tracking
+            original_url = _downloaded_name_to_url.get(parquet_path.name)
+            original_basename = os.path.basename(original_url) if original_url else parquet_path.name
+            processed_parquet_basenames.append(original_basename)
 
-            iso_week = extract_iso_week_from_path(parquet_url)
+            iso_week = extract_iso_week_from_path(original_url or str(parquet_path))
             
             archive_filenames = _extract_unique_archive_filenames(parquet_path)
             for archive_filename in archive_filenames:
@@ -1560,6 +1572,27 @@ def download_single_file(
         logger.error(f"Error downloading {url}: {str(e)}")
         logger.error(traceback.format_exc())
         return None
+
+
+def _get_expected_download_filename(url: str) -> str:
+    """Compute the filename that download_single_file() would produce for a URL.
+
+    download_single_file() appends a URL hash to filenames to avoid collisions
+    (e.g., "file.parquet" becomes "file_abc12345.parquet"). This function mirrors
+    that naming convention to enable reverse-mapping from downloaded filenames
+    back to original URLs.
+    """
+    if url.startswith("s3:"):
+        s3_path = url[3:]
+        parts = s3_path.split("/", 1)
+        key = parts[1] if len(parts) == 2 else s3_path
+        url_hash = hashlib.md5(key.encode()).hexdigest()[:8]
+        base_filename = os.path.basename(key)
+    else:
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+        base_filename = os.path.basename(url)
+    name, ext = os.path.splitext(base_filename)
+    return f"{name}_{url_hash}{ext}"
 
 
 def _is_dataset_cached(dataset, cache_dir: str = "/.cache/gasbench") -> bool:

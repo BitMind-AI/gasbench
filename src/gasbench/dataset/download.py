@@ -601,12 +601,8 @@ def _process_gasstation(
         return
 
     logger.info(
-        f"Extracting archive filenames from {len(downloaded_parquets)} parquet files"
+        f"Processing {len(downloaded_parquets)} parquet files (per-parquet download & extract)"
     )
-
-    archive_to_week = {}
-    parquet_metadata_maps = {}
-    processed_parquet_basenames = []
 
     # Build reverse mapping: downloaded filename -> original URL.
     # download_single_file() appends a URL hash to filenames (e.g., "file_abc12345.parquet"),
@@ -617,111 +613,125 @@ def _process_gasstation(
         expected_name = _get_expected_download_filename(url)
         _downloaded_name_to_url[expected_name] = url
 
+    total_samples = 0
+    total_archives = 0
+
+    # Process each parquet independently: extract metadata → download its tars →
+    # extract samples → mark parquet done. This ensures a parquet is only marked
+    # as processed after ALL of its tar archives have been successfully downloaded
+    # and extracted, and preserves progress incrementally across timeouts.
     for parquet_path in downloaded_parquets:
         if not parquet_path or not parquet_path.exists():
             continue
 
         try:
-            # Track original URL basename (not hash-appended) for archive tracking
+            # Resolve original URL basename (not hash-appended) for archive tracking
             original_url = _downloaded_name_to_url.get(parquet_path.name)
             original_basename = os.path.basename(original_url) if original_url else parquet_path.name
-            processed_parquet_basenames.append(original_basename)
 
             iso_week = extract_iso_week_from_path(original_url or str(parquet_path))
-            
+
+            # Step 1: Extract archive filenames referenced by this parquet
             archive_filenames = _extract_unique_archive_filenames(parquet_path)
+            if not archive_filenames:
+                logger.warning(f"No archive filenames found in {parquet_path}")
+                # Still mark as done - the parquet was processed, it just had no archives
+                if downloaded_archives is not None:
+                    downloaded_archives.add(original_basename)
+                continue
+
+            archive_to_week = {}
             for archive_filename in archive_filenames:
-                if archive_filename not in archive_to_week and iso_week:
+                if iso_week:
                     archive_to_week[archive_filename] = iso_week
 
+            # Step 2: Build metadata map from this parquet
             metadata_map = _build_parquet_metadata_map(parquet_path)
-            for key, value in metadata_map.items():
-                parquet_metadata_maps[key] = value
-
             if iso_week:
                 for key in metadata_map.keys():
-                    if key in parquet_metadata_maps:
-                        parquet_metadata_maps[key]["iso_week"] = iso_week
+                    if key in metadata_map:
+                        metadata_map[key]["iso_week"] = iso_week
+
+            # Step 3: Download this parquet's tar archives
+            archive_paths = [
+                f"archives/{week}/{basename}"
+                for basename, week in archive_to_week.items()
+            ]
+            archive_urls = _get_download_urls(dataset.path, archive_paths, source)
+
+            if not archive_urls:
+                logger.warning(f"No archive URLs resolved for {original_basename}")
+                continue
+
+            max_workers = min(10, len(archive_urls))
+            downloaded_archive_files = download_files(
+                archive_urls,
+                temp_dir_root,
+                chunk_size=8192,
+                max_workers=max_workers,
+                hf_token=hf_token,
+            )
+
+            if not downloaded_archive_files:
+                logger.warning(
+                    f"Failed to download tar archives for parquet {original_basename}"
+                )
+                continue
+
+            # Step 4: Extract samples from this parquet's tar archives
+            parquet_samples = 0
+            for archive_path in downloaded_archive_files:
+                if not archive_path or not archive_path.exists():
+                    continue
+
+                try:
+                    tar_iso_week = extract_iso_week_from_path(str(archive_path))
+
+                    for sample in _process_tar_with_metadata(
+                        archive_path,
+                        dataset,
+                        metadata_map,
+                        media_per_archive,
+                        tar_iso_week,
+                        seed,
+                    ):
+                        parquet_samples += 1
+                        total_samples += 1
+                        yield sample
+                except Exception as e:
+                    logger.warning(f"Failed to process archive {archive_path}: {e}")
+                    continue
+                finally:
+                    try:
+                        if archive_path.exists():
+                            archive_path.unlink()
+                    except Exception:
+                        pass
+
+            total_archives += len(downloaded_archive_files)
+
+            # Step 5: Mark parquet as done ONLY after all its tars are processed.
+            # This is the last step so if anything above fails or times out,
+            # the parquet will be retried on the next run.
+            if downloaded_archives is not None:
+                downloaded_archives.add(original_basename)
+            logger.info(
+                f"✅ Parquet {original_basename}: {parquet_samples} samples "
+                f"from {len(downloaded_archive_files)} archives"
+            )
         except Exception as e:
             logger.warning(f"Failed to process parquet {parquet_path}: {e}")
             continue
-
-    logger.info(
-        f"Found {len(archive_to_week)} unique archive files referenced in parquet metadata"
-    )
-    logger.info(f"Built metadata map with {len(parquet_metadata_maps)} entries")
-
-    if not archive_to_week:
-        logger.warning("No archive filenames found in parquet metadata")
-        return
-
-    archive_paths = [
-        f"archives/{week}/{basename}" for basename, week in archive_to_week.items()
-    ]
-    
-    weeks_in_batch = set(archive_to_week.values())
-    logger.info(f"Downloading {len(archive_paths)} tar archives from {len(weeks_in_batch)} week(s): {sorted(weeks_in_batch)}")
-
-    archive_urls = _get_download_urls(dataset.path, archive_paths, source)
-
-    max_workers = min(10, len(archive_urls))
-    downloaded_archive_files = download_files(
-        archive_urls,
-        temp_dir_root,
-        chunk_size=8192,
-        max_workers=max_workers,
-        hf_token=hf_token,
-    )
-
-    if not downloaded_archive_files:
-        logger.warning(f"Failed to download archive files for {dataset.name}")
-        return
-
-    logger.info(f"Extracting media from {len(downloaded_archive_files)} archives")
-
-    total_samples = 0
-    for archive_path in downloaded_archive_files:
-        if not archive_path or not archive_path.exists():
-            continue
-
-        try:
-            iso_week = extract_iso_week_from_path(str(archive_path))
-
-            for sample in _process_tar_with_metadata(
-                archive_path,
-                dataset,
-                parquet_metadata_maps,
-                media_per_archive,
-                iso_week,
-                seed,
-            ):
-                total_samples += 1
-                yield sample
-        except Exception as e:
-            logger.warning(f"Failed to process archive {archive_path}: {e}")
-            continue
         finally:
+            # Clean up this parquet file immediately
             try:
-                if archive_path.exists():
-                    archive_path.unlink()
+                if parquet_path and parquet_path.exists():
+                    parquet_path.unlink()
             except Exception:
                 pass
 
-    # Track the processed parquet files (not tar archives)
-    if downloaded_archives is not None:
-        for parquet_basename in processed_parquet_basenames:
-            downloaded_archives.add(parquet_basename)
-
-    # Clean up parquet files
-    for parquet_path in downloaded_parquets:
-        try:
-            if parquet_path and parquet_path.exists():
-                parquet_path.unlink()
-        except Exception:
-            pass
-
     logger.info(
-        f"Extracted {total_samples} samples from {len(downloaded_archive_files)} archives"
+        f"Extracted {total_samples} samples from {total_archives} archives"
     )
 
 

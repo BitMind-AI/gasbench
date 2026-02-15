@@ -33,7 +33,7 @@ modality: "image"
 
 preprocessing:
   resize: [224, 224]       # Target [H, W] - must match model input
-  normalize:               # Optional params will beb passed to your load_model() fn in model.py
+  normalize:               # Optional params will be passed to your load_model() fn in model.py
     mean: [0.485, 0.456, 0.406]
     std: [0.229, 0.224, 0.225]
 
@@ -100,6 +100,38 @@ def load_model(weights_path: str, num_classes: int = 2) -> torch.nn.Module:
     model.train(False)  # Set to eval mode
     return model
 ```
+
+### Allowed Imports
+
+Your `model.py` is checked by a static analyzer before execution in a sandboxed environment. Only the following imports are permitted:
+
+**Allowed:**
+- **PyTorch:** `torch`, `torch.nn`, `torch.nn.functional`, `torch.cuda.amp`, `torchvision`, `torchvision.models`, `torchvision.transforms`, `torchaudio`
+- **ML Frameworks:** `transformers`, `timm`, `einops`, `safetensors`, `safetensors.torch`, `flash_attn`
+- **Image/Video Processing:** `PIL`, `PIL.Image`, `cv2`, `skimage` (scikit-image), `decord`
+- **Scientific Computing:** `numpy`, `scipy`, `scipy.ndimage`, `scipy.signal`
+- **Vision Utilities:** `fvcore`
+- **Python Standard Library:** `math`, `functools`, `typing`, `collections`, `dataclasses`, `enum`, `abc`, `pathlib`
+
+**Blocked (security):**
+- **System access:** `os`, `sys`, `subprocess`, `shutil`
+- **Network access:** `socket`, `requests`, `urllib`, `http`, `asyncio`, `aiohttp`, `httpx`, `ftplib`, `smtplib`, `telnetlib`
+- **Serialization:** `pickle`, `marshal`, `shelve`, `dill`, `cloudpickle`, `joblib`
+- **Code execution:** `importlib`, `builtins`, `code`, `runpy`
+- **JIT compilation:** `numba`, `cython`
+- **Low-level access:** `ctypes`, `cffi`, `mmap`, `signal`
+- **Multiprocessing:** `multiprocessing`, `concurrent`, `threading`
+- **Training-only:** `apex`, `deepspeed`
+- **Logging/monitoring:** `tensorboard`, `wandb`, `mlflow`
+- **Cloud SDKs:** `boto3`, `google.cloud`, `azure`
+- **Database access:** `sqlite3`, `psycopg2`, `pymongo`, `redis`
+- **Other:** `tempfile`, `glob`, `h5py`, `pty`, `tty`, `termios`
+
+**Blocked function calls:** `eval()`, `exec()`, `compile()`, `__import__()`, `getattr()`, `setattr()`, `globals()`, `locals()`
+
+**Blocked submodules:** `torch.utils.cpp_extension`, `torch.jit.script`, `torch.jit.trace`, `numpy.ctypeslib`
+
+Any model using blocked imports or calls will be rejected during evaluation.
 
 ---
 

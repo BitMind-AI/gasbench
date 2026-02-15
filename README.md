@@ -82,7 +82,7 @@ from gasbench import run_benchmark, print_benchmark_summary, save_results_to_jso
 
 async def evaluate_model():
     results = await run_benchmark(
-        model_path="path/to/model.onnx",
+        model_path="path/to/my_model/",  # directory with model_config.yaml, model.py, *.safetensors
         modality="image",  # "image" | "video" | "audio"
         debug_mode=False,
         gasstation_only=False,
@@ -100,24 +100,28 @@ results = asyncio.run(evaluate_model())
 
 ## Model Requirements (High-Level)
 
-- Models must be exported as **ONNX classifiers** (image, video, or audio).
-- GASBench expects **batched inputs** and **logits outputs**.
-- Image/video preprocessing (resize/crop/augment) and audio preprocessing (mono/resample/crop) are handled by GASBench.
-- Both **binary (real vs synthetic)** and **3-class (real, semisynthetic, synthetic)** models are supported.
+- Models must be submitted in **safetensors format** as a directory containing `model_config.yaml`, `model.py`, and `*.safetensors` weights.
+- Your `model.py` must define a `load_model(weights_path, num_classes)` function that returns a PyTorch `nn.Module`.
+- GASBench expects **batched inputs** (raw 0-255 pixel values for image/video, waveform tensors for audio) and **logits outputs**.
+- Image/video preprocessing (resize/crop/augment) and audio preprocessing (mono/resample/crop) are handled by GASBench. Input normalization should be done inside your model's `forward()` method.
+- **Binary (real vs synthetic)** classification with `num_classes: 2` is the standard format.
 
-For exact ONNX requirements, see:  
-👉 **[ONNX Model Specification](./docs/ONNX.md)**
+For full submission requirements, see:  
+👉 **[Safetensors Model Specification](./docs/Safetensors.md)** (required for competition)
+
+> **Note**: ONNX format is no longer accepted. See [ONNX.md](./docs/ONNX.md) for legacy reference.
 
 ---
 
 ## Metrics
 
-- **benchmark_score**
-- **sn34_score**
-- **binary_mcc**
-- **binary_cross_entropy**
-- **avg_inference_time_ms**
-- **p95_inference_time_ms**
+- **sn34_score** -- Primary competition metric. Geometric mean of normalized MCC and Brier score: $\sqrt{\text{MCC\_norm}^{1.2} \cdot \text{Brier\_norm}^{1.8}}$. Rewards both discrimination accuracy and probability calibration.
+- **binary_mcc** -- Matthews Correlation Coefficient for binary real/synthetic classification (-1 to +1)
+- **binary_brier** -- Brier score measuring calibration quality (0 = perfect, 0.25 = random)
+- **binary_cross_entropy** -- Log-loss for predicted probabilities
+- **benchmark_score** -- Overall benchmark score
+- **avg_inference_time_ms** -- Mean inference time per sample
+- **p95_inference_time_ms** -- 95th percentile inference time
 
 ---
 
@@ -136,7 +140,7 @@ A structured JSON summary is automatically generated after each run:
     "run_id": "64a8c5eb-560a-4822-9ae5-b51d27737831",
     "timestamp": 1765074390.323,
     "datetime": "2025-12-07T02:26:30.323068",
-    "model_path": "model.onnx",
+    "model_path": "./my_audio_model/",
     "modality": "audio",
     "mode": "full",
     "gasstation_only": false,
@@ -145,10 +149,9 @@ A structured JSON summary is automatically generated after each run:
   },
   "overall_score": 0.8523,
   "validation": {
-    "model_path": "model.onnx",
-    "input_shape": "['batch_size', 96000]",
-    "input_type": "tensor(float)",
-    "output_shape": "['batch_size', 2]"
+    "model_path": "./my_audio_model/",
+    "num_classes": 2,
+    "weights_file": "model.safetensors"
   },
   "errors": [],
   "results": {
@@ -158,6 +161,7 @@ A structured JSON summary is automatically generated after each run:
     "avg_inference_time_ms": 12.3,
     "p95_inference_time_ms": 45.6,
     "binary_mcc": 0.7045,
+    "binary_brier": 0.1523,
     "binary_cross_entropy": 0.2345,
     "sn34_score": 0.7891
   },

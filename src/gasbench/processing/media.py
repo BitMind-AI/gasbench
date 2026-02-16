@@ -1,5 +1,6 @@
 import os
 import tempfile
+import concurrent.futures
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 
@@ -8,7 +9,7 @@ import numpy as np
 from decord import VideoReader, cpu
 from io import BytesIO
 from PIL import Image
-import torchaudio
+from torchcodec.decoders import AudioDecoder
 import torch
 
 from ..logger import get_logger
@@ -196,39 +197,69 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
         return None, None
 
 
+AUDIO_DECODE_TIMEOUT = 30  # seconds -- prevents ffmpeg deadlocks on malformed files
+
+
+def _decode_audio_with_timeout(audio_bytes: bytes, target_sr: int, timeout: int = AUDIO_DECODE_TIMEOUT):
+    """Decode audio bytes using TorchCodec with a timeout.
+
+    Uses a thread pool to enforce a timeout on the underlying ffmpeg decode,
+    which can hang indefinitely on certain malformed audio files.
+
+    Args:
+        audio_bytes: Raw audio file bytes
+        target_sr: Target sample rate (resampling handled by AudioDecoder)
+        timeout: Maximum seconds to wait for decode
+
+    Returns:
+        AudioSamples from TorchCodec (data shape: (num_channels, num_samples), float32 in [-1, 1])
+
+    Raises:
+        concurrent.futures.TimeoutError: If decode hangs beyond timeout
+    """
+    def _decode():
+        decoder = AudioDecoder(audio_bytes, sample_rate=target_sr, num_channels=1)
+        return decoder.get_all_samples()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_decode)
+        return future.result(timeout=timeout)
+
+
 def process_audio_sample(
-    sample: Dict, 
-    target_sr: int = 16000, 
+    sample: Dict,
+    target_sr: int = 16000,
     target_duration_seconds: float = 6.0,
     use_random_crop: bool = False,
     seed: Optional[int] = 42,
-    device: Optional[str] = None
+    device: Optional[str] = None,
 ) -> Tuple[any, int]:
     """
     Process an audio sample for deepfake detection benchmark.
-    
-    Preprocessing Pipeline (in exact order):
-    1. Load audio with torchaudio
-    2. Convert to mono (average all channels)
-    3. Resample to 16kHz if needed (GPU-accelerated if available)
-    4. Crop/pad to exactly 6 seconds (96,000 samples at 16kHz)
+
+    Uses TorchCodec AudioDecoder which accepts bytes directly (no temp files),
+    handles resampling to target_sr and mono conversion internally.
+
+    Preprocessing Pipeline:
+    1. Decode audio bytes with TorchCodec (resamples to 16kHz, converts to mono)
+    2. Crop/pad to exactly 6 seconds (96,000 samples at 16kHz)
        - If longer: random crop (with seed) or center crop
        - If shorter: zero-pad on the right
-    
-    No normalization is applied. torchaudio loads PCM as float32 in [-1, 1].
-    This matches image/video preprocessing where raw uint8 values are passed.
-    
+
+    A 30-second per-sample timeout prevents ffmpeg deadlocks on malformed files.
+    No normalization is applied -- TorchCodec returns float32 in [-1, 1].
+
     Args:
         sample: Dictionary containing 'audio_bytes' and metadata
-        target_sr: Target sample rate (hardcoded to 16000 Hz)
-        target_duration_seconds: Target duration in seconds (hardcoded to 6.0)
-        use_random_crop: If True, randomly crop; if False, center crop (default: False for reproducibility)
-        seed: Random seed for deterministic cropping during validation (default: 42)
-        device: Device for processing ('cuda', 'cpu', or None for auto-detect)
-        
+        target_sr: Target sample rate (default 16000 Hz)
+        target_duration_seconds: Target duration in seconds (default 6.0)
+        use_random_crop: If True, randomly crop; if False, center crop
+        seed: Random seed for deterministic cropping
+        device: Unused (kept for API compatibility)
+
     Returns:
         Tuple of (waveform, label)
-        - waveform: torch.Tensor of shape (1, 96000) as float32 on CPU
+        - waveform: torch.Tensor of shape (96000,) as float32 on CPU
         - label: int (0 for real, 1 for synthetic)
     """
     try:
@@ -238,101 +269,35 @@ def process_audio_sample(
             return None, None
 
         media_type = sample.get("media_type", "synthetic")
-        label = MEDIA_TYPE_TO_LABEL.get(media_type, 1)  # Default to synthetic/1 if unknown
+        label = MEDIA_TYPE_TO_LABEL.get(media_type, 1)
 
-        # Auto-detect device if not specified
-        if device is None:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        
-        # Determine format from source_file or cached_filename if available
-        source_file = sample.get("cached_filename") or sample.get("source_file", "")
-        audio_format = ".wav"  # default
-        if source_file:
-            # Extract extension from filename
-            ext = Path(source_file).suffix.lower()
-            if ext in [".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"]:
-                audio_format = ext
+        # Decode with timeout -- AudioDecoder handles resampling + mono conversion
+        samples = _decode_audio_with_timeout(audio_bytes, target_sr)
+        waveform = samples.data.squeeze(0)  # (1, num_samples) -> (num_samples,)
 
-        # torchaudio requires a file path, so write to a temporary file
-        temp_audio = tempfile.NamedTemporaryFile(suffix=audio_format, delete=False)
-        temp_audio_path = temp_audio.name
-        
-        try:
-            temp_audio.write(audio_bytes)
-            temp_audio.flush()
-            temp_audio.close()
+        # Crop/pad to target length (e.g. 96,000 samples = 6s at 16kHz)
+        target_length = int(target_sr * target_duration_seconds)
 
-            # Step 1: Load audio from temporary file
-            waveform, sample_rate = torchaudio.load(temp_audio_path)
-            
-            # Move to GPU if available for faster processing
-            if device == 'cuda' and torch.cuda.is_available():
-                waveform = waveform.cuda()
+        if waveform.shape[0] > target_length:
+            if use_random_crop:
+                if seed is not None:
+                    torch.manual_seed(seed)
+                max_start = waveform.shape[0] - target_length
+                start_idx = torch.randint(0, max_start + 1, (1,)).item()
+            else:
+                start_idx = (waveform.shape[0] - target_length) // 2
+            waveform = waveform[start_idx:start_idx + target_length]
+        elif waveform.shape[0] < target_length:
+            padding = target_length - waveform.shape[0]
+            waveform = torch.nn.functional.pad(waveform, (0, padding))
 
-            # Step 2: Convert to mono (average all channels)
-            if waveform.shape[0] > 1:
-                waveform = waveform.mean(dim=0, keepdim=True)
+        return waveform.float(), label
 
-            # Step 3: Resample to 16kHz if necessary (GPU-accelerated)
-            if sample_rate != target_sr:
-                if device == 'cuda' and torch.cuda.is_available():
-                    # GPU-accelerated resampling
-                    resampler = torchaudio.transforms.Resample(
-                        orig_freq=sample_rate, 
-                        new_freq=target_sr
-                    ).to(device)
-                else:
-                    resampler = torchaudio.transforms.Resample(
-                        orig_freq=sample_rate, 
-                        new_freq=target_sr
-                    )
-                waveform = resampler(waveform)
-            
-            # Step 4: Length handling - exactly 6 seconds (96,000 samples at 16kHz)
-            target_length = int(target_sr * target_duration_seconds)  # 96,000 samples
-            current_length = waveform.shape[1]
-            
-            if current_length > target_length:
-                # Audio is longer than target - crop it
-                if use_random_crop:
-                    # Random crop with seed for reproducibility
-                    if seed is not None:
-                        torch.manual_seed(seed)
-                    max_start = current_length - target_length
-                    start_idx = torch.randint(0, max_start + 1, (1,)).item()
-                    waveform = waveform[:, start_idx:start_idx + target_length]
-                else:
-                    # Center crop (deterministic, default for benchmarking)
-                    start_idx = (current_length - target_length) // 2
-                    waveform = waveform[:, start_idx:start_idx + target_length]
-            elif current_length < target_length:
-                # Audio is shorter than target - zero-pad on the right
-                padding = target_length - current_length
-                waveform = torch.nn.functional.pad(waveform, (0, padding))
-            
-            # Ensure output is float32 and shape (1, 96000)
-            # No normalization - torchaudio already loads as float32 in [-1, 1]
-            # This matches image/video approach where we pass raw values (uint8)
-            waveform = waveform.float()
-            
-            # Move back to CPU for consistency with existing code
-            if device == 'cuda' and waveform.is_cuda:
-                waveform = waveform.cpu()
-            
-            assert waveform.shape == (1, target_length), f"Expected shape (1, {target_length}), got {waveform.shape}"
-            
-            # Squeeze channel dimension for compatibility with most audio models
-            # Output: (96000,) instead of (1, 96000)
-            waveform = waveform.squeeze(0)
-            
-            return waveform, label
-            
-        finally:
-            try:
-                os.unlink(temp_audio_path)
-            except:
-                pass
-
+    except concurrent.futures.TimeoutError:
+        logger.warning(
+            f"Audio decode timed out after {AUDIO_DECODE_TIMEOUT}s, skipping sample"
+        )
+        return None, None
     except Exception as e:
         logger.warning(f"Failed to process audio sample: {e}")
         return None, None

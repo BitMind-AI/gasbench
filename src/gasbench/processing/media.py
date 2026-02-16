@@ -41,7 +41,7 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
     """Process a video sample that contains raw video bytes using decord.
     
     Returns uint8 data for ONNX models in RGB format.
-    Decord outputs RGB directly (no BGR→RGB conversion needed).
+    Decord outputs RGB directly (no BGR->RGB conversion needed).
     """
     try:
         video_bytes = sample.get("video_bytes")

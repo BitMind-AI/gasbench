@@ -253,13 +253,8 @@ def calculate_weighted_dataset_sampling(
 
     if num_gasstation == 0:
         per_dataset_cap = target_total_samples // len(datasets) if datasets else 0
-        return {
-            d.name: min(
-                REGULAR_DATASET_MAX_SAMPLES,
-                per_dataset_cap * UNIFORM_SAMPLING_MULTIPLIER,
-            )
-            for d in datasets
-        }
+        per_dataset_cap = min(REGULAR_DATASET_MAX_SAMPLES, per_dataset_cap)
+        return {d.name: per_dataset_cap for d in datasets}
 
     # Currently each regular dataset gets weight=1, each gasstation gets weight=gasstation_weight
     total_weight = num_regular + (num_gasstation * gasstation_weight)

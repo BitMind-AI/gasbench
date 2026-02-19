@@ -88,14 +88,18 @@ class PyTorchInferenceSession:
         if "resize" in preproc:
             h, w = preproc["resize"]
             if self.model_type == "video":
-                max_frames = preproc.get("max_frames", 16)
-                return [None, max_frames, 3, h, w]  # NTCHW format
+                num_frames = preproc.get("num_frames", preproc.get("max_frames", 16))
+                return [None, num_frames, 3, h, w]  # NTCHW format
             return [None, 3, h, w]  # NCHW format
-        
-        # Defaults based on model type
+
+        # Defaults
         if self.model_type == "video":
             return [None, 16, 3, 224, 224]
         return [None, 3, 224, 224]
+
+    def get_preprocessing_config(self) -> dict:
+        """Return the preprocessing section of model_config.yaml."""
+        return self.config.get("preprocessing", {})
 
     def get_inputs(self) -> List[InputSpec]:
         """Return input specifications (ONNX-compatible interface)."""

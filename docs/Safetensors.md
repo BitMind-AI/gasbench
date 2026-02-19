@@ -51,7 +51,9 @@ modality: "video"
 
 preprocessing:
   resize: [224, 224]       # Target [H, W] for each frame
-  max_frames: 16           # Maximum frames to sample
+  num_frames: 16           # Number of frames to extract per video
+  frame_rate: 8.0          # Sample at this fps from frame 0 (8fps × 16 frames = 2s coverage).
+                           # Defaults to 8.0 if omitted. Falls back to 30fps if video fps metadata is missing.
 
 model:
   num_classes: 2
@@ -163,10 +165,10 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 ### Video Models
 
 **Input:**
-- Shape: `[batch_size, frames, 3, H, W]`
+- Shape: `[batch_size, num_frames, 3, H, W]` where `num_frames` is set in config yaml
 - Data type: `uint8`
 - Value range: `[0, 255]`
-- Color format: BGR (as from cv2.VideoCapture)
+- Color format: RGB
 
 **Output:**
 - Shape: `[batch_size, num_classes]`
@@ -327,5 +329,7 @@ gascli d push --audio-model my_model.zip
 3. **Wrong output shape**: Output must be `[batch_size, num_classes]` logits.
 
 4. **Mismatched resize dimensions**: Ensure `preprocessing.resize` in config matches your model's expected input size.
+
+5. **Mismatched frame count**: Ensure `preprocessing.num_frames` matches the temporal dimension your model expects. If `frame_rate` is set, frames are sampled at that fps from frame 0; otherwise the first `num_frames` consecutive frames are used.
 
 5. **ONNX format**: ONNX is no longer accepted. Convert your model to safetensors format.

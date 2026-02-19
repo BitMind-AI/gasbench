@@ -441,3 +441,61 @@ datasets:
     source_format: zip
     media_per_archive: -1
     archives_per_dataset: -1
+
+  # ── V11 open-source real-video datasets (zip of mp4 files) ────────────
+  # Each zip holds ~500 mp4 files; 2 archives → ~1000 clips
+  - name: human-activity-recognition
+    path: 34data/human-activity-recognition
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: include-50
+    path: 34data/include-50
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: real-life-violence
+    path: 34data/real-life-violence
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: v-librasil
+    path: 34data/v-librasil
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: video-fights
+    path: 34data/video-fights
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: fall-video
+    path: 34data/fall-video
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: wlasl
+    path: 34data/wlasl
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2

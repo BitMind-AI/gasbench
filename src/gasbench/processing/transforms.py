@@ -20,10 +20,6 @@ def extract_target_size_from_input_specs(input_specs):
     Expected shapes:
         - Image: [batch, channels, height, width] or [batch, height, width, channels]
         - Video: [batch, time, channels, height, width] or [batch, time, height, width, channels]
-
-    Args:
-        input_specs: ONNX input specification with shape information
-
     Returns:
         tuple: (H, W) target dimensions, or None if cannot be determined (e.g., dynamic axes)
 
@@ -50,6 +46,25 @@ def extract_target_size_from_input_specs(input_specs):
             return (h, w)
 
     return None
+
+
+def extract_num_frames_from_input_specs(input_specs):
+    """
+    Extract the number of frames (T) from video model input specs.
+    Expected shape: [batch, time, channels, height, width].
+
+    Returns:
+        int: number of frames, or None if shape is dynamic or not a video model
+    """
+    if not input_specs or len(input_specs) == 0:
+        return None
+
+    shape = input_specs[0].shape
+    if not shape or len(shape) != 5:
+        return None
+
+    t = shape[1]
+    return t if isinstance(t, int) else None
 
 
 def ensure_mask_3d(mask: np.ndarray) -> np.ndarray:

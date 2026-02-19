@@ -13,6 +13,7 @@ from ..processing.archive import video_archive_manager
 from ..processing.media import process_video_bytes_sample, process_video_frames_sample
 from ..processing.transforms import (
     apply_random_augmentations,
+    extract_num_frames_from_input_specs,
 )
 from ..config import DEFAULT_VIDEO_BATCH_SIZE
 from ..dataset.iterator import DatasetIterator
@@ -38,6 +39,8 @@ class VideoPrefetchPipeline:
         crop_prob,
         num_workers=3,
         max_queue_size=6,
+        num_frames=16,
+        frame_rate=None,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -47,6 +50,8 @@ class VideoPrefetchPipeline:
         self.crop_prob = crop_prob
         self.num_workers = num_workers
         self.max_queue_size = max_queue_size
+        self.num_frames = num_frames
+        self.frame_rate = frame_rate
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -60,9 +65,13 @@ class VideoPrefetchPipeline:
         """Preprocess a single sample (runs in worker thread)."""
         try:
             if "video_frames" in sample:
-                video_array, label = process_video_frames_sample(sample)
+                video_array, label = process_video_frames_sample(
+                    sample, num_frames=self.num_frames
+                )
             else:
-                video_array, label = process_video_bytes_sample(sample)
+                video_array, label = process_video_bytes_sample(
+                    sample, num_frames=self.num_frames, frame_rate=self.frame_rate
+                )
 
             if video_array is None or label is None:
                 return None
@@ -255,6 +264,21 @@ async def run_video_benchmark(
     if batch_size is None:
         batch_size = DEFAULT_VIDEO_BATCH_SIZE
 
+    # Resolve num_frames and frame_rate from input shape / preprocessing config.
+    # Defaults: 16 frames at 8fps (= 2 seconds of coverage).
+    num_frames = extract_num_frames_from_input_specs(input_specs)
+    frame_rate = None
+    if hasattr(session, "get_preprocessing_config"):
+        preproc = session.get_preprocessing_config()
+        if num_frames is None:
+            num_frames = preproc.get("num_frames", 16)
+        frame_rate = preproc.get("frame_rate")
+    if num_frames is None:
+        num_frames = 16
+    if frame_rate is None:
+        frame_rate = 8.0
+    logger.info(f"Video preprocessing: num_frames={num_frames}, frame_rate={frame_rate}")
+
     try:
         hf_token = os.environ.get("HF_TOKEN")
 
@@ -336,6 +360,8 @@ async def run_video_benchmark(
                         crop_prob=crop_prob,
                         num_workers=3,
                         max_queue_size=6,
+                        num_frames=num_frames,
+                        frame_rate=frame_rate,
                     )
 
                     batch_id = 0

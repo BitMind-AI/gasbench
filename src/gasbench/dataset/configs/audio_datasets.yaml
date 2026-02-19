@@ -271,3 +271,61 @@ datasets:
     source_format: parquet
     media_per_archive: 1000
     archives_per_dataset: 1
+
+  # ── V11 open-source real-audio datasets (OpenSLR, zip of wav files) ──────
+  # Each zip holds ~500 wav files; 2 archives → ~1000 clips
+  - name: slr1
+    path: 34data/slr1
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: slr41
+    path: 34data/slr41
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: slr97
+    path: 34data/slr97
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: slr101
+    path: 34data/slr101
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: slr120
+    path: 34data/slr120
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: slr133
+    path: 34data/slr133
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+
+  - name: slr149
+    path: 34data/slr149
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2

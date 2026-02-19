@@ -52,9 +52,8 @@ modality: "video"
 preprocessing:
   resize: [224, 224]       # Target [H, W] for each frame
   num_frames: 16           # Number of frames to extract per video
-  # frame_rate: 2.0        # Optional: sample at this fps from frame 0 (e.g. 2.0 = every 0.5s).
-                           # If omitted, the first num_frames consecutive frames are used.
-                           # Falls back to 30 fps if video metadata is missing.
+  frame_rate: 8.0          # Sample at this fps from frame 0 (8fps × 16 frames = 2s coverage).
+                           # Defaults to 8.0 if omitted. Falls back to 30fps if video fps metadata is missing.
 
 model:
   num_classes: 2

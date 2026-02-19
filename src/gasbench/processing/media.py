@@ -37,11 +37,21 @@ def configure_huggingface_cache(volume_dir: str = "/benchmark_data"):
     return hf_cache_dir
 
 
-def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
+def process_video_bytes_sample(
+    sample: Dict,
+    num_frames: int = 16,
+    frame_rate: Optional[float] = None,
+) -> Tuple[any, int]:
     """Process a video sample that contains raw video bytes using decord.
-    
+
     Returns uint8 data for ONNX models in RGB format.
     Decord outputs RGB directly (no BGR->RGB conversion needed).
+
+    Args:
+        sample: Dict containing 'video_bytes' and metadata.
+        num_frames: Number of frames to extract (default 16).
+        frame_rate: If set, sample frames at this fps from the video; otherwise
+            take the first ``num_frames`` frames sequentially.
     """
     try:
         video_bytes = sample.get("video_bytes")
@@ -66,15 +76,23 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
 
             vr = VideoReader(temp_video_path, ctx=cpu(0), num_threads=1)
             total_frames = len(vr)
-            
+
             if total_frames == 0:
                 logger.warning(f"No frames in video")
                 return None, None
 
-            max_frames = 16
+            if frame_rate is not None:
+                video_fps = vr.get_avg_fps()
+                if not video_fps or video_fps <= 0:
+                    logger.warning("Video has no fps metadata, assuming 30fps")
+                    video_fps = 30.0
+                frame_step = max(1, round(video_fps / frame_rate))
+                frame_indices = list(range(0, total_frames, frame_step))[:num_frames]
+            else:
+                frame_indices = list(range(min(num_frames, total_frames)))
+
             frames = []
-            
-            for i in range(min(max_frames, total_frames)):
+            for i in frame_indices:
                 frame = vr[i].asnumpy()  # Already RGB, shape (H, W, C)
                 if frame is None or frame.size == 0:
                     logger.warning(f"Skipping invalid frame at index {i}")
@@ -85,9 +103,9 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
                 logger.warning(f"No frames extracted from video")
                 return None, None
 
-            if len(frames) < max_frames:
+            if len(frames) < num_frames:
                 last_frame = frames[-1]
-                for i in range(len(frames), max_frames):
+                for _ in range(len(frames), num_frames):
                     frames.append(last_frame)
 
             video_array = np.array(frames, dtype=np.uint8)  # THWC uint8 RGB
@@ -105,21 +123,25 @@ def process_video_bytes_sample(sample: Dict) -> Tuple[any, int]:
         return None, None
 
 
-def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
+def process_video_frames_sample(
+    sample: Dict,
+    num_frames: int = 16,
+) -> Tuple[any, int]:
     """Process a video sample that contains pre-extracted frames (list of frame paths or bytes).
 
     This is used for datasets where frames are already extracted (e.g., PNG files in directories).
-    Returns the same format as process_video_bytes_sample: (T, H, W, C) uint8 numpy array with T=16 frames.
-    
+    Returns the same format as process_video_bytes_sample: (T, H, W, C) uint8 numpy array.
+
     Uses cv2 for fast image loading, converts BGR to RGB.
 
     Args:
         sample: Dict containing either:
             - 'video_frames': List of frame file paths or frame bytes
             - 'media_type': 'real', 'synthetic', or 'semisynthetic'
+        num_frames: Number of frames to use (default 16).
 
     Returns:
-        Tuple of (video_array, label) where video_array is (16, H, W, 3) uint8 numpy array in RGB
+        Tuple of (video_array, label) where video_array is (num_frames, H, W, 3) uint8 numpy array in RGB
     """
     try:
         frames_data = sample.get("video_frames")
@@ -129,10 +151,9 @@ def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
         media_type = sample.get("media_type", "synthetic")
         label = MEDIA_TYPE_TO_LABEL[media_type]
 
-        max_frames = 16
         frames = []
 
-        for frame_data in frames_data[:max_frames]:
+        for frame_data in frames_data[:num_frames]:
             try:
                 if isinstance(frame_data, (str, Path)):
                     frame_array = cv2.imread(str(frame_data))
@@ -161,9 +182,9 @@ def process_video_frames_sample(sample: Dict) -> Tuple[any, int]:
             logger.warning("No frames could be loaded")
             return None, None
 
-        if len(frames) < max_frames:
+        if len(frames) < num_frames:
             last_frame = frames[-1]
-            for i in range(len(frames), max_frames):
+            for _ in range(len(frames), num_frames):
                 frames.append(last_frame)
 
         video_array = np.array(frames, dtype=np.uint8)

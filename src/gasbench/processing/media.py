@@ -83,10 +83,10 @@ def process_video_bytes_sample(
 
             if frame_rate is not None:
                 video_fps = vr.get_avg_fps()
-                if video_fps > 0:
-                    frame_step = max(1, round(video_fps / frame_rate))
-                else:
-                    frame_step = 1
+                if not video_fps or video_fps <= 0:
+                    logger.warning("Video has no fps metadata, assuming 30fps")
+                    video_fps = 30.0
+                frame_step = max(1, round(video_fps / frame_rate))
                 frame_indices = list(range(0, total_frames, frame_step))[:num_frames]
             else:
                 frame_indices = list(range(min(num_frames, total_frames)))

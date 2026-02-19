@@ -420,3 +420,68 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     exclude_paths: ["models.tar.gz", "ALB.tar.gz", "SRB.tar.gz", "SRB_scanned.tar.gz", "LVA.tar.gz"]
+
+  # ── V11 open-source real-image datasets (parquet, "image" binary column) ──
+  - name: 47-plant-species
+    path: 34data/47-plant-species
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: animal-10
+    path: 34data/animal-10
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: birds-525-species
+    path: 34data/birds-525-species
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: cub-200-2011
+    path: 34data/cub-200-2011
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: oxford-flower-102
+    path: 34data/oxford-flower-102
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: animal-90
+    path: 34data/animal-90
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: fruits-vegetables
+    path: 34data/fruits-vegetables
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+
+  - name: sea-animals-image
+    path: 34data/sea-animals-image
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1

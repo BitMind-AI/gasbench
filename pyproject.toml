@@ -32,6 +32,11 @@ dependencies = [
     "psutil==7.1.2",
     "rich==14.2.0",
     "soundfile>=0.12.0",
+    "onnx>=1.16.0",
+    "timm>=1.0.24",
+    "scikit-image>=0.21.0",
+    "fvcore>=0.1.5",
+    "einops>=0.7.0",
 ]
 
 [project.optional-dependencies]

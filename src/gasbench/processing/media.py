@@ -9,7 +9,6 @@ import numpy as np
 from decord import VideoReader, cpu
 from io import BytesIO
 from PIL import Image
-from torchcodec.decoders import AudioDecoder
 import torch
 
 from ..logger import get_logger
@@ -239,6 +238,7 @@ def _decode_audio_with_timeout(audio_bytes: bytes, target_sr: int, timeout: int 
         concurrent.futures.TimeoutError: If decode hangs beyond timeout
     """
     def _decode():
+        from torchcodec.decoders import AudioDecoder
         decoder = AudioDecoder(audio_bytes, sample_rate=target_sr, num_channels=1)
         return decoder.get_all_samples()
 

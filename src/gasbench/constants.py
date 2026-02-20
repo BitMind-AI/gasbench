@@ -9,3 +9,7 @@ MEDIA_TYPE_TO_LABEL = {
     "semisynthetic": 1,
 }
 
+# Video evaluation limits
+# Caps num_frames to prevent submitted models from overwhelming the eval system.
+MAX_VIDEO_NUM_FRAMES = 64
+

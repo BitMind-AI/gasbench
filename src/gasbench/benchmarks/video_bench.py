@@ -16,6 +16,7 @@ from ..processing.transforms import (
     extract_num_frames_from_input_specs,
 )
 from ..config import DEFAULT_VIDEO_BATCH_SIZE
+from ..constants import MAX_VIDEO_NUM_FRAMES
 from ..dataset.iterator import DatasetIterator
 
 from .utils.inference import process_model_output
@@ -275,6 +276,12 @@ async def run_video_benchmark(
         frame_rate = preproc.get("frame_rate")
     if num_frames is None:
         num_frames = 16
+    if num_frames > MAX_VIDEO_NUM_FRAMES:
+        logger.warning(
+            f"num_frames={num_frames} exceeds maximum allowed ({MAX_VIDEO_NUM_FRAMES}). "
+            f"Clamping to {MAX_VIDEO_NUM_FRAMES}."
+        )
+        num_frames = MAX_VIDEO_NUM_FRAMES
     logger.info(f"Video preprocessing: num_frames={num_frames}, frame_rate={frame_rate}")
 
     try:

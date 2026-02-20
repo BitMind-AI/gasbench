@@ -265,7 +265,7 @@ async def run_video_benchmark(
         batch_size = DEFAULT_VIDEO_BATCH_SIZE
 
     # Resolve num_frames and frame_rate from input shape / preprocessing config.
-    # Defaults: 16 frames at 8fps (= 2 seconds of coverage).
+    # If frame_rate is not specified, frames are taken sequentially at native video fps.
     num_frames = extract_num_frames_from_input_specs(input_specs)
     frame_rate = None
     if hasattr(session, "get_preprocessing_config"):
@@ -275,8 +275,6 @@ async def run_video_benchmark(
         frame_rate = preproc.get("frame_rate")
     if num_frames is None:
         num_frames = 16
-    if frame_rate is None:
-        frame_rate = 8.0
     logger.info(f"Video preprocessing: num_frames={num_frames}, frame_rate={frame_rate}")
 
     try:

@@ -103,6 +103,7 @@ async def run_audio_benchmark(
     dataset_filters: Optional[list] = None,
     skip_missing: bool = False,
     holdout_weight: float = 1.0,
+    holdouts_only: bool = False,
 ) -> pd.DataFrame:
     """Test model on benchmark audio datasets for AI-generated content detection.
     
@@ -137,6 +138,7 @@ async def run_audio_benchmark(
             run_id=run_id,
             dataset_filters=dataset_filters,
             holdout_weight=holdout_weight,
+            holdouts_only=holdouts_only,
         )
 
         plan = build_plan(logger, run_config, input_specs)

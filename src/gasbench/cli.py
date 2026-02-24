@@ -62,6 +62,11 @@ def command_run(args):
         print("Error: Must specify either --image-model, --video-model, or --audio-model")
         return 1
 
+    holdouts_only = getattr(args, "holdouts_only", False)
+    if holdouts_only and not getattr(args, "holdout_config", None):
+        print("Error: --holdouts-only requires --holdout-config")
+        return 1
+
     # Validate model path - must be directory with model_config.yaml (safetensors format)
     if not model_path.exists():
         print(f"Error: Model path not found: {model_path}")
@@ -107,6 +112,7 @@ def command_run(args):
         "modality": modality.upper(),
         "mode": mode.upper(),
         "gasstation_only": args.gasstation_only,
+        "holdouts_only": holdouts_only,
         "download_latest_gasstation_data": args.download_latest_gasstation_data,
         "skip_missing": getattr(args, "skip_missing", False),
         "results_directory": str(results_path),
@@ -135,6 +141,8 @@ def command_run(args):
                 skip_missing=getattr(args, "skip_missing", False),
                 run_id=getattr(args, "run_id", None),
                 holdout_weight=getattr(args, "holdout_weight", 1.0),
+                holdouts_only=holdouts_only,
+                dataset_filters=getattr(args, "datasets", None),
             )
         )
 
@@ -509,6 +517,19 @@ See docs/Safetensors.md for detailed requirements.
         metavar="WEIGHT",
         help="Weight multiplier for holdout datasets in final score. Higher values give "
              "holdout datasets more impact on benchmark_score. Default: 1.0 (equal weighting)",
+    )
+    run_parser.add_argument(
+        "--holdouts-only",
+        action="store_true",
+        help="Only run holdout datasets (requires --holdout-config)",
+    )
+    run_parser.add_argument(
+        "--datasets",
+        nargs="+",
+        metavar="PATTERN",
+        default=None,
+        help="Only run datasets whose names contain one of these substrings (case-insensitive). "
+             "E.g. --datasets 34data/ pica-100k",
     )
 
     run_parser.set_defaults(func=command_run)

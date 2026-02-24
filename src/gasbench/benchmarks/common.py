@@ -40,6 +40,7 @@ class BenchmarkRunConfig:
     run_id: Optional[str] = None
     dataset_filters: Optional[List[str]] = None
     holdout_weight: float = 1.0  # Weight multiplier for holdout datasets in final score
+    holdouts_only: bool = False  # If True, only run holdout datasets (requires holdout_config_path)
 
 
 @dataclass
@@ -66,12 +67,15 @@ class BenchmarkPlan:
 def build_plan(
     logger, config: BenchmarkRunConfig, input_specs
 ) -> Optional[BenchmarkPlan]:
-    available_datasets = discover_benchmark_datasets(
-        modality=config.modality,
-        mode=config.mode,
-        gasstation_only=config.gasstation_only,
-        yaml_path=config.dataset_config_path,
-    )
+    if config.holdouts_only:
+        available_datasets = []
+    else:
+        available_datasets = discover_benchmark_datasets(
+            modality=config.modality,
+            mode=config.mode,
+            gasstation_only=config.gasstation_only,
+            yaml_path=config.dataset_config_path,
+        )
 
     if config.holdout_config_path and not config.gasstation_only:
         try:

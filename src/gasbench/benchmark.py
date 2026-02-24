@@ -35,6 +35,7 @@ async def run_benchmark(
     dataset_filters: Optional[list] = None,
     skip_missing: bool = False,
     holdout_weight: float = 1.0,
+    holdouts_only: bool = False,
 ) -> Dict:
     """
     Args:
@@ -112,6 +113,7 @@ async def run_benchmark(
             dataset_filters,
             skip_missing,
             holdout_weight,
+            holdouts_only,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -206,10 +208,11 @@ async def execute_benchmark(
     dataset_filters: Optional[list] = None,
     skip_missing: bool = False,
     holdout_weight: float = 1.0,
+    holdouts_only: bool = False,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only})")
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
@@ -231,6 +234,7 @@ async def execute_benchmark(
             dataset_filters=dataset_filters,
             skip_missing=skip_missing,
             holdout_weight=holdout_weight,
+            holdouts_only=holdouts_only,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -252,6 +256,7 @@ async def execute_benchmark(
             dataset_filters=dataset_filters,
             skip_missing=skip_missing,
             holdout_weight=holdout_weight,
+            holdouts_only=holdouts_only,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
@@ -273,6 +278,7 @@ async def execute_benchmark(
             dataset_filters=dataset_filters,
             skip_missing=skip_missing,
             holdout_weight=holdout_weight,
+            holdouts_only=holdouts_only,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

@@ -20,6 +20,9 @@ This package provides a self-contained benchmark evaluation system for testing m
 For model submission requirements, see the  
 👉 **[Safetensors Model Specification](./docs/Safetensors.md)** (required for competition)
 
+To learn how to submit your model to **Bittensor Subnet 34** — including the entrance exam, full benchmark, and scoring pipeline — see the  
+👉 **[Discriminative Mining Guide](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/Discriminative-Mining.md)**
+
 > **Note**: ONNX format is no longer accepted for competition. See [ONNX.md](./docs/ONNX.md) for legacy reference.
 
 ---

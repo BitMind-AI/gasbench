@@ -30,6 +30,7 @@ The config file defines model metadata and preprocessing settings.
 name: "my-image-detector"
 version: "1.0.0"
 modality: "image"
+dtype: "bfloat16"          # Optional: float32 (default), float16/fp16, bfloat16/bf16
 
 preprocessing:
   resize: [224, 224]       # Target [H, W] - must match model input
@@ -48,6 +49,7 @@ model:
 name: "my-video-detector"
 version: "1.0.0"
 modality: "video"
+dtype: "bfloat16"          # Optional: float32 (default), float16/fp16, bfloat16/bf16
 
 preprocessing:
   resize: [224, 224]       # Target [H, W] for each frame
@@ -67,6 +69,7 @@ model:
 name: "my-audio-detector"
 version: "1.0.0"
 modality: "audio"
+dtype: "bfloat16"          # Optional: float32 (default), float16/fp16, bfloat16/bf16
 
 preprocessing:
   sample_rate: 16000       # Target sample rate (Hz)
@@ -144,7 +147,7 @@ Any model using blocked imports or calls will be rejected during evaluation.
 
 **Input:**
 - Shape: `[batch_size, 3, H, W]`
-- Data type: `uint8`
+- Data type: configured `dtype` (default `float32`; set `dtype: bfloat16` in config for bf16)
 - Value range: `[0, 255]`
 - Color format: RGB
 
@@ -153,12 +156,12 @@ Any model using blocked imports or calls will be rejected during evaluation.
 - Type: Logits (raw scores, before softmax)
 - Classes: `[real, synthetic]` for 2-class
 
-Your model's `forward()` should handle uint8 input and convert to float internally:
+Your model's `forward()` receives a tensor already in the configured dtype — just normalise and proceed:
 
 ```python
 def forward(self, x: torch.Tensor) -> torch.Tensor:
-    # x: [B, 3, H, W] uint8 [0, 255]
-    x = x.float() / 255.0  # Convert to float [0, 1]
+    # x: [B, 3, H, W] in configured dtype, values [0, 255]
+    x = x / 255.0  # Normalise to [0, 1] — no explicit .float() cast needed
     # ... your model logic ...
     return logits  # [B, num_classes]
 ```
@@ -167,7 +170,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 
 **Input:**
 - Shape: `[batch_size, num_frames, 3, H, W]` where `num_frames` is set in config yaml
-- Data type: `uint8`
+- Data type: configured `dtype` (default `float32`; set `dtype: bfloat16` in config for bf16)
 - Value range: `[0, 255]`
 - Color format: RGB
 
@@ -179,9 +182,9 @@ Your model should aggregate temporal information internally:
 
 ```python
 def forward(self, x: torch.Tensor) -> torch.Tensor:
-    # x: [B, T, 3, H, W] uint8 [0, 255]
+    # x: [B, T, 3, H, W] in configured dtype, values [0, 255]
     batch_size, num_frames = x.shape[:2]
-    x = x.float() / 255.0
+    x = x / 255.0
     # ... process frames, aggregate temporally ...
     return logits  # [B, num_classes]
 ```
@@ -218,6 +221,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 name: "simple-image-detector"
 version: "1.0.0"
 modality: "image"
+dtype: "bfloat16"          # Optional — omit to keep float32 default
 
 preprocessing:
   resize: [224, 224]
@@ -262,22 +266,33 @@ def load_model(weights_path: str, num_classes: int = 2) -> nn.Module:
 
 ---
 
-## 6. Testing Your Model
+## 6. Testing Your Model Locally
 
-Use gasbench to test your model locally before submission:
+Use gasbench to test your model before submission. There are three modes, each progressively closer to production conditions:
+
+| Mode | Command flag | What it runs |
+|---|---|---|
+| Debug | `--debug` | Minimal — first dataset only, handful of samples. Fast smoke test. |
+| Small | `--small` | ~100 samples per dataset, one archive per dataset. **Mirrors the entrance exam.** |
+| Full | `--full` | Complete dataset configs. Mirrors the full network benchmark (without holdouts). |
 
 ```bash
-# Test image model
+# Quick smoke test
 gasbench run --image-model ./my_image_model/ --debug
 
-# Test video model
-gasbench run --video-model ./my_video_model/ --debug
+# Replicate entrance exam conditions (recommended before pushing)
+gasbench run --image-model ./my_image_model/ --small
+gasbench run --video-model ./my_video_model/ --small
+gasbench run --audio-model ./my_audio_model/ --small
 
-# Test audio model
-gasbench run --audio-model ./my_audio_model/ --debug
+# Full local benchmark
+gasbench run --image-model ./my_image_model/ --full
 ```
 
-The `--debug` flag runs a quick test with limited samples.
+> **Tip**: Run `--small` locally before pushing. The network entrance exam uses the same mode and requires ≥ 80% accuracy to pass.
+
+For the full submission and evaluation pipeline on Bittensor Subnet 34, see the  
+👉 **[Discriminative Mining Guide](https://github.com/BitMind-AI/bitmind-subnet/blob/main/docs/Discriminative-Mining.md)**
 
 ---
 
@@ -325,7 +340,7 @@ gascli d push --audio-model my_model.zip
 
 1. **Missing load_model function**: Ensure `model.py` has a `load_model(weights_path, num_classes)` function.
 
-2. **Wrong input dtype**: Models receive `uint8` for image/video, `float32` for audio. Handle conversion in your forward pass.
+2. **Wrong input dtype**: Image/video tensors are cast to the `dtype` specified in your config (default `float32`). Audio is always `float32`. No explicit `.float()` cast is required in `forward()` — just normalise the values.
 
 3. **Wrong output shape**: Output must be `[batch_size, num_classes]` logits.
 

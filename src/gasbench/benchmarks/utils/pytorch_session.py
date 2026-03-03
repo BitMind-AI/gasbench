@@ -147,11 +147,11 @@ class PyTorchInferenceSession:
         """
         data = list(input_dict.values())[0]
         
-        # Convert to tensor, move to device, and cast to the configured dtype
+        # Deliver uint8 tensor to device — models cast and normalise in forward().
         if isinstance(data, np.ndarray):
-            tensor = torch.from_numpy(data).to(device=self.device, dtype=self.dtype)
+            tensor = torch.from_numpy(data).to(self.device)
         else:
-            tensor = data.to(device=self.device, dtype=self.dtype)
+            tensor = data.to(self.device)
 
         with torch.no_grad():
             output = self.model(tensor)

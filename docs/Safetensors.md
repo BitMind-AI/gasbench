@@ -31,6 +31,8 @@ name: "my-image-detector"
 version: "1.0.0"
 modality: "image"
 dtype: "bfloat16"          # Optional: float32 (default), float16/fp16, bfloat16/bf16
+                           # Loads model weights in this precision (e.g. bf16 halves GPU memory).
+                           # Inputs are always uint8 — cast to your dtype inside forward().
 
 preprocessing:
   resize: [224, 224]       # Target [H, W] - must match model input
@@ -50,6 +52,8 @@ name: "my-video-detector"
 version: "1.0.0"
 modality: "video"
 dtype: "bfloat16"          # Optional: float32 (default), float16/fp16, bfloat16/bf16
+                           # Loads model weights in this precision (e.g. bf16 halves GPU memory).
+                           # Inputs are always uint8 — cast to your dtype inside forward().
 
 preprocessing:
   resize: [224, 224]       # Target [H, W] for each frame
@@ -70,6 +74,8 @@ name: "my-audio-detector"
 version: "1.0.0"
 modality: "audio"
 dtype: "bfloat16"          # Optional: float32 (default), float16/fp16, bfloat16/bf16
+                           # Loads model weights in this precision (e.g. bf16 halves GPU memory).
+                           # Inputs are always uint8 — cast to your dtype inside forward().
 
 preprocessing:
   sample_rate: 16000       # Target sample rate (Hz)
@@ -147,7 +153,7 @@ Any model using blocked imports or calls will be rejected during evaluation.
 
 **Input:**
 - Shape: `[batch_size, 3, H, W]`
-- Data type: configured `dtype` (default `float32`; set `dtype: bfloat16` in config for bf16)
+- Data type: `uint8`
 - Value range: `[0, 255]`
 - Color format: RGB
 
@@ -156,12 +162,13 @@ Any model using blocked imports or calls will be rejected during evaluation.
 - Type: Logits (raw scores, before softmax)
 - Classes: `[real, synthetic]` for 2-class
 
-Your model's `forward()` receives a tensor already in the configured dtype — just normalise and proceed:
+Your model's `forward()` always receives `uint8` and must cast and normalise internally:
 
 ```python
 def forward(self, x: torch.Tensor) -> torch.Tensor:
-    # x: [B, 3, H, W] in configured dtype, values [0, 255]
-    x = x / 255.0  # Normalise to [0, 1] — no explicit .float() cast needed
+    # x: [B, 3, H, W] uint8 [0, 255]
+    x = x.float() / 255.0          # float32 (default)
+    # x = x.to(torch.bfloat16) / 255.0  # if dtype: bfloat16 in config
     # ... your model logic ...
     return logits  # [B, num_classes]
 ```
@@ -170,7 +177,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 
 **Input:**
 - Shape: `[batch_size, num_frames, 3, H, W]` where `num_frames` is set in config yaml
-- Data type: configured `dtype` (default `float32`; set `dtype: bfloat16` in config for bf16)
+- Data type: `uint8`
 - Value range: `[0, 255]`
 - Color format: RGB
 
@@ -182,9 +189,10 @@ Your model should aggregate temporal information internally:
 
 ```python
 def forward(self, x: torch.Tensor) -> torch.Tensor:
-    # x: [B, T, 3, H, W] in configured dtype, values [0, 255]
+    # x: [B, T, 3, H, W] uint8 [0, 255]
     batch_size, num_frames = x.shape[:2]
-    x = x / 255.0
+    x = x.float() / 255.0          # float32 (default)
+    # x = x.to(torch.bfloat16) / 255.0  # if dtype: bfloat16 in config
     # ... process frames, aggregate temporally ...
     return logits  # [B, num_classes]
 ```
@@ -221,7 +229,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 name: "simple-image-detector"
 version: "1.0.0"
 modality: "image"
-dtype: "bfloat16"          # Optional — omit to keep float32 default
+# dtype: "bfloat16"  # optional — omit to keep float32 default
 
 preprocessing:
   resize: [224, 224]
@@ -340,7 +348,7 @@ gascli d push --audio-model my_model.zip
 
 1. **Missing load_model function**: Ensure `model.py` has a `load_model(weights_path, num_classes)` function.
 
-2. **Wrong input dtype**: Image/video tensors are cast to the `dtype` specified in your config (default `float32`). Audio is always `float32`. No explicit `.float()` cast is required in `forward()` — just normalise the values.
+2. **Wrong input dtype**: Image/video inputs are always `uint8 [0, 255]`; audio is always `float32 [-1, 1]`. Cast and normalise in your `forward()`. If you set `dtype: bfloat16`, do `x = x.to(torch.bfloat16) / 255.0` instead of `x.float()`.
 
 3. **Wrong output shape**: Output must be `[batch_size, num_classes]` logits.
 

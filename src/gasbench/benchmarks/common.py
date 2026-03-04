@@ -1,3 +1,5 @@
+import gc
+import ctypes
 import json
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -21,6 +23,23 @@ from .recording import (
 )
 from .utils import calculate_per_source_accuracy
 from ..logger import get_logger
+
+
+def trim_heap() -> None:
+    """Ask glibc to return free pages to the OS after processing each dataset.
+
+    Python's allocator and glibc's malloc arena retain freed pages in their
+    free lists to reduce syscall overhead, so RSS grows monotonically even when
+    no objects are live.  gc.collect() releases Python objects first, then
+    malloc_trim(0) returns the empty arena pages to the kernel.
+
+    No-op on non-Linux platforms (malloc_trim is Linux/glibc only).
+    """
+    gc.collect()
+    try:
+        ctypes.cdll.LoadLibrary("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
 
 
 @dataclass

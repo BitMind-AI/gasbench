@@ -21,7 +21,7 @@ from ..dataset.iterator import DatasetIterator
 
 from .utils.inference import process_model_output
 from .recording import BenchmarkRunRecorder, log_dataset_summary
-from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run, trim_heap
+from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
 import pandas as pd
 
 logger = get_logger(__name__)
@@ -406,7 +406,6 @@ async def run_video_benchmark(
                         log_dataset_summary(
                             logger, tracker, dataset_config.name, include_skipped=True
                         )
-                        trim_heap()
 
                 except Exception as e:
                     logger.error(

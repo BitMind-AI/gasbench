@@ -6,7 +6,7 @@
 #   - Use when the column is not auto-detected (e.g., "output_audio" instead of "audio")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 30000
+benchmark_size: 36000
 
 datasets:
   # ============================================================================

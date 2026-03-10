@@ -11,6 +11,15 @@ from ...logger import get_logger
 
 logger = get_logger(__name__)
 
+_DTYPE_MAP = {
+    "float32": torch.float32,
+    "fp32": torch.float32,
+    "float16": torch.float16,
+    "fp16": torch.float16,
+    "bfloat16": torch.bfloat16,
+    "bf16": torch.bfloat16,
+}
+
 
 class InputSpec:
     """Mock ONNX InputSpec for interface compatibility."""
@@ -55,18 +64,28 @@ class PyTorchInferenceSession:
         # Load model and config
         self.model, self.config = load_custom_model(self.model_dir)
 
+        # Resolve dtype from config (top-level 'dtype' key)
+        dtype_str = self.config.get("dtype", "float32")
+        self.dtype = _DTYPE_MAP.get(str(dtype_str).lower())
+        if self.dtype is None:
+            raise ValueError(
+                f"Unsupported dtype '{dtype_str}' in model_config.yaml. "
+                f"Valid options: {list(_DTYPE_MAP.keys())}"
+            )
+
         # Setup device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device).eval()
+        self.model.to(device=self.device, dtype=self.dtype).eval()
 
         load_time = time.time() - load_start
         logger.info(f"Loaded {model_type} detector in {load_time:.2f} seconds")
 
-        # Log device info
+        # Log device and dtype info
         if self.device.type == "cuda":
             logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
         else:
             logger.info("Using CPU")
+        logger.info(f"Inference dtype: {self.dtype}")
 
         # Setup input/output specs
         self._input_name = "input"
@@ -128,15 +147,11 @@ class PyTorchInferenceSession:
         """
         data = list(input_dict.values())[0]
         
-        # Convert to tensor and move to device
+        # Deliver uint8 tensor to device — models cast and normalise in forward().
         if isinstance(data, np.ndarray):
             tensor = torch.from_numpy(data).to(self.device)
         else:
             tensor = data.to(self.device)
-        
-        # Ensure float32
-        if tensor.dtype != torch.float32:
-            tensor = tensor.float()
 
         with torch.no_grad():
             output = self.model(tensor)
@@ -150,4 +165,4 @@ class PyTorchInferenceSession:
             # Some models return dicts with 'logits' key
             output = output.get("logits", output.get("output", list(output.values())[0]))
 
-        return [output.cpu().numpy()]
+        return [output.cpu().to(torch.float32).numpy()]

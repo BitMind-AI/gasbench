@@ -35,6 +35,11 @@ class BenchmarkRunRecorder:
         self.crop_prob = crop_prob
         self.rows: List[Dict[str, Any]] = []
 
+        # Incremental per-dataset counters — updated in add_ok/add_skip so that
+        # log_dataset_summary never has to materialise a full DataFrame.
+        # Structure: {dataset_name: {"ok": int, "correct": int, "skipped": int}}
+        self._dataset_counts: Dict[str, Dict[str, int]] = {}
+
     @property
     def count(self) -> int:
         return len(self.rows)
@@ -114,6 +119,12 @@ class BenchmarkRunRecorder:
 
         self.rows.append(row)
 
+        # Maintain incremental counters so per-dataset logging is O(1).
+        ds = self._dataset_counts.setdefault(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
+        ds["ok"] += 1
+        if bool(predicted == label):
+            ds["correct"] += 1
+
     def add_skip(
         self,
         *,
@@ -170,6 +181,9 @@ class BenchmarkRunRecorder:
         row["sample_display_uri"] = build_display_uri(row)
         self.rows.append(row)
 
+        ds = self._dataset_counts.setdefault(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
+        ds["skipped"] += 1
+
     def add_error(
         self,
         *,
@@ -225,6 +239,20 @@ class BenchmarkRunRecorder:
         row["sample_compound_id"] = build_compound_id(row)
         row["sample_display_uri"] = build_display_uri(row)
         self.rows.append(row)
+
+    def get_dataset_summary(self, dataset_name: str, include_skipped: bool = False) -> Dict[str, Any]:
+        """Return per-dataset accuracy from incremental counters — O(1), no DataFrame."""
+        ds = self._dataset_counts.get(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
+        total = ds["ok"]
+        correct = ds["correct"]
+        summary: Dict[str, Any] = {
+            "accuracy": (correct / total) if total > 0 else 0.0,
+            "correct": correct,
+            "total": total,
+        }
+        if include_skipped:
+            summary["skipped"] = ds["skipped"]
+        return summary
 
     def to_dataframe(self) -> pd.DataFrame:
         if not self.rows:
@@ -477,37 +505,10 @@ def summarize_dataset_from_tracker(
     include_skipped: bool = False,
 ) -> Dict[str, Any]:
     """
-    Compute minimal per-dataset summary from the tracker's dataframe.
-    Returns a dict with accuracy, correct, total, and optionally skipped.
+    Return per-dataset accuracy from the tracker's incremental counters.
+    O(1) — does not materialise a DataFrame from the full rows list.
     """
-    df_now = tracker.to_dataframe()
-    if df_now.empty:
-        return {
-            "accuracy": 0.0,
-            "correct": 0,
-            "total": 0,
-            **({"skipped": 0} if include_skipped else {}),
-        }
-
-    ds_ok = df_now[
-        (df_now.get("status") == "ok") & (df_now.get("dataset_name") == dataset_name)
-    ]
-    total_ds = int(len(ds_ok))
-    correct_ds = int(ds_ok["correct"].sum()) if total_ds > 0 else 0
-    summary: Dict[str, Any] = {
-        "accuracy": (correct_ds / total_ds) if total_ds > 0 else 0.0,
-        "correct": correct_ds,
-        "total": total_ds,
-    }
-    if include_skipped:
-        ds_skipped = int(
-            (
-                (df_now.get("status") == "skipped")
-                & (df_now.get("dataset_name") == dataset_name)
-            ).sum()
-        )
-        summary["skipped"] = ds_skipped
-    return summary
+    return tracker.get_dataset_summary(dataset_name, include_skipped=include_skipped)
 
 
 def log_dataset_summary(

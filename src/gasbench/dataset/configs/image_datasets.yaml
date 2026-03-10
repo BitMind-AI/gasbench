@@ -4,7 +4,7 @@
 #   - Use when the column is not auto-detected (e.g., "src_img" instead of "image")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 50000
+benchmark_size: 52000
 
 datasets:
   - name: gasstation-generated-images
@@ -485,3 +485,79 @@ datasets:
     source_format: parquet
     media_per_archive: 1000
     archives_per_dataset: 1
+
+  # ── Released v12 holdouts ─────────────────────────────────────────────────
+
+  - name: nano-receipts
+    path: 34data/nano-receipts
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: receipts-i2i
+    path: 34data/receipts-i2i
+    modality: image
+    media_type: semisynthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  - name: fairface
+    path: HuggingFaceM4/FairFace
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "FairFace - balanced demographic face dataset (WACV 2021)"
+
+  - name: foodseg103
+    path: EduardoPacheco/FoodSeg103
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "FoodSeg103 - food segmentation benchmark (ACM MM 2021, Apache 2.0)"
+
+  - name: openfake-fake
+    path: ComplexDataLab/OpenFake
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["fake"]
+    notes: "OpenFake synthetic images (CC-BY-SA 4.0)"
+
+  - name: openfake-real
+    path: ComplexDataLab/OpenFake
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["real"]
+    notes: "OpenFake real images (CC-BY-SA 4.0)"
+
+  # Datasets requiring 34data upload before use
+  - name: bdd100k-weather-classification
+    path: 34data/bdd100k-weather-classification
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "BDD100K weather classification subset - requires 34data upload"
+
+  - name: human-action-recognition-har-dataset
+    path: Bingsu/Human_Action_Recognition
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["train"]
+    notes: "Human Action Recognition (HAR) - 15 activity classes (Kaggle via Bingsu/Human_Action_Recognition)"

@@ -862,8 +862,12 @@ class RandomCropWithParams:
 
 
 class ResizeShortestEdge:
-    """Resize image so shortest edge matches target, then center crop to exact 
-    target size if necessary."""
+    """Center crop to target aspect ratio, then resize to exact target size.
+
+    Cropping before resizing ensures every image is downsampled by the same
+    factor regardless of original aspect ratio, avoiding inconsistent
+    interpolation artifacts across differently-shaped inputs.
+    """
 
     def __init__(self, target_size):
         """
@@ -877,49 +881,41 @@ class ResizeShortestEdge:
 
     def __call__(self, img, mask=None):
         """
-        Apply resize transform.
+        Apply center-crop-then-resize transform.
 
         Args:
             img (np.ndarray): Input image array
             mask (np.ndarray, optional): Input mask array
 
         Returns:
-            np.ndarray or tuple: Resized image, or tuple of (image, mask) if mask provided
+            np.ndarray or tuple: Transformed image, or tuple of (image, mask) if mask provided
         """
         h, w = img.shape[:2]
-        
-        # Resize shortest edge to target
-        if h < w:
-            new_h = self.target_h
-            new_w = int(w * (self.target_h / h))
+
+        # Largest crop that fits in the image and matches the target aspect ratio
+        scale = min(h / self.target_h, w / self.target_w)
+        crop_h = min(int(round(scale * self.target_h)), h)
+        crop_w = min(int(round(scale * self.target_w)), w)
+
+        # Center crop
+        i = (h - crop_h) // 2
+        j = (w - crop_w) // 2
+
+        if img.ndim == 2:
+            img = img[i:i+crop_h, j:j+crop_w]
         else:
-            new_w = self.target_w
-            new_h = int(h * (self.target_w / w))
+            img = img[i:i+crop_h, j:j+crop_w, :]
 
-        if new_h < self.target_h:
-            new_h = self.target_h
-        if new_w < self.target_w:
-            new_w = self.target_w
-
-        img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         if mask is not None:
-            mask = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
-
-        # Center crop to exact target size if not already at target
-        if new_h != self.target_h or new_w != self.target_w:
-            i = (new_h - self.target_h) // 2
-            j = (new_w - self.target_w) // 2
-
-            if img.ndim == 2:
-                img = img[i:i+self.target_h, j:j+self.target_w]
+            if mask.ndim == 2:
+                mask = mask[i:i+crop_h, j:j+crop_w]
             else:
-                img = img[i:i+self.target_h, j:j+self.target_w, :]
+                mask = mask[i:i+crop_h, j:j+crop_w, :]
 
-            if mask is not None:
-                if mask.ndim == 2:
-                    mask = mask[i:i+self.target_h, j:j+self.target_w]
-                else:
-                    mask = mask[i:i+self.target_h, j:j+self.target_w, :]
+        # Resize to exact target
+        img = cv2.resize(img, (self.target_w, self.target_h), interpolation=cv2.INTER_LINEAR)
+        if mask is not None:
+            mask = cv2.resize(mask, (self.target_w, self.target_h), interpolation=cv2.INTER_NEAREST)
 
         if mask is not None:
             return img, mask

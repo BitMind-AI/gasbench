@@ -329,3 +329,88 @@ datasets:
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
+
+  # ── Released v12 holdouts ─────────────────────────────────────────────────
+
+  - name: librispeech-asr-clean
+    path: openslr/librispeech_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: ["all"]
+    notes: "LibriSpeech ASR corpus - clean subset"
+
+  - name: indian-ted-talks-chunked
+    path: edwixxx/indian_ted_talks_chunked
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "Indian TED Talks (chunked)"
+
+  - name: gemini-flash-speech
+    path: shb777/gemini-flash-2.0-speech
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 333
+    archives_per_dataset: 1
+    notes: "Gemini Flash 2.0 Speech"
+    data_columns: ["kore", "puck"]
+
+  - name: laion-reference-ai-voices
+    path: laion/reference_ai_voices_with_timbre_annotations
+    modality: audio
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 200
+    archives_per_dataset: 2
+    notes: "Reference AI Voices with Timbre Annotations"
+
+  - name: DeepDialogue-orpheus
+    path: SALT-Research/DeepDialogue-orpheus
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 1
+    archives_per_dataset: 500
+    include_paths: ["segments"]
+
+  - name: cosyvoice-instruct
+    path: LALM-emotional-vulnerability/cosyvoice-instruct
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 2
+
+  - name: speechocean762
+    path: mispeech/speechocean762
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "SpeechOcean762 - non-native English pronunciation assessment corpus"
+
+  # OpenSLR datasets (require 34data upload before use)
+  - name: slr70
+    path: 34data/slr70
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "OpenSLR 70 - requires 34data upload"
+
+  - name: slr66
+    path: 34data/slr66
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "OpenSLR 66 Telugu (male + female) - requires 34data upload"

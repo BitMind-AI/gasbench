@@ -499,3 +499,81 @@ datasets:
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
+
+  # ── Released v12 holdouts ─────────────────────────────────────────────────
+
+  - name: rtfs-10k-real
+    path: kontur-ai/rtfs-10k
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["original_videos"]
+    notes: "RTFS-10K real video-conference clips (Creative Commons)"
+
+  - name: rtfs-10k-inswapper
+    path: kontur-ai/rtfs-10k
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["inswapper"]
+    notes: "RTFS-10K inswapper face-swap deepfakes"
+
+  - name: rtfs-10k-uniface
+    path: kontur-ai/rtfs-10k
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["uniface"]
+    notes: "RTFS-10K uniface face-swap deepfakes"
+
+  - name: tencentarc-vpdata
+    path: TencentARC/VPData
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "VPData - large-scale video inpainting dataset (SIGGRAPH 2025)"
+
+  - name: xd-violence
+    path: Arjun2k04/XD-Violence
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "XD-Violence weakly-supervised violence detection benchmark (ECCV 2020)"
+
+  # Datasets requiring 34data upload before use
+  - name: hockey-fight-videos
+    path: 34data/hockey-fight-videos
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "Hockey Fight Videos benchmark - requires 34data upload"
+
+  - name: ucf50
+    path: 34data/ucf50
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "UCF-50 action recognition benchmark - requires 34data upload"
+
+  - name: slovo
+    path: 34data/slovo
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "SLOVO Russian Sign Language dataset (CC BY-SA 4.0) - requires 34data upload"

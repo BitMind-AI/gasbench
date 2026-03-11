@@ -10,6 +10,7 @@ import tarfile
 import tempfile
 import time
 import traceback
+from urllib.parse import quote
 from contextlib import closing
 from io import BytesIO
 from pathlib import Path
@@ -559,7 +560,7 @@ def _get_download_urls(
 
 def _get_huggingface_urls(dataset_path: str, filenames: List[str]) -> List[str]:
     return [
-        f"https://huggingface.co/datasets/{dataset_path}/resolve/main/{f}"
+        f"https://huggingface.co/datasets/{dataset_path}/resolve/main/{quote(f, safe='/')}"
         for f in filenames
     ]
 

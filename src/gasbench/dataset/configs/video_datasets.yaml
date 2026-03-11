@@ -536,18 +536,20 @@ datasets:
     path: TencentARC/VPData
     modality: video
     media_type: real
-    source_format: mp4
+    source_format: zip
     media_per_archive: 500
-    archives_per_dataset: 2
+    archives_per_dataset: 1
+    include_paths: ["videovo_raw_videos"]
     notes: "VPData - large-scale video inpainting dataset (SIGGRAPH 2025)"
 
   - name: xd-violence
-    path: Arjun2k04/XD-Violence
+    path: jherng/xd-violence
     modality: video
     media_type: real
     source_format: mp4
     media_per_archive: 500
     archives_per_dataset: 2
+    include_paths: ["data/video"]
     notes: "XD-Violence weakly-supervised violence detection benchmark (ECCV 2020)"
 
   # Datasets requiring 34data upload before use

@@ -62,7 +62,15 @@ class BenchmarkDatasetConfig:
     # Works for any modality (image, audio, video)
     data_columns: Optional[List[str]] = None
     notes: Optional[str] = None
-    
+
+    # Row-level filter applied after downloading each parquet shard.
+    # When set, gasbench downloads parquet files one at a time (sequentially)
+    # and stops as soon as enough filtered samples have been collected,
+    # avoiding unnecessary downloads from large datasets.
+    # Example: filter_column: "label", filter_value: "fake"
+    filter_column: Optional[str] = None
+    filter_value: Optional[str] = None
+
     # For holdout datasets: stores the original name before obfuscation
     original_name: Optional[str] = None
 
@@ -397,6 +405,8 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                 include_paths=dataset_dict.get("include_paths"),
                 exclude_paths=dataset_dict.get("exclude_paths"),
                 data_columns=dataset_dict.get("data_columns"),
+                filter_column=dataset_dict.get("filter_column"),
+                filter_value=dataset_dict.get("filter_value"),
             )
             if modality in result:
                 result[modality].append(config)
@@ -521,6 +531,8 @@ def load_holdout_datasets_from_yaml(
                 exclude_paths=dataset_dict.get("exclude_paths", []),
                 data_columns=dataset_dict.get("data_columns"),
                 notes=dataset_dict.get("notes", ""),
+                filter_column=dataset_dict.get("filter_column"),
+                filter_value=dataset_dict.get("filter_value"),
             )
             configs.append(config)
         
@@ -677,10 +689,12 @@ def load_benchmark_datasets_from_yaml(
                                 source=dataset_dict.get("source", "huggingface"),
                                 include_paths=dataset_dict.get("include_paths"),
                                 exclude_paths=dataset_dict.get("exclude_paths"),
-                                data_columns=dataset_dict.get("data_columns"),
-                                notes=dataset_dict.get("notes"),
-                            )
-                            result[modality].append(config)
+                data_columns=dataset_dict.get("data_columns"),
+                notes=dataset_dict.get("notes"),
+                filter_column=dataset_dict.get("filter_column"),
+                filter_value=dataset_dict.get("filter_value"),
+            )
+            result[modality].append(config)
                 
                 if all_errors:
                     raise ValueError("Validation errors:\n" + "\n".join(f"  - {e}" for e in all_errors))
@@ -707,10 +721,12 @@ def load_benchmark_datasets_from_yaml(
                                 source=dataset_dict.get("source", "huggingface"),
                                 include_paths=dataset_dict.get("include_paths"),
                                 exclude_paths=dataset_dict.get("exclude_paths"),
-                                data_columns=dataset_dict.get("data_columns"),
-                                notes=dataset_dict.get("notes"),
-                            )
-                            result[modality].append(config)
+                data_columns=dataset_dict.get("data_columns"),
+                notes=dataset_dict.get("notes"),
+                filter_column=dataset_dict.get("filter_column"),
+                filter_value=dataset_dict.get("filter_value"),
+            )
+            result[modality].append(config)
                 return result
         
         # Load from separate bundled config files (new default)
@@ -742,10 +758,12 @@ def load_benchmark_datasets_from_yaml(
                             source=dataset_dict.get("source", "huggingface"),
                             include_paths=dataset_dict.get("include_paths"),
                             exclude_paths=dataset_dict.get("exclude_paths"),
-                            data_columns=dataset_dict.get("data_columns"),
-                            notes=dataset_dict.get("notes"),
-                        )
-                        result[modality].append(config)
+                data_columns=dataset_dict.get("data_columns"),
+                notes=dataset_dict.get("notes"),
+                filter_column=dataset_dict.get("filter_column"),
+                filter_value=dataset_dict.get("filter_value"),
+            )
+            result[modality].append(config)
             except Exception as e:
                 logger.warning(f"Failed to load {modality} datasets: {e}")
         

@@ -1,4 +1,6 @@
+import base64
 import hashlib
+import io
 import json
 import os
 import random
@@ -6,14 +8,16 @@ import re
 import shutil
 import tarfile
 import tempfile
+import time
 import traceback
-import base64
 from contextlib import closing
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple
 from zipfile import ZipFile
 from datetime import datetime
+
+import soundfile as sf
 
 import pandas as pd
 import pyarrow.parquet as pq
@@ -145,6 +149,46 @@ def download_and_extract(
                 archives_per_dataset,
             )
             max_files_to_list = n_files if n_files > 0 else None
+
+            # ── Filtered sequential mode ─────────────────────────────────────
+            # When filter_column/filter_value are set, download parquet shards
+            # one at a time and stop as soon as the sample target is hit.
+            filter_column = getattr(dataset, "filter_column", None)
+            filter_value = getattr(dataset, "filter_value", None)
+            if filter_column and filter_value:
+                try:
+                    all_filenames = _list_remote_dataset_files(
+                        dataset.path,
+                        dataset.source_format or "parquet",
+                        False, None, None,
+                        include_paths, exclude_paths,
+                        source, hf_token,
+                        max_files=None,  # need full list to shuffle and pick from
+                    )
+                except DatasetAccessError as e:
+                    logger.warning(f"Skipping {dataset.name}: {e}")
+                    return
+
+                if not all_filenames:
+                    logger.warning(f"No parquet files found for {dataset.path}")
+                    return
+
+                target_total = media_per_archive * archives_per_dataset
+                logger.info(
+                    f"Filtered mode: {dataset.name} — {filter_column}=={filter_value}, "
+                    f"target {target_total} samples from {len(all_filenames)} shards"
+                )
+                yield from _download_filtered_sequential(
+                    dataset=dataset,
+                    filenames=all_filenames,
+                    target_total=target_total,
+                    temp_dir_root=temp_dir_root,
+                    source=source,
+                    hf_token=hf_token,
+                    seed=seed,
+                )
+                return
+            # ── Standard (non-filtered) download path ────────────────────────
 
             try:
                 filenames = _list_remote_dataset_files(
@@ -1086,6 +1130,58 @@ def _extract_parquet_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
     return metadata
 
 
+def _download_filtered_sequential(
+    dataset,
+    filenames: List[str],
+    target_total: int,
+    temp_dir_root: Path,
+    source: str,
+    hf_token: Optional[str],
+    seed: Optional[int],
+) -> Generator[Dict[str, Any], None, None]:
+    """Download parquet shards one at a time, stopping once target_total samples are collected.
+
+    Filtering is handled inside _process_parquet via dataset.filter_column/filter_value,
+    so all media decoding follows the exact same path as regular parquet downloads.
+    """
+    remote_paths = _get_download_urls(dataset.path, filenames, source)
+    random.shuffle(remote_paths)
+
+    collected = 0
+    for url in remote_paths:
+        if collected >= target_total:
+            break
+
+        logger.info(
+            f"Filtered download [{dataset.name}]: {collected}/{target_total} collected, "
+            f"fetching next shard"
+        )
+        downloaded = download_files([url], temp_dir_root, hf_token=hf_token)
+        if not downloaded:
+            continue
+
+        parquet_path = downloaded[0]
+        try:
+            remaining = target_total - collected
+            for sample in yield_media_from_source(
+                parquet_path, dataset, remaining, iso_week=None,
+                hf_token=hf_token, seed=seed,
+            ):
+                yield sample
+                collected += 1
+                if collected >= target_total:
+                    break
+        finally:
+            try:
+                parquet_path.unlink()
+            except Exception:
+                pass
+
+    logger.info(
+        f"Filtered download complete: {collected}/{target_total} samples for {dataset.name}"
+    )
+
+
 def _process_parquet(
     source_path: Path, 
     dataset, 
@@ -1101,7 +1197,19 @@ def _process_parquet(
     try:
         table = pq.read_table(source_path)
         df = table.to_pandas()
-        
+
+        filter_column = getattr(dataset, "filter_column", None)
+        filter_value = getattr(dataset, "filter_value", None)
+        if filter_column and filter_value:
+            if filter_column not in df.columns:
+                logger.warning(f"filter_column '{filter_column}' not in {source_path.name}; skipping")
+                return
+            df = df[df[filter_column] == filter_value]
+            if df.empty:
+                logger.info(f"No rows matching {filter_column}=={filter_value} in {source_path.name}")
+                return
+            logger.info(f"  {source_path.name}: {len(df)} rows after filter ({filter_column}=={filter_value})")
+
         if num_items == -1:
             sample_df = df
         else:
@@ -1196,12 +1304,9 @@ def _process_parquet(
                         if dataset.modality == "audio" and isinstance(media_data, (list, np.ndarray)):
                             # Audio data is a numpy array - convert to WAV bytes
                             try:
-                                import io
-                                import soundfile as sf
                                 audio_array = np.array(media_data, dtype=np.float32)
                                 if audio_array.ndim == 1:
                                     audio_array = audio_array.reshape(-1, 1)
-                                # Use extracted sampling rate or default to 16000
                                 sr = audio_sampling_rate if audio_sampling_rate else 16000
                                 buffer = io.BytesIO()
                                 sf.write(buffer, audio_array, sr, format='WAV')
@@ -1407,8 +1512,6 @@ def _is_tar_file(filename_lower: str) -> bool:
     Also handles hash-suffixed filenames like 'file.tar_abc123.gz' that result
     from download_single_file adding URL hashes to avoid collisions.
     """
-    import re
-    
     if filename_lower.endswith(".tar") or filename_lower.endswith(".tgz"):
         return True
     if filename_lower.endswith(".tar.gz"):
@@ -1590,7 +1693,6 @@ def download_single_file(
                     f"Retrying in {wait_time}s..."
                 )
                 if attempt < max_retries - 1:
-                    import time
                     time.sleep(wait_time)
                 else:
                     raise

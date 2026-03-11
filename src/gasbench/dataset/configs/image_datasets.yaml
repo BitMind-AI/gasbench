@@ -527,20 +527,22 @@ datasets:
     modality: image
     media_type: synthetic
     source_format: parquet
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: ["fake"]
-    notes: "OpenFake synthetic images (CC-BY-SA 4.0)"
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    filter_column: label
+    filter_value: fake
+    notes: "OpenFake synthetic images (CC-BY-SA 4.0) — streamed with row filter"
 
   - name: openfake-real
     path: ComplexDataLab/OpenFake
     modality: image
     media_type: real
     source_format: parquet
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: ["real"]
-    notes: "OpenFake real images (CC-BY-SA 4.0)"
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    filter_column: label
+    filter_value: real
+    notes: "OpenFake real images (CC-BY-SA 4.0) — streamed with row filter"
 
   # Datasets requiring 34data upload before use
   - name: bdd100k-weather-classification

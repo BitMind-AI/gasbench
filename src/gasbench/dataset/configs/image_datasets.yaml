@@ -523,23 +523,21 @@ datasets:
     notes: "FoodSeg103 - food segmentation benchmark (ACM MM 2021, Apache 2.0)"
 
   - name: openfake-fake
-    path: ComplexDataLab/OpenFake
+    path: 34data/openfake-fake
     modality: image
     media_type: synthetic
     source_format: parquet
     media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: ["fake"]
+    archives_per_dataset: 1
     notes: "OpenFake synthetic images (CC-BY-SA 4.0)"
 
   - name: openfake-real
-    path: ComplexDataLab/OpenFake
+    path: 34data/openfake-real
     modality: image
     media_type: real
     source_format: parquet
     media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: ["real"]
+    archives_per_dataset: 1
     notes: "OpenFake real images (CC-BY-SA 4.0)"
 
   # Datasets requiring 34data upload before use

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gasbench"
-version = "0.5.13"
+version = "0.5.14"
 description = "GASBench - ML model benchmark evaluation package"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,6 +36,7 @@ dependencies = [
     "scikit-image>=0.21.0",
     "fvcore>=0.1.5",
     "einops>=0.7.0",
+    "open-clip-torch>=2.20.0",
 ]
 
 [project.optional-dependencies]

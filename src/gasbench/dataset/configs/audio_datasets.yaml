@@ -414,3 +414,140 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     notes: "OpenSLR 66 Telugu (male + female) - requires 34data upload"
+
+  # ── Released v13 holdouts ─────────────────────────────────────────────────
+
+  - name: asvspoof2021-df-eval
+    path: 34data/asvspoof2021-df-eval
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "ASVspoof 2021 DeepFake track evaluation set"
+
+  - name: asvspoof2021-la-eval
+    path: 34data/asvspoof2021-la-eval
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "ASVspoof 2021 Logical Access track evaluation set"
+
+  - name: asvspoof2021-pa-eval
+    path: 34data/asvspoof2021-pa-eval
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "ASVspoof 2021 Physical Access track evaluation set"
+
+  - name: audiospoofing-mini-fake
+    path: 34data/audiospoofing-mini-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "AudioSpoofing mini dataset — synthetic speech subset"
+
+  - name: audiospoofing-mini-real
+    path: 34data/audiospoofing-mini-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "AudioSpoofing mini dataset — genuine speech subset"
+
+  - name: cfad-fake
+    path: 34data/cfad-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "CFAD Chinese Fake Audio Detection — fake/synthetic audio"
+
+  - name: cfad-real
+    path: 34data/cfad-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "CFAD Chinese Fake Audio Detection — real/genuine audio"
+
+  - name: cvoice-small-fake
+    path: 34data/cvoice-small-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "Common Voice small subset — TTS/voice-converted fake speech"
+
+  - name: cvoice-small-real
+    path: 34data/cvoice-small-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "Common Voice small subset — genuine human speech"
+
+  - name: fakesound2-fake
+    path: 34data/fakesound2-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "FakeSound 2 — AI-generated environmental/ambient audio"
+
+  - name: fakesound2-real
+    path: 34data/fakesound2-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "FakeSound 2 — genuine environmental/ambient audio"
+
+  - name: scdf-en
+    path: 34data/scdf-en
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "SCDF English subset — scalable deepfake speech detection corpus"
+
+  - name: vcc2020-fake
+    path: 34data/vcc2020-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "Voice Conversion Challenge 2020 — converted (fake) speech"
+
+  - name: vcc2020-real
+    path: 34data/vcc2020-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "Voice Conversion Challenge 2020 — source (real) speech"
+
+  - name: audioset-sl
+    path: 34data/audioset-sl
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "AudioSet Sound Level subset — real environmental audio (FLAC)"

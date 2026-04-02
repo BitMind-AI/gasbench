@@ -579,3 +579,86 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     notes: "SLOVO Russian Sign Language dataset (CC BY-SA 4.0) - requires 34data upload"
+
+  # ── Released v13 holdouts ─────────────────────────────────────────────────
+
+  - name: fmfcc-v-fake
+    path: 34data/fmfcc-v-fake
+    modality: video
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "FMFCC-V deepfake video benchmark — manipulated videos"
+
+  - name: fmfcc-v-real
+    path: 34data/fmfcc-v-real
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "FMFCC-V deepfake video benchmark — original real videos"
+
+  - name: polyglotfake-fake
+    path: 34data/polyglotfake-fake
+    modality: video
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "PolyGlotFake multilingual deepfake benchmark — synthetic videos"
+
+  - name: polyglotfake-real
+    path: 34data/polyglotfake-real
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "PolyGlotFake multilingual deepfake benchmark — real source videos"
+
+  - name: blendface
+    path: 34data/blendface
+    modality: video
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "BlendFace face-swap deepfake videos"
+
+  - name: dagan
+    path: 34data/dagan
+    modality: video
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "DAGAN GAN-generated face animation deepfake videos"
+
+  - name: wav2lip
+    path: 34data/wav2lip
+    modality: video
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "Wav2Lip lip-sync deepfake videos"
+
+  - name: rareact
+    path: 34data/rareact
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "RareAct YouTube rare compound action dataset"
+
+  - name: vidor
+    path: 34data/vidor
+    modality: video
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "ViDor video relation detection dataset"

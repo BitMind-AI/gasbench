@@ -564,3 +564,59 @@ datasets:
     archives_per_dataset: 1
     include_paths: ["train"]
     notes: "Human Action Recognition (HAR) - 15 activity classes (Kaggle via Bingsu/Human_Action_Recognition)"
+
+  # ── Released v13 holdouts ─────────────────────────────────────────────────
+
+  - name: digi2real
+    path: 34data/digi2real
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "Digi2Real synthetic-to-real image translation dataset"
+
+  - name: fake-animals-images
+    path: 34data/fake-animals-images
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "AI-generated fake animal images"
+
+  - name: animalweb
+    path: 34data/animalweb
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "AnimalWeb animal face detection and alignment dataset"
+
+  - name: labelme-12-50k
+    path: 34data/labelme-12-50k
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "LabelMe 12-class 50k image dataset"
+
+  - name: uagd
+    path: 34data/uagd
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "UAGD urban AI-generated detection dataset — real images"
+
+  - name: imdb-crop
+    path: 34data/imdb-crop
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "IMDB-WIKI face crops — real face images"

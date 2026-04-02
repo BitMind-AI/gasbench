@@ -1,0 +1,133 @@
+# Image Human Datasets — Public gasbench config for the "human" vertical
+#
+# These datasets focus on human faces and identity documents.
+# Miners use this config via: gasbench run --image-model model.zip --dataset-config image_human_datasets.yaml
+#
+# When adding new datasets, cross-check against private holdouts to avoid leaks:
+#   bmcore/src/apps/benchmark/configs/v14/image-human-holdouts.yaml
+#   bmcore/src/apps/benchmark/configs/v14/image-holdouts.yaml
+
+benchmark_size: 20000
+
+datasets:
+  # ── Real human face datasets ──────────────────────────────────────────────
+
+  - name: celeb-a-hq
+    path: bitmind/celeb-a-hq
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "CelebA-HQ — high-quality celebrity face images"
+
+  - name: ffhq-256
+    path: bitmind/ffhq-256
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "Flickr-Faces-HQ 256px — real face images"
+
+  - name: lfw
+    path: bitmind/lfw
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "Labeled Faces in the Wild — real face images"
+
+  - name: imdb-crop
+    path: 34data/imdb-crop
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: "IMDB-WIKI face crops — real face images"
+
+  - name: fairface
+    path: HuggingFaceM4/FairFace
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: "FairFace — balanced demographic face dataset (WACV 2021)"
+
+  - name: idoc-mugshots
+    path: bitmind/idoc-mugshots-images
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: "IDOC mugshot face images"
+
+  - name: fakeclue-real-ffpp
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["data/real/ff++/"]
+    notes: "FaceForensics++ real face images (CC-BY-SA 4.0)"
+
+  # ── Synthetic / deepfake human face datasets ──────────────────────────────
+
+  - name: SFHQ-part1
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part1.zip"]
+    notes: "Synthetic Faces HQ — part 1"
+
+  - name: SFHQ-part2
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part2.zip"]
+    notes: "Synthetic Faces HQ — part 2"
+
+  - name: SFHQ-part3
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part3.zip"]
+    notes: "Synthetic Faces HQ — part 3"
+
+  - name: SFHQ-part4
+    path: bitmind/SyntheticFacesHQ
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ["SFHQ-part4.zip"]
+    notes: "Synthetic Faces HQ — part 4"
+
+  - name: face-swap
+    path: bitmind/face-swap
+    modality: image
+    media_type: semisynthetic
+    media_per_archive: 333
+    archives_per_dataset: 3
+    notes: "Face-swap deepfake images"
+
+  - name: fakeclue-fake-ffpp
+    path: bitmind/FakeClue
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: ["data/fake/ff++/"]
+    notes: "FaceForensics++ deepfake images (CC-BY-SA 4.0)"

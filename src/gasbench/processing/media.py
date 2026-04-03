@@ -1,4 +1,5 @@
 import os
+import subprocess
 import tempfile
 import concurrent.futures
 from pathlib import Path
@@ -13,6 +14,11 @@ import torch
 
 from ..logger import get_logger
 from ..constants import MEDIA_TYPE_TO_LABEL
+
+try:
+    from torchcodec.decoders import AudioDecoder
+except Exception:
+    AudioDecoder = None
 
 logger = get_logger(__name__)
 
@@ -220,27 +226,94 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
 AUDIO_DECODE_TIMEOUT = 30  # seconds -- prevents ffmpeg deadlocks on malformed files
 
 
-def _decode_audio_with_timeout(audio_bytes: bytes, target_sr: int, timeout: int = AUDIO_DECODE_TIMEOUT):
-    """Decode audio bytes using TorchCodec with a timeout.
+def _decode_audio_waveform_ffmpeg_cli(audio_bytes: bytes, target_sr: int) -> torch.Tensor:
+    """Decode arbitrary audio bytes to mono float32 PCM using the ffmpeg CLI.
 
-    Uses a thread pool to enforce a timeout on the underlying ffmpeg decode,
-    which can hang indefinitely on certain malformed audio files.
+    Used when TorchCodec cannot load (e.g. PyTorch wheel vs system FFmpeg ABI mismatch on
+    Ubuntu 22.04 / Modal images). Requires ``ffmpeg`` on PATH.
+    """
+    if not audio_bytes:
+        raise ValueError("empty audio bytes")
+
+    tmp = tempfile.NamedTemporaryFile(prefix="gasbench_audio_", delete=False)
+    tmp_path = tmp.name
+    try:
+        tmp.write(audio_bytes)
+        tmp.close()
+        cmd = [
+            "ffmpeg",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            tmp_path,
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            str(int(target_sr)),
+            "-f",
+            "f32le",
+            "pipe:1",
+        ]
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=AUDIO_DECODE_TIMEOUT,
+            check=False,
+        )
+        if proc.returncode != 0:
+            err = (
+                proc.stderr.decode("utf-8", errors="replace") if proc.stderr else ""
+            )
+            raise RuntimeError(
+                f"ffmpeg decode failed (exit {proc.returncode}): {err.strip()}"
+            )
+        raw = proc.stdout
+        if not raw or len(raw) % 4 != 0:
+            raise RuntimeError("invalid f32le output from ffmpeg")
+        pcm = np.frombuffer(raw, dtype=np.float32).copy()
+        return torch.from_numpy(pcm)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+def _decode_audio_with_timeout(audio_bytes: bytes, target_sr: int, timeout: int = AUDIO_DECODE_TIMEOUT):
+    """Decode audio bytes with a timeout.
+
+    Tries TorchCodec first (in-process, resamples to ``target_sr``, mono). If TorchCodec
+    cannot load or fails, falls back to the ``ffmpeg`` CLI (same sample rate / channel layout).
+
+    A thread pool enforces ``timeout`` so a stuck decoder cannot block indefinitely.
 
     Args:
         audio_bytes: Raw audio file bytes
-        target_sr: Target sample rate (resampling handled by AudioDecoder)
+        target_sr: Target sample rate
         timeout: Maximum seconds to wait for decode
 
     Returns:
-        AudioSamples from TorchCodec (data shape: (num_channels, num_samples), float32 in [-1, 1])
+        ``torch.Tensor`` of shape ``(num_samples,)``, float32 in roughly [-1, 1]
 
     Raises:
         concurrent.futures.TimeoutError: If decode hangs beyond timeout
     """
-    def _decode():
-        from torchcodec.decoders import AudioDecoder
-        decoder = AudioDecoder(audio_bytes, sample_rate=target_sr, num_channels=1)
-        return decoder.get_all_samples()
+    def _decode() -> torch.Tensor:
+        try:
+            if AudioDecoder is None:
+                raise RuntimeError("torchcodec AudioDecoder not importable")
+            decoder = AudioDecoder(audio_bytes, sample_rate=target_sr, num_channels=1)
+            samples = decoder.get_all_samples()
+            return samples.data.squeeze(0)
+        except Exception as e:
+            logger.debug(
+                "TorchCodec audio decode unavailable (%s); using ffmpeg CLI fallback",
+                e,
+            )
+            return _decode_audio_waveform_ffmpeg_cli(audio_bytes, target_sr)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(_decode)
@@ -258,17 +331,18 @@ def process_audio_sample(
     """
     Process an audio sample for deepfake detection benchmark.
 
-    Uses TorchCodec AudioDecoder which accepts bytes directly (no temp files),
-    handles resampling to target_sr and mono conversion internally.
+    Decodes with TorchCodec when available; otherwise uses the ``ffmpeg`` CLI (same
+    sample rate and mono), which matches typical Modal/Ubuntu images that ship ffmpeg
+    but lack the libavutil versions bundled TorchCodec expects.
 
     Preprocessing Pipeline:
-    1. Decode audio bytes with TorchCodec (resamples to 16kHz, converts to mono)
+    1. Decode audio bytes (TorchCodec or ffmpeg fallback)
     2. Crop/pad to exactly 6 seconds (96,000 samples at 16kHz)
        - If longer: random crop (with seed) or center crop
        - If shorter: zero-pad on the right
 
     A 30-second per-sample timeout prevents ffmpeg deadlocks on malformed files.
-    No normalization is applied -- TorchCodec returns float32 in [-1, 1].
+    No normalization is applied -- decoded float32 PCM is in roughly [-1, 1].
 
     Args:
         sample: Dictionary containing 'audio_bytes' and metadata
@@ -292,9 +366,8 @@ def process_audio_sample(
         media_type = sample.get("media_type", "synthetic")
         label = MEDIA_TYPE_TO_LABEL.get(media_type, 1)
 
-        # Decode with timeout -- AudioDecoder handles resampling + mono conversion
-        samples = _decode_audio_with_timeout(audio_bytes, target_sr)
-        waveform = samples.data.squeeze(0)  # (1, num_samples) -> (num_samples,)
+        # Decode with timeout (TorchCodec or ffmpeg CLI)
+        waveform = _decode_audio_with_timeout(audio_bytes, target_sr)
 
         # Crop/pad to target length (e.g. 96,000 samples = 6s at 16kHz)
         target_length = int(target_sr * target_duration_seconds)

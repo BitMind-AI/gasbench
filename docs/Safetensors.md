@@ -122,7 +122,7 @@ Your `model.py` is checked by a static analyzer before execution in a sandboxed 
 - **ML Frameworks:** `transformers`, `timm`, `einops`, `safetensors`, `safetensors.torch`, `flash_attn`
 - **Image/Video Processing:** `PIL`, `PIL.Image`, `cv2`, `skimage` (scikit-image), `decord`
 - **Scientific Computing:** `numpy`, `scipy`, `scipy.ndimage`, `scipy.signal`
-- **Vision Utilities:** `fvcore`
+- **Vision Utilities:** `fvcore`, `ultralytics`
 - **Python Standard Library:** `math`, `functools`, `typing`, `collections`, `dataclasses`, `enum`, `abc`, `pathlib`
 
 **Blocked (security):**

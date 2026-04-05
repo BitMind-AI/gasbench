@@ -558,10 +558,16 @@ def load_holdout_datasets_from_yaml(
 
 
 def _save_holdout_mapping(cache_dir: str, modality: str, mapping: Dict[str, str], source_config: str):
-    """Save holdout mapping to YAML file."""
+    """Save holdout mapping to YAML file.
+
+    The mapping filename is derived from the source config basename so that
+    different verticals (e.g. image-holdouts.yaml vs image-human-holdouts.yaml)
+    produce separate mapping files instead of overwriting each other.
+    """
     try:
         os.makedirs(cache_dir, exist_ok=True)
-        mapping_file = os.path.join(cache_dir, f"{modality}-holdout-mappings.yaml")
+        config_stem = Path(source_config).stem  # e.g. "image-human-holdouts"
+        mapping_file = os.path.join(cache_dir, f"{config_stem}-mappings.yaml")
         full_mapping = {
             "modality": modality,
             "source_config": source_config,

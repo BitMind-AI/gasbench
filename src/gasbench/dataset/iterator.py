@@ -39,6 +39,7 @@ class DatasetIterator:
         allow_eviction: bool = True,
         hf_token: Optional[str] = None,
         seed: Optional[int] = None,
+        lazy_read: bool = False,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
@@ -48,6 +49,7 @@ class DatasetIterator:
         self.allow_eviction = allow_eviction
         self.hf_token = hf_token
         self.seed = seed
+        self.lazy_read = lazy_read
 
         self.is_gasstation = "gasstation" in dataset_config.name.lower()
 
@@ -676,14 +678,22 @@ class DatasetIterator:
 
                 if self.config.modality == "image":
                     try:
-                        with open(file_path, "rb") as f:
-                            image_bytes = f.read()
-                        sample = {
-                            "image": image_bytes,  # bytes; decode downstream
-                            "dataset_name": self.config.name,
-                            "media_type": self.config.media_type,
-                            **metadata,
-                        }
+                        if self.lazy_read:
+                            sample = {
+                                "image_path": file_path,
+                                "dataset_name": self.config.name,
+                                "media_type": self.config.media_type,
+                                **metadata,
+                            }
+                        else:
+                            with open(file_path, "rb") as f:
+                                image_bytes = f.read()
+                            sample = {
+                                "image": image_bytes,
+                                "dataset_name": self.config.name,
+                                "media_type": self.config.media_type,
+                                **metadata,
+                            }
                         sample["dataset_path"] = self.config.path
                         sample["source_kind"] = self.source_kind
                         sample["hf_resolved_revision"] = dataset_info.get(
@@ -717,13 +727,13 @@ class DatasetIterator:
                                 "media_type": self.config.media_type,
                                 **metadata,
                             }
-                            sample["dataset_path"] = self.config.path
-                            sample["source_kind"] = self.source_kind
-                            sample["hf_resolved_revision"] = dataset_info.get(
-                                "hf_resolved_revision", self.hf_resolved_revision
-                            )
-                            sample["cache_relpath"] = filename
-                            yield sample
+                        elif self.lazy_read:
+                            sample = {
+                                "video_path": file_path,
+                                "dataset_name": self.config.name,
+                                "media_type": self.config.media_type,
+                                **metadata,
+                            }
                         else:
                             with open(file_path, "rb") as f:
                                 video_bytes = f.read()
@@ -733,13 +743,13 @@ class DatasetIterator:
                                 "media_type": self.config.media_type,
                                 **metadata,
                             }
-                            sample["dataset_path"] = self.config.path
-                            sample["source_kind"] = self.source_kind
-                            sample["hf_resolved_revision"] = dataset_info.get(
-                                "hf_resolved_revision", self.hf_resolved_revision
-                            )
-                            sample["cache_relpath"] = filename
-                            yield sample
+                        sample["dataset_path"] = self.config.path
+                        sample["source_kind"] = self.source_kind
+                        sample["hf_resolved_revision"] = dataset_info.get(
+                            "hf_resolved_revision", self.hf_resolved_revision
+                        )
+                        sample["cache_relpath"] = filename
+                        yield sample
                     except Exception as e:
                         logger.warning(f"Failed to load cached video {filename}: {e}")
                         continue

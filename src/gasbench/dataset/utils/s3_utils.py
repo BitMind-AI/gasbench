@@ -169,10 +169,11 @@ def list_s3_files(path: str, extension=None) -> List[str]:
         
         if extension and files:
             if isinstance(extension, (list, tuple, set)):
-                exts = tuple(extension)
-                files = [f for f in files if f.endswith(exts)]
+                exts = tuple(e.lower() for e in extension)
+                files = [f for f in files if f.lower().endswith(exts)]
             else:
-                files = [f for f in files if f.endswith(extension)]
+                ext_lower = extension.lower()
+                files = [f for f in files if f.lower().endswith(ext_lower)]
         
         logger.info(f"Found {len(files)} files in S3 bucket {bucket}/{prefix}")
         return files

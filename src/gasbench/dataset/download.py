@@ -69,7 +69,7 @@ def _calculate_files_to_download(
     elif dataset.modality == "audio":
         is_direct_media = src_fmt in {ext.lstrip(".") for ext in AUDIO_FILE_EXTENSIONS}
     else:
-        is_direct_media = src_fmt == "mp4"
+        is_direct_media = src_fmt in {ext.lstrip(".") for ext in VIDEO_FILE_EXTENSIONS}
 
     if is_direct_media:
         if media_per_archive == -1 or archives_per_dataset == -1:

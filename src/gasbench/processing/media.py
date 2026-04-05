@@ -212,9 +212,9 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
         media_type = sample.get("media_type", "synthetic")
         label = MEDIA_TYPE_TO_LABEL[media_type]
 
-        # Decode bytes -> PIL -> numpy (HWC uint8)
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
         image_array = np.array(image, dtype=np.uint8)
+        image.close()
 
         return image_array, label
 

@@ -4,7 +4,7 @@ import asyncio
 import numpy as np
 import traceback
 from typing import Dict, Optional
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from queue import Queue, Empty
 import threading
 
@@ -26,9 +26,16 @@ import pandas as pd
 
 logger = get_logger(__name__)
 
+_HEAVY_VIDEO_KEYS = frozenset(("video_bytes", "video_path"))
+
 
 class VideoPrefetchPipeline:
-    """Pipeline for parallel loading and preprocessing of video samples."""
+    """Pipeline for parallel loading and preprocessing of video samples.
+
+    When the iterator yields lazy samples (video_path instead of video_bytes),
+    file I/O is performed inside worker threads so that multiple disk reads from
+    network volumes happen concurrently.
+    """
 
     def __init__(
         self,
@@ -38,7 +45,7 @@ class VideoPrefetchPipeline:
         seed,
         augment_level,
         crop_prob,
-        num_workers=3,
+        num_workers=4,
         max_queue_size=6,
         num_frames=16,
         frame_rate=None,
@@ -62,9 +69,15 @@ class VideoPrefetchPipeline:
         self.producer_thread = threading.Thread(target=self._producer_loop, daemon=True)
         self.producer_thread.start()
 
-    def _preprocess_sample(self, sample, sample_index, dataset_name):
-        """Preprocess a single sample (runs in worker thread)."""
+    def _read_and_preprocess(self, sample, sample_index, dataset_name):
+        """Read file from disk (if lazy), decode, and augment. Runs in worker thread."""
         try:
+            video_path = sample.get("video_path")
+            if video_path:
+                with open(video_path, "rb") as f:
+                    video_bytes = f.read()
+                sample = {**sample, "video_bytes": video_bytes}
+
             if "video_frames" in sample:
                 video_array, label = process_video_frames_sample(
                     sample, num_frames=self.num_frames
@@ -92,58 +105,60 @@ class VideoPrefetchPipeline:
 
             aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
 
+            sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_VIDEO_KEYS}
+
             return {
                 "video": aug_tchw,
                 "label": label,
-                "sample": sample,
+                "sample": sample_meta,
                 "sample_index": sample_index,
                 "dataset_name": dataset_name,
                 "sample_seed": sample_seed,
             }
         except Exception as e:
-            logger.warning(f"Failed to preprocess video sample: {e}")
+            logger.warning(f"Failed to preprocess video sample {sample_index}: {e}")
             return None
 
     def _producer_loop(self):
-        """Main loop that feeds samples to workers and batches results."""
+        """Read + preprocess samples in parallel with bounded concurrency."""
         try:
-            batch = []
-            sample_index = 0
             dataset_name = getattr(self.dataset_iterator.config, "name", "unknown")
+            max_in_flight = self.num_workers * 3
 
-            futures = []
-            for sample in self.dataset_iterator:
-                if self.stop_event.is_set():
+            sample_iter = enumerate(self.dataset_iterator, 1)
+            pending = set()
+            exhausted = False
+            batch = []
+
+            while not self.stop_event.is_set():
+                while len(pending) < max_in_flight and not exhausted:
+                    try:
+                        idx, sample = next(sample_iter)
+                        future = self.executor.submit(
+                            self._read_and_preprocess, sample, idx, dataset_name
+                        )
+                        pending.add(future)
+                    except StopIteration:
+                        exhausted = True
+                        break
+
+                if not pending:
                     break
 
-                sample_index += 1
+                done, pending = wait(pending, return_when=FIRST_COMPLETED)
 
-                future = self.executor.submit(
-                    self._preprocess_sample, sample, sample_index, dataset_name
-                )
-                futures.append(future)
-
-                if len(futures) >= self.num_workers * 2:
-                    for future in futures:
-                        if self.stop_event.is_set():
-                            break
+                for future in done:
+                    if self.stop_event.is_set():
+                        break
+                    try:
                         result = future.result()
-                        if result is not None:
-                            batch.append(result)
-                            if len(batch) >= self.batch_size:
-                                self.batch_queue.put(batch)
-                                batch = []
-                    futures = []
-
-            for future in futures:
-                if self.stop_event.is_set():
-                    break
-                result = future.result()
-                if result is not None:
-                    batch.append(result)
-                    if len(batch) >= self.batch_size:
-                        self.batch_queue.put(batch)
-                        batch = []
+                    except Exception:
+                        continue
+                    if result is not None:
+                        batch.append(result)
+                        if len(batch) >= self.batch_size:
+                            self.batch_queue.put(batch)
+                            batch = []
 
             if batch and not self.stop_event.is_set():
                 self.batch_queue.put(batch)
@@ -176,7 +191,7 @@ class VideoPrefetchPipeline:
     def close(self):
         """Clean up resources."""
         self.stop_event.set()
-        self.executor.shutdown(wait=False)
+        self.executor.shutdown(wait=False, cancel_futures=True)
 
         while not self.batch_queue.empty():
             try:
@@ -352,6 +367,7 @@ async def run_video_benchmark(
                         cache_policy=cache_policy,
                         hf_token=hf_token,
                         seed=seed,
+                        lazy_read=True,
                     )
 
                     if skip_missing and dataset_iterator.get_total_cached_count() == 0:
@@ -365,8 +381,6 @@ async def run_video_benchmark(
                         seed=seed,
                         augment_level=augment_level,
                         crop_prob=crop_prob,
-                        num_workers=3,
-                        max_queue_size=6,
                         num_frames=num_frames,
                         frame_rate=frame_rate,
                     )

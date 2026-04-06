@@ -1,6 +1,5 @@
 import uuid
 import time
-import json
 import os
 import hashlib
 from typing import Any, Dict, List, Optional, Tuple
@@ -531,43 +530,3 @@ def log_dataset_summary(
         logger.info(
             f"Dataset {dataset_name}: {s['accuracy']:.2%} accuracy ({s['correct']}/{s['total']})"
         )
-
-
-def compute_generator_fool_rates_from_df(df: pd.DataFrame) -> Dict[str, float]:
-    """
-    Compute fool_rate per generator_hotkey:
-    fool_rate = fraction of generator-tagged samples predicted as 0 (real).
-    """
-    if df is None or df.empty:
-        return {}
-    ok_df = df[(df.get("status") == "ok")].copy()
-    if (
-        "generator_hotkey" not in ok_df.columns
-        or ok_df["generator_hotkey"].isna().all()
-    ):
-        return {}
-    result: Dict[str, float] = {}
-    grouped = ok_df.groupby("generator_hotkey")
-    for hotkey, g in grouped:
-        total = len(g)
-        if total <= 0:
-            continue
-        fooled = int((g["predicted"] == 0).sum())
-        result[str(hotkey)] = fooled / total
-    return result
-
-
-def write_cache_policy_from_df(df: pd.DataFrame, policy_path: str) -> Dict[str, float]:
-    """
-    Write a cache policy JSON with generator_priorities equal to fool_rate per generator.
-    Returns the mapping written.
-    """
-    priorities = compute_generator_fool_rates_from_df(df)
-    policy = {"generator_priorities": priorities}
-    try:
-        os.makedirs(os.path.dirname(policy_path), exist_ok=True)
-    except Exception:
-        pass
-    with open(policy_path, "w") as f:
-        json.dump(policy, f, indent=2)
-    return priorities

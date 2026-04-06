@@ -14,7 +14,6 @@ from ..logger import get_logger
 from .config import BenchmarkDatasetConfig
 from .download import download_and_extract
 from .cache import save_sample_to_cache, save_dataset_cache_files
-from .cache_policy import load_cache_policy, get_generator_priority
 from .utils import gasstation_utils
 import huggingface_hub as hf_hub
 
@@ -35,7 +34,6 @@ class DatasetIterator:
         cache_dir: str = "/.cache/gasbench",
         download: bool = True,
         num_weeks: int = None,
-        cache_policy: Optional[str] = None,
         allow_eviction: bool = True,
         hf_token: Optional[str] = None,
         seed: Optional[int] = None,
@@ -52,10 +50,6 @@ class DatasetIterator:
         self.lazy_read = lazy_read
 
         self.is_gasstation = "gasstation" in dataset_config.name.lower()
-
-        self.cache_policy = None
-        if self.is_gasstation:
-            self.cache_policy = load_cache_policy(cache_policy)
 
         if self.is_gasstation:
             self.target_weeks = gasstation_utils.calculate_target_weeks(
@@ -226,32 +220,13 @@ class DatasetIterator:
     def _select_sample_to_evict(
         self, sample_metadata: Dict, samples_dir: str
     ) -> Optional[str]:
-        """Find the best sample to evict using priority-aware scoring.
-
-        Scoring heavily prioritizes generator performance (fool rate):
-        - Priority (fool rate) is primary factor: (1 - priority) * 100 (0-100 range)
-        - Age is only a tiebreaker: normalized age (0-1 range)
-        - Evict sample with highest score = low-performing generator + older age
-
-        Args:
-            sample_metadata: Dictionary mapping filenames to metadata
-            samples_dir: Directory containing sample files
-
-        Returns:
-            Filename of sample to evict, or None if none found
-        """
+        """Pick a sample to evict using oldest-first (by numeric index in filename)."""
         if not sample_metadata:
             return None
-
-        # If no policy loaded, fall back to pure age-based eviction
-        has_policy = bool(
-            self.cache_policy and self.cache_policy.get("generator_priorities")
-        )
 
         best_file = None
         best_score = -1.0
 
-        # Extract all indices first to normalize age
         all_indices = []
         for filename in sample_metadata.keys():
             match = re.search(r"_(\d+)", filename)
@@ -265,33 +240,16 @@ class DatasetIterator:
         max_index = max(all_indices)
         index_range = max_index - min_index if max_index > min_index else 1
 
-        for filename, metadata in sample_metadata.items():
-            # Extract numeric index (age proxy)
+        for filename in sample_metadata:
             match = re.search(r"_(\d+)", filename)
             if not match:
                 continue
 
             index = int(match.group(1))
-
-            # Normalize age: 0 (newest) to 1 (oldest)
             age_factor = (index - min_index) / index_range if index_range > 0 else 0
 
-            if has_policy:
-                # Get generator priority from policy (default 0.5 if not found)
-                hotkey = metadata.get("generator_hotkey", "")
-                priority = get_generator_priority(self.cache_policy, hotkey)
-
-                # Score: (1 - priority) * 100 + age_factor
-                # Priority is heavily weighted (0-100 range)
-                # Age is only a tiebreaker (0-1 range)
-                # High score = low priority + old = evict first
-                score = (1.0 - priority) * 100 + age_factor
-            else:
-                # No policy: use pure age
-                score = age_factor
-
-            if score > best_score:
-                best_score = score
+            if age_factor > best_score:
+                best_score = age_factor
                 best_file = filename
 
         return best_file

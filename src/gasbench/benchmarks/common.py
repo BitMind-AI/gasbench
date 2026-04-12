@@ -17,7 +17,6 @@ from .recording import (
     compute_metrics_from_df,
     compute_per_dataset_from_df,
     compute_generator_stats_from_df,
-    write_cache_policy_from_df,
 )
 from .utils import calculate_per_source_accuracy
 from ..logger import get_logger
@@ -31,7 +30,6 @@ class BenchmarkRunConfig:
     dataset_config_path: Optional[str]
     holdout_config_path: Optional[str]
     cache_dir: Optional[str]
-    cache_policy_path: Optional[str]
     hf_token: Optional[str]
     batch_size: int
     augment_level: int
@@ -228,14 +226,4 @@ def finalize_run(
 
     benchmark_results[results_key] = results
 
-    if config.cache_policy_path:
-        try:
-            priorities = write_cache_policy_from_df(df, config.cache_policy_path)
-            logger.info(
-                f"Updated cache policy with {len(priorities)} generator priorities (fool_rate)"
-            )
-        except Exception as e:
-            logger.warning(
-                f"Failed to update cache policy at {config.cache_policy_path}: {e}"
-            )
     return df

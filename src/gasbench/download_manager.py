@@ -33,7 +33,6 @@ class DatasetTask:
     cache_dir: str
     num_weeks: Optional[int] = None
     seed: Optional[int] = None
-    cache_policy: Optional[str] = None
     allow_eviction: bool = True
     unlimited_samples: bool = False
 
@@ -47,14 +46,12 @@ class DownloadManager:
         cache_dir: str,
         hf_token: Optional[str] = None,
         seed: Optional[int] = None,
-        cache_policy: Optional[str] = None,
         allow_eviction: bool = True,
     ):
         self.max_workers = max_workers
         self.cache_dir = cache_dir
         self.hf_token = hf_token
         self.seed = seed
-        self.cache_policy = cache_policy
         self.allow_eviction = allow_eviction
         self.semaphore = asyncio.Semaphore(max_workers)
         self.completed = []
@@ -190,7 +187,6 @@ class DownloadManager:
                 num_weeks=task.num_weeks,
                 hf_token=self.hf_token,
                 seed=task.seed,
-                cache_policy=task.cache_policy,
                 allow_eviction=task.allow_eviction,
             )
 
@@ -255,7 +251,6 @@ async def download_datasets(
     concurrent_downloads: Optional[int] = None,
     num_weeks: Optional[int] = None,
     seed: Optional[int] = None,
-    cache_policy: Optional[str] = None,
     allow_eviction: bool = True,
     unlimited_samples: bool = False,
     dataset_config: Optional[str] = None,
@@ -274,7 +269,6 @@ async def download_datasets(
         concurrent_downloads: Number of concurrent downloads (auto if None)
         num_weeks: Number of recent weeks for gasstation datasets
         seed: Random seed for non-gasstation dataset sampling (for reproducible random sampling)
-        cache_policy: Path to cache policy JSON file for intelligent sample eviction
         allow_eviction: If False, disable sample eviction and accumulate all samples
         unlimited_samples: If True, download ALL available samples (no cap)
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
@@ -315,7 +309,6 @@ async def download_datasets(
                 cache_dir=cache_dir,
                 num_weeks=num_weeks,
                 seed=seed,
-                cache_policy=cache_policy,
                 allow_eviction=allow_eviction,
                 unlimited_samples=unlimited_samples,
             )
@@ -335,7 +328,6 @@ async def download_datasets(
         cache_dir=cache_dir,
         hf_token=hf_token,
         seed=seed,
-        cache_policy=cache_policy,
         allow_eviction=allow_eviction,
     )
     

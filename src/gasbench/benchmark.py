@@ -25,7 +25,6 @@ async def run_benchmark(
     gasstation_only: bool = False,
     cache_dir: Optional[str] = None,
     download_latest_gasstation_data: bool = False,
-    cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
@@ -45,7 +44,6 @@ async def run_benchmark(
         gasstation_only: If True, only use gasstation datasets
         cache_dir: Directory for caching (defaults to /.cache/gasbench)
         download_latest_gasstation_data: If True, download latest gasstation data before benchmarking (default: False)
-        cache_policy: Optional path to cache policy JSON file with generator priorities
         seed: Optional random seed for non-gasstation dataset sampling (for reproducible random sampling)
         batch_size: Batch size for model inference (default: 8)
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
@@ -103,7 +101,6 @@ async def run_benchmark(
             gasstation_only,
             cache_dir,
             download_latest_gasstation_data,
-            cache_policy,
             seed,
             batch_size,
             dataset_config,
@@ -198,7 +195,6 @@ async def execute_benchmark(
     gasstation_only: bool = False,
     cache_dir: str = "/.cache/gasbench",
     download_latest_gasstation_data: bool = False,
-    cache_policy: Optional[str] = None,
     seed: Optional[int] = None,
     batch_size: Optional[int] = None,
     dataset_config: Optional[str] = None,
@@ -224,7 +220,6 @@ async def execute_benchmark(
             gasstation_only,
             cache_dir,
             download_latest_gasstation_data,
-            cache_policy,
             seed,
             batch_size,
             dataset_config,
@@ -246,7 +241,6 @@ async def execute_benchmark(
             gasstation_only,
             cache_dir,
             download_latest_gasstation_data,
-            cache_policy,
             seed,
             batch_size,
             dataset_config,
@@ -268,7 +262,6 @@ async def execute_benchmark(
             gasstation_only,
             cache_dir,
             download_latest_gasstation_data,
-            cache_policy,
             seed,
             batch_size,
             dataset_config,

@@ -551,3 +551,455 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     notes: "AudioSet Sound Level subset — real environmental audio (FLAC)"
+
+# ── Released v14 holdouts ─────────────────────────────────────────────────
+
+  - name: v14-real-vcapcv-vggsound-test-15446-audio-cut
+    path: 34data/v14-real-vcapcv-vggsound-test-15446-audio-cut
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-vggsound-test-15446-video-cut
+    path: 34data/v14-real-vggsound-test-15446-video-cut
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-kallaama
+    path: 34data/v14-real-kallaama
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-chichewa-dataset
+    path: 34data/v14-real-chichewa-dataset
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-vivos
+    path: 34data/v14-real-vivos
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-nisqa-corpus-dataset
+    path: 34data/v14-real-nisqa-corpus-dataset
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-natural-odss
+    path: 34data/v14-real-natural-odss
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-fastpitch-hifigan
+    path: 34data/v14-real-fastpitch-hifigan
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-daps
+    path: 34data/v14-real-daps
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-bci-datasets
+    path: 34data/v14-real-bci-datasets
+    modality: audio
+    media_type: real
+    source_format: m4a
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-ravdess-speech-16k
+    path: 34data/v14-real-ravdess-speech-16k
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # V14 Benchmark Datasets - Fake/Synthetic audio
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-somos
+    path: 34data/v14-fake-somos
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-diffgan-tts-aux
+    path: 34data/v14-fake-diffgan-tts-aux
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-grad-tts
+    path: 34data/v14-fake-grad-tts
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-tacotron2-dca-diffwave
+    path: 34data/v14-fake-tacotron2-dca-diffwave
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-wavegrad2
+    path: 34data/v14-fake-wavegrad2
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-diffgan-tts-naive
+    path: 34data/v14-fake-diffgan-tts-naive
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-natspeech-diffspeech
+    path: 34data/v14-fake-natspeech-diffspeech
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-fast-pitch
+    path: 34data/v14-fake-fast-pitch
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-tacotron2-dca
+    path: 34data/v14-fake-tacotron2-dca
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-tacotron2-dca-wavegrad
+    path: 34data/v14-fake-tacotron2-dca-wavegrad
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-diffgan-tts-shallow
+    path: 34data/v14-fake-diffgan-tts-shallow
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-prodiff
+    path: 34data/v14-fake-prodiff
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-glow-tts
+    path: 34data/v14-fake-glow-tts
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-tacotron2-dca-bddm
+    path: 34data/v14-fake-tacotron2-dca-bddm
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-vits-1
+    path: 34data/v14-fake-vits-1
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-vits
+    path: 34data/v14-fake-vits
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-vcapv-t2a
+    path: 34data/v14-fake-vcapv-t2a
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  
+  # V14 Benchmark Datasets - Fake audio
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_01
+    path: 34data/v14-MLAAD-Fake-part_01
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_02
+    path: 34data/v14-MLAAD-Fake-part_02
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_03
+    path: 34data/v14-MLAAD-Fake-part_03
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_04
+    path: 34data/v14-MLAAD-Fake-part_04
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_05
+    path: 34data/v14-MLAAD-Fake-part_05
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_06
+    path: 34data/v14-MLAAD-Fake-part_06
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_07
+    path: 34data/v14-MLAAD-Fake-part_07
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_08
+    path: 34data/v14-MLAAD-Fake-part_08
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_09
+    path: 34data/v14-MLAAD-Fake-part_09
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-MLAAD-Fake-part_10
+    path: 34data/v14-MLAAD-Fake-part_10
+    modality: audio
+    media_type: fake
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # V14 Benchmark Datasets - Real audio
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-dag-asr-audio
+    path: 34data/v14-dag-asr-audio
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_01
+    path: 34data/v14-WaxalNLP-TTS-part_01
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_02
+    path: 34data/v14-WaxalNLP-TTS-part_02
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_03
+    path: 34data/v14-WaxalNLP-TTS-part_03
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_04
+    path: 34data/v14-WaxalNLP-TTS-part_04
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_05
+    path: 34data/v14-WaxalNLP-TTS-part_05
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_06
+    path: 34data/v14-WaxalNLP-TTS-part_06
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_07
+    path: 34data/v14-WaxalNLP-TTS-part_07
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_08
+    path: 34data/v14-WaxalNLP-TTS-part_08
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_09
+    path: 34data/v14-WaxalNLP-TTS-part_09
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-WaxalNLP-TTS-part_10
+    path: 34data/v14-WaxalNLP-TTS-part_10
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # ── Carried over from v13 holdouts ───────────────────────────────────────
+    notes: "Released from v14 bmcore holdouts"

@@ -7,7 +7,7 @@
 #   bmcore/src/apps/benchmark/configs/v14/image-human-holdouts.yaml
 #   bmcore/src/apps/benchmark/configs/v14/image-holdouts.yaml
 
-benchmark_size: 20000
+benchmark_size: 25000
 
 datasets:
   # ── Real human face datasets ──────────────────────────────────────────────

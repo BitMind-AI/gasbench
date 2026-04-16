@@ -1,293 +1,110 @@
 # Video Human Datasets — Public gasbench config for the "human" vertical
-# Rebalanced to near 50/50 real/synthetic; excess real datasets moved to extras/.
+# Built from existing public datasets in video_datasets.yaml.
+# Names are explicitly non-overlapping with current v15 video-human holdouts.
 
 benchmark_size: 25000
 datasets:
-- name: dev-part_1
-  path: 34data/dev-part_1
+- name: rtfs-10k-real
+  path: kontur-ai/rtfs-10k
   modality: video
   media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: dev-part_2
-  path: 34data/dev-part_2
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: dev-part_3
-  path: 34data/dev-part_3
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: dev-part_4
-  path: 34data/dev-part_4
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: dev-part_5
-  path: 34data/dev-part_5
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: dev-part_6
-  path: 34data/dev-part_6
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: devtest-part_1
-  path: 34data/devtest-part_1
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: devtest-part_2
-  path: 34data/devtest-part_2
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: devtest-part_3
-  path: 34data/devtest-part_3
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: devtest-part_4
-  path: 34data/devtest-part_4
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: devtest-part_5
-  path: 34data/devtest-part_5
-  modality: video
-  media_type: real
-  source_format: mov
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: DH-FaceVid-1K-0004-part_1
-  path: 34data/DH-FaceVid-1K-0004-part_1
+  source_format: mp4
+  media_per_archive: 500
+  archives_per_dataset: 2
+  include_paths:
+  - original_videos
+  notes: RTFS-10K real video-conference clips (Creative Commons)
+- name: dfd-real
+  path: Hemgg/deep-fake-detection-dfd-entire-original-datasett
   modality: video
   media_type: real
   source_format: mp4
   media_per_archive: -1
   archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: DH-FaceVid-1K-0004-part_2
-  path: 34data/DH-FaceVid-1K-0004-part_2
+  include_paths:
+  - DFD_original sequences
+- name: fmfcc-v-real
+  path: 34data/fmfcc-v-real
   modality: video
   media_type: real
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: DH-FaceVid-1K-0004-part_3
-  path: 34data/DH-FaceVid-1K-0004-part_3
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "FMFCC-V deepfake video benchmark \u2014 original real videos"
+- name: polyglotfake-real
+  path: 34data/polyglotfake-real
   modality: video
   media_type: real
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: DH-FaceVid-1K-0004-part_4
-  path: 34data/DH-FaceVid-1K-0004-part_4
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "PolyGlotFake multilingual deepfake benchmark \u2014 real source videos"
+- name: rareact
+  path: 34data/rareact
   modality: video
   media_type: real
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: DH-FaceVid-1K-0004-part_5
-  path: 34data/DH-FaceVid-1K-0004-part_5
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: RareAct YouTube rare compound action dataset
+- name: vidor
+  path: 34data/vidor
   modality: video
   media_type: real
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: DH-FaceVid-1K-0005-part_1
-  path: 34data/DH-FaceVid-1K-0005-part_1
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: ViDor video relation detection dataset
+- name: rtfs-10k-inswapper
+  path: kontur-ai/rtfs-10k
   modality: video
-  media_type: real
+  media_type: semisynthetic
   source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: DH-FaceVid-1K-0005-part_2
-  path: 34data/DH-FaceVid-1K-0005-part_2
+  media_per_archive: 500
+  archives_per_dataset: 2
+  include_paths:
+  - inswapper
+  notes: RTFS-10K inswapper face-swap deepfakes
+- name: rtfs-10k-uniface
+  path: kontur-ai/rtfs-10k
   modality: video
-  media_type: real
+  media_type: semisynthetic
   source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-russian_inswapper
-  path: 34data/MAVOS-DD-russian_inswapper
+  media_per_archive: 500
+  archives_per_dataset: 2
+  include_paths:
+  - uniface
+  notes: RTFS-10K uniface face-swap deepfakes
+- name: dfd-fake
+  path: Hemgg/deep-fake-detection-dfd-entire-original-datasett
   modality: video
-  media_type: synthetic
+  media_type: semisynthetic
   source_format: mp4
   media_per_archive: -1
   archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-russian_knnvc
-  path: 34data/MAVOS-DD-russian_knnvc
+  include_paths:
+  - DFD_manipulated_sequences
+- name: fmfcc-v-fake
+  path: 34data/fmfcc-v-fake
   modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-russian_liveportrait
-  path: 34data/MAVOS-DD-russian_liveportrait
+  media_type: semisynthetic
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "FMFCC-V deepfake video benchmark \u2014 manipulated videos"
+- name: polyglotfake-fake
+  path: 34data/polyglotfake-fake
   modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-russian_memo
-  path: 34data/MAVOS-DD-russian_memo
+  media_type: semisynthetic
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "PolyGlotFake multilingual deepfake benchmark \u2014 synthetic videos"
+- name: blendface
+  path: 34data/blendface
   modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-russian_roop
-  path: 34data/MAVOS-DD-russian_roop
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-russian_sonic
-  path: 34data/MAVOS-DD-russian_sonic
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_echomimic
-  path: 34data/MAVOS-DD-spanish_echomimic
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_freevc
-  path: 34data/MAVOS-DD-spanish_freevc
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_hififace
-  path: 34data/MAVOS-DD-spanish_hififace
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_inswapper
-  path: 34data/MAVOS-DD-spanish_inswapper
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_knnvc
-  path: 34data/MAVOS-DD-spanish_knnvc
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_liveportrait
-  path: 34data/MAVOS-DD-spanish_liveportrait
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_memo
-  path: 34data/MAVOS-DD-spanish_memo
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_roop
-  path: 34data/MAVOS-DD-spanish_roop
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: MAVOS-DD-spanish_sonic
-  path: 34data/MAVOS-DD-spanish_sonic
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: memo
-  path: 34data/memo
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: RealTimeFaceSwap-10k-inswapper
-  path: 34data/RealTimeFaceSwap-10k-inswapper
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
-- name: RealTimeFaceSwap-10k-uniface
-  path: 34data/RealTimeFaceSwap-10k-uniface
-  modality: video
-  media_type: synthetic
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: Released from v15 human video holdouts
+  media_type: semisynthetic
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: BlendFace face-swap deepfake videos

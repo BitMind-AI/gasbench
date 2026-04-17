@@ -563,15 +563,6 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
 
-  - name: v14-real-vggsound-test-15446-video-cut
-    path: 34data/v14-real-vggsound-test-15446-video-cut
-    modality: audio
-    media_type: real
-    source_format: wav
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: "Released from v14 bmcore holdouts"
-
   - name: v14-real-kallaama
     path: 34data/v14-real-kallaama
     modality: audio

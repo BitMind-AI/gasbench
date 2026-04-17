@@ -7,7 +7,7 @@
 #   bmcore/src/apps/benchmark/configs/v14/image-human-holdouts.yaml
 #   bmcore/src/apps/benchmark/configs/v14/image-holdouts.yaml
 
-benchmark_size: 20000
+benchmark_size: 25000
 
 datasets:
   # ── Real human face datasets ──────────────────────────────────────────────
@@ -131,3 +131,331 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/fake/ff++/"]
     notes: "FaceForensics++ deepfake images (CC-BY-SA 4.0)"
+
+# ── Released v14 holdouts ───────────────────────────────────────────────
+
+  - name: nepali-ethnic-groups-Face-emotions
+    path: 34data/nepali-ethnic-groups-Face-emotions
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: nepali-cultural-dress-dataset
+    path: 34data/nepali-cultural-dress-dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: UTKFace
+    path: 34data/UTKFace
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: CACD
+    path: 34data/CACD
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: FaceDisguiseDatabase
+    path: 34data/FaceDisguiseDatabase
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: MAPIR-Faces
+    path: 34data/MAPIR-Faces
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: scface_dataset
+    path: 34data/scface_dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: AgeDB
+    path: 34data/AgeDB
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: WarpDoc_merged
+    path: 34data/WarpDoc_merged
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: 140k-real-fake-faces-real
+    path: 34data/140k-real-fake-faces-real
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: FantasyID-real
+    path: 34data/FantasyID-real
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: or-real-id
+    path: 34data/or-real-id
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: affectnet
+    path: 34data/affectnet
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # Fake datasets
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r1
+    path: 34data/human-faces-dataset-r1
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r2
+    path: 34data/human-faces-dataset-r2
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r3
+    path: 34data/human-faces-dataset-r3
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r4
+    path: 34data/human-faces-dataset-r4
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r5
+    path: 34data/human-faces-dataset-r5
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r6
+    path: 34data/human-faces-dataset-r6
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r7
+    path: 34data/human-faces-dataset-r7
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r8
+    path: 34data/human-faces-dataset-r8
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: human-faces-dataset-r9
+    path: 34data/human-faces-dataset-r9
+    modality: image
+    media_type: synthetic
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: AttGAN
+    path: 34data/AttGAN
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: MMD_GAN_CelebA
+    path: 34data/MMD_GAN_CelebA
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: 140k-real-fake-faces-fake
+    path: 34data/140k-real-fake-faces-fake
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: stylegan3_T_FFHQU_processed
+    path: 34data/stylegan3_T_FFHQU_processed
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: STGAN_CelebA
+    path: 34data/STGAN_CelebA
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: taming_transformer_VQGAN
+    path: 34data/taming_transformer_VQGAN
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: STARGAN
+    path: 34data/STARGAN
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: cg-fake-id
+    path: 34data/cg-fake-id
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: MSG_STYLE_GAN
+    path: 34data/MSG_STYLE_GAN
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: STYLEGAN
+    path: 34data/STYLEGAN
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: FLUXSynID
+    path: 34data/FLUXSynID
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: FantasyID-fake
+    path: 34data/FantasyID-fake
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: synthetic_cards
+    path: 34data/synthetic_cards
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: StyleGAN3_1024x1024_images
+    path: 34data/StyleGAN3_1024x1024_images
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"

@@ -4,7 +4,7 @@
 #   - Use when the column is not auto-detected (e.g., "video_bytes" instead of "video")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 22000
+benchmark_size: 26000
 
 datasets:
   - name: gasstation-generated-videos
@@ -662,3 +662,457 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     notes: "ViDor video relation detection dataset"
+
+# ── Released v14 holdouts ─────────────────────────────────────────────────
+
+  - name: v14-real-mmhu-h-videos
+    path: 34data/v14-real-mmhu-h-videos
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-mmhu-t-videos
+    path: 34data/v14-real-mmhu-t-videos
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-mmhu-v-videos
+    path: 34data/v14-real-mmhu-v-videos
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-vivid
+    path: 34data/v14-real-vivid
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-soccernet-10s-5class
+    path: 34data/v14-real-soccernet-10s-5class
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-ofdvdnet
+    path: 34data/v14-real-ofdvdnet
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-or-video-mov
+    path: 34data/v14-real-or-video-mov
+    modality: video
+    media_type: real
+    source_format: mov
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-poultry-videos
+    path: 34data/v14-real-poultry-videos
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-spatialvid-group-001
+    path: 34data/v14-real-spatialvid-group-001
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-spatialvid-group-002
+    path: 34data/v14-real-spatialvid-group-002
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-spatialvid-group-003
+    path: 34data/v14-real-spatialvid-group-003
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-spatialvid-group-004
+    path: 34data/v14-real-spatialvid-group-004
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-spatialvid-group-005
+    path: 34data/v14-real-spatialvid-group-005
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-videoespresso-train-video-01
+    path: 34data/v14-real-videoespresso-train-video-01
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-videoespresso-train-video-02
+    path: 34data/v14-real-videoespresso-train-video-02
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-open-o3-video
+    path: 34data/v14-real-open-o3-video
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-panflow-1
+    path: 34data/v14-real-panflow-1
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-panflow-2
+    path: 34data/v14-real-panflow-2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-panflow-3
+    path: 34data/v14-real-panflow-3
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-panflow-4
+    path: 34data/v14-real-panflow-4
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-dh-facevid-1k-0001
+    path: 34data/v14-real-dh-facevid-1k-0001
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-tracking-any-granularity-videos
+    path: 34data/v14-real-tracking-any-granularity-videos
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-wild-animal-recognition-video-dataset
+    path: 34data/v14-real-wild-animal-recognition-video-dataset
+    modality: video
+    media_type: real
+    source_format: mov
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-wlasl-videos
+    path: 34data/v14-real-wlasl-videos
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-wlasl-videos-1
+    path: 34data/v14-real-wlasl-videos-1
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-wlasl-raw-videos-mp4
+    path: 34data/v14-real-wlasl-raw-videos-mp4
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-youtubeclips
+    path: 34data/v14-real-youtubeclips
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-allegro
+    path: 34data/v14-fake-allegro
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-animatediffturbo
+    path: 34data/v14-fake-animatediffturbo
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-ltxvideo
+    path: 34data/v14-fake-ltxvideo
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-mochi1
+    path: 34data/v14-fake-mochi1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-pyramidflow
+    path: 34data/v14-fake-pyramidflow
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-videocrafter2
+    path: 34data/v14-fake-videocrafter2
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-animatediff
+    path: 34data/v14-fake-animatediff
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cogvideox
+    path: 34data/v14-fake-cogvideox
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-fastsvd
+    path: 34data/v14-fake-fastsvd
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-lavie
+    path: 34data/v14-fake-lavie
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-modelscope
+    path: 34data/v14-fake-modelscope
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-opensora12
+    path: 34data/v14-fake-opensora12
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-opensora
+    path: 34data/v14-fake-opensora
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-t2vturbo
+    path: 34data/v14-fake-t2vturbo
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-vcapav-t2v
+    path: 34data/v14-fake-vcapav-t2v
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cameraclone-0316
+    path: 34data/v14-fake-cameraclone-0316
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cameraclone-0317
+    path: 34data/v14-fake-cameraclone-0317
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cameraclone-0401
+    path: 34data/v14-fake-cameraclone-0401
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cameraclone-0402
+    path: 34data/v14-fake-cameraclone-0402
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cameraclone-0404
+    path: 34data/v14-fake-cameraclone-0404
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cameraclone-0407
+    path: 34data/v14-fake-cameraclone-0407
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-fake-cameraclone-0410
+    path: 34data/v14-fake-cameraclone-0410
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-real-chinese-mp4-in-audio
+    path: 34data/v14-real-chinese-mp4-in-audio
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # ── Carried over from v13 holdouts (internal/scraped) ────────────────────
+    notes: "Released from v14 bmcore holdouts"

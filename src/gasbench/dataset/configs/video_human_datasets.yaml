@@ -1,0 +1,117 @@
+# Video Human Datasets — Public gasbench config for the "human" vertical
+# Curated for talking-head / face-centric content only.
+
+benchmark_size: 25000
+datasets:
+- name: blendface
+  path: 34data/blendface
+  modality: video
+  media_type: semisynthetic
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: BlendFace face-swap deepfake videos
+- name: dfd-fake
+  path: Hemgg/deep-fake-detection-dfd-entire-original-datasett
+  modality: video
+  media_type: semisynthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  include_paths:
+  - DFD_manipulated_sequences
+- name: dfd-real
+  path: Hemgg/deep-fake-detection-dfd-entire-original-datasett
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  include_paths:
+  - DFD_original sequences
+- name: celebv-hq
+  path: RichardErkhov/CelebV-HQ
+  modality: video
+  media_type: real
+  source_format: tar.gz
+  media_per_archive: 500
+  archives_per_dataset: 1
+  notes: Public CelebV-HQ mirror with face-centric real videos
+- name: fmfcc-v-fake
+  path: 34data/fmfcc-v-fake
+  modality: video
+  media_type: semisynthetic
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "FMFCC-V deepfake video benchmark \u2014 manipulated videos"
+- name: fmfcc-v-real
+  path: 34data/fmfcc-v-real
+  modality: video
+  media_type: real
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "FMFCC-V deepfake video benchmark \u2014 original real videos"
+- name: polyglotfake-fake
+  path: 34data/polyglotfake-fake
+  modality: video
+  media_type: semisynthetic
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "PolyGlotFake multilingual deepfake benchmark \u2014 synthetic videos"
+- name: polyglotfake-real
+  path: 34data/polyglotfake-real
+  modality: video
+  media_type: real
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: "PolyGlotFake multilingual deepfake benchmark \u2014 real source videos"
+- name: rtfs-10k-inswapper
+  path: kontur-ai/rtfs-10k
+  modality: video
+  media_type: semisynthetic
+  source_format: mp4
+  media_per_archive: 500
+  archives_per_dataset: 2
+  include_paths:
+  - inswapper
+  notes: RTFS-10K inswapper face-swap deepfakes
+- name: rtfs-10k-real
+  path: kontur-ai/rtfs-10k
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: 500
+  archives_per_dataset: 2
+  include_paths:
+  - original_videos
+  notes: RTFS-10K real video-conference clips (Creative Commons)
+- name: rtfs-10k-uniface
+  path: kontur-ai/rtfs-10k
+  modality: video
+  media_type: semisynthetic
+  source_format: mp4
+  media_per_archive: 500
+  archives_per_dataset: 2
+  include_paths:
+  - uniface
+  notes: RTFS-10K uniface face-swap deepfakes
+- name: v14-real-dh-facevid-1k-0001
+  path: 34data/v14-real-dh-facevid-1k-0001
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v14 bmcore holdouts
+- name: wav2lip
+  path: 34data/wav2lip
+  modality: video
+  media_type: semisynthetic
+  source_format: zip
+  media_per_archive: 500
+  archives_per_dataset: 2
+  notes: Wav2Lip lip-sync deepfake videos

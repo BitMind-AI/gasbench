@@ -4,7 +4,7 @@
 #   - Use when the column is not auto-detected (e.g., "src_img" instead of "image")
 #   - Can specify multiple columns to extract from each row
 
-benchmark_size: 52000
+benchmark_size: 55000
 
 datasets:
   - name: gasstation-generated-images
@@ -620,3 +620,298 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     notes: "IMDB-WIKI face crops — real face images"
+
+# ── Released v14 holdouts ─────────────────────────────────────────────────
+
+  - name: Synthetic-Images-Fire-Scenario
+    path: 34data/Synthetic-Images-Fire-Scenario
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: synthetic-dataset
+    path: 34data/synthetic-dataset
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: Midjourneyv5-5K
+    path: 34data/Midjourneyv5-5K
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: fake_sdxl_12k-part-1
+    path: 34data/fake_sdxl_12k-part-1
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: fake_sdxl_12k-part-2
+    path: 34data/fake_sdxl_12k-part-2
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: fake_sdxl_12k-part-3
+    path: 34data/fake_sdxl_12k-part-3
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: fake_sdxl_12k-part-4
+    path: 34data/fake_sdxl_12k-part-4
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: Synthetic-Dog-Images
+    path: 34data/Synthetic-Dog-Images
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: synthetic_data_0.1
+    path: 34data/synthetic_data_0.1
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: syntheticdata_0.15
+    path: 34data/syntheticdata_0.15
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: ptd-synthetic
+    path: 34data/ptd-synthetic
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: image_patches_raw
+    path: 34data/image_patches_raw
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: stable-imagenet1k-flat
+    path: 34data/stable-imagenet1k-flat
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: Shooter-fake
+    path: 34data/Shooter-fake
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: SDv15R-dpmsolver-25-15K-part0
+    path: 34data/SDv15R-dpmsolver-25-15K-part0
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: SDv15R-dpmsolver-25-15K-part1
+    path: 34data/SDv15R-dpmsolver-25-15K-part1
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: SDv15R-dpmsolver-25-15K-part3
+    path: 34data/SDv15R-dpmsolver-25-15K-part3
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # Real Datasets
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: 60k-car
+    path: 34data/60k-car
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: large-receipt-image-dataset-SRD
+    path: 34data/large-receipt-image-dataset-SRD
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: FaceDisguiseDatabase-image
+    path: 34data/FaceDisguiseDatabase-image
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: SoloFace
+    path: 34data/SoloFace
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: Mandrillus-Face
+    path: 34data/Mandrillus-Face
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: Aslan-mingye-OCR-Quality
+    path: 34data/Aslan-mingye-OCR-Quality
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: FDDB_Dataset
+    path: 34data/FDDB_Dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: nepali-food-images
+    path: 34data/nepali-food-images
+    modality: image
+    media_type: real
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: Shooter-real
+    path: 34data/Shooter-real
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: M6Doc_test
+    path: 34data/M6Doc_test
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: SmartDoc-QA
+    path: 34data/SmartDoc-QA
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: nepali-currency-dataset
+    path: 34data/nepali-currency-dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+  # V14 Benchmark Datasets - Real images
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-Images-vivid
+    path: 34data/v14-Images-vivid
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-vil100-png
+    path: 34data/v14-vil100-png
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v14 bmcore holdouts"
+
+  - name: v14-vil100-jpeg
+    path: 34data/v14-vil100-jpeg
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+
+  # ── Carried over from v13 holdouts (internal/scraped) ────────────────────
+    notes: "Released from v14 bmcore holdouts"

@@ -382,7 +382,7 @@ datasets:
   - name: cosyvoice-instruct
     path: LALM-emotional-vulnerability/cosyvoice-instruct
     modality: audio
-    media_type: real
+    media_type: synthetic
     source_format: parquet
     media_per_archive: 200
     archives_per_dataset: 2

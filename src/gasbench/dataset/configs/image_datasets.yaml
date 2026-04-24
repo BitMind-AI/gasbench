@@ -740,15 +740,6 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
 
-  - name: Shooter-fake
-    path: 34data/Shooter-fake
-    modality: image
-    media_type: synthetic
-    source_format: jpg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: "Released from v14 bmcore holdouts"
-
   - name: SDv15R-dpmsolver-25-15K-part0
     path: 34data/SDv15R-dpmsolver-25-15K-part0
     modality: image

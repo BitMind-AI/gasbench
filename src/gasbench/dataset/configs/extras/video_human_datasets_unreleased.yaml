@@ -1,0 +1,293 @@
+# Unreleased public human-video candidates.
+# These entries were moved out of the active config because 34data repos returned 404 during predownload.
+
+benchmark_size: 25000
+datasets:
+- name: dev-part_1
+  path: 34data/dev-part_1
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: dev-part_2
+  path: 34data/dev-part_2
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: dev-part_3
+  path: 34data/dev-part_3
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: dev-part_4
+  path: 34data/dev-part_4
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: dev-part_5
+  path: 34data/dev-part_5
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: dev-part_6
+  path: 34data/dev-part_6
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: devtest-part_1
+  path: 34data/devtest-part_1
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: devtest-part_2
+  path: 34data/devtest-part_2
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: devtest-part_3
+  path: 34data/devtest-part_3
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: devtest-part_4
+  path: 34data/devtest-part_4
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: devtest-part_5
+  path: 34data/devtest-part_5
+  modality: video
+  media_type: real
+  source_format: mov
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: DH-FaceVid-1K-0004-part_1
+  path: 34data/DH-FaceVid-1K-0004-part_1
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: DH-FaceVid-1K-0004-part_2
+  path: 34data/DH-FaceVid-1K-0004-part_2
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: DH-FaceVid-1K-0004-part_3
+  path: 34data/DH-FaceVid-1K-0004-part_3
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: DH-FaceVid-1K-0004-part_4
+  path: 34data/DH-FaceVid-1K-0004-part_4
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: DH-FaceVid-1K-0004-part_5
+  path: 34data/DH-FaceVid-1K-0004-part_5
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: DH-FaceVid-1K-0005-part_1
+  path: 34data/DH-FaceVid-1K-0005-part_1
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: DH-FaceVid-1K-0005-part_2
+  path: 34data/DH-FaceVid-1K-0005-part_2
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-russian_inswapper
+  path: 34data/MAVOS-DD-russian_inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-russian_knnvc
+  path: 34data/MAVOS-DD-russian_knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-russian_liveportrait
+  path: 34data/MAVOS-DD-russian_liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-russian_memo
+  path: 34data/MAVOS-DD-russian_memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-russian_roop
+  path: 34data/MAVOS-DD-russian_roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-russian_sonic
+  path: 34data/MAVOS-DD-russian_sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_echomimic
+  path: 34data/MAVOS-DD-spanish_echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_freevc
+  path: 34data/MAVOS-DD-spanish_freevc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_hififace
+  path: 34data/MAVOS-DD-spanish_hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_inswapper
+  path: 34data/MAVOS-DD-spanish_inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_knnvc
+  path: 34data/MAVOS-DD-spanish_knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_liveportrait
+  path: 34data/MAVOS-DD-spanish_liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_memo
+  path: 34data/MAVOS-DD-spanish_memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_roop
+  path: 34data/MAVOS-DD-spanish_roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: MAVOS-DD-spanish_sonic
+  path: 34data/MAVOS-DD-spanish_sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: memo
+  path: 34data/memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: RealTimeFaceSwap-10k-inswapper
+  path: 34data/RealTimeFaceSwap-10k-inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts
+- name: RealTimeFaceSwap-10k-uniface
+  path: 34data/RealTimeFaceSwap-10k-uniface
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: Released from v15 human video holdouts

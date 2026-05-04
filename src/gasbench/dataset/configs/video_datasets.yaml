@@ -1116,3 +1116,60 @@ datasets:
 
   # ── Carried over from v13 holdouts (internal/scraped) ────────────────────
     notes: "Released from v14 bmcore holdouts"
+  # ── Released v15 holdouts ─────────────────────────────────────────────────
+
+  - name: v13-e4s
+    path: 34data/v13-e4s
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v15 bmcore holdouts"
+
+  - name: v13-echonet-synthetic-v1
+    path: 34data/v13-echonet-synthetic-v1
+    modality: video
+    media_type: synthetic
+    source_format: avi
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v15 bmcore holdouts"
+
+  - name: v13-lemonade
+    path: 34data/v13-lemonade
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v15 bmcore holdouts"
+
+  - name: v13-live-whisperx-526k
+    path: 34data/v13-live-whisperx-526k
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v15 bmcore holdouts"
+
+  - name: v14-real-hallo3-training-data
+    path: 34data/v14-real-hallo3-training-data
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v15 bmcore holdouts"
+
+  - name: v14-real-moments-in-time-raw
+    path: 34data/v14-real-moments-in-time-raw
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v15 bmcore holdouts"
+
+

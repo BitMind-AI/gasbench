@@ -115,3 +115,647 @@ datasets:
   media_per_archive: 500
   archives_per_dataset: 2
   notes: Wav2Lip lip-sync deepfake videos
+# ── Released v15 holdouts ─────────────────────────────────────────────────
+
+- name: DH-FaceVid-1K-0003-part_3
+  path: 34data/DH-FaceVid-1K-0003-part_3
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+
+- name: DH-FaceVid-1K-0003-part_5
+  path: 34data/DH-FaceVid-1K-0003-part_5
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-english_sonic
+  path: 34data/MAVOS-DD-english_sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-freevc
+  path: 34data/MAVOS-DD-freevc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_echomimic
+  path: 34data/MAVOS-DD-german_echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_freevc
+  path: 34data/MAVOS-DD-german_freevc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_hififace
+  path: 34data/MAVOS-DD-german_hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_inswapper
+  path: 34data/MAVOS-DD-german_inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_knnvc
+  path: 34data/MAVOS-DD-german_knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_liveportrait
+  path: 34data/MAVOS-DD-german_liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_memo
+  path: 34data/MAVOS-DD-german_memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_roop
+  path: 34data/MAVOS-DD-german_roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-german_sonic
+  path: 34data/MAVOS-DD-german_sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_echomimic
+  path: 34data/MAVOS-DD-hindi_echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_hififace
+  path: 34data/MAVOS-DD-hindi_hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_inswapper
+  path: 34data/MAVOS-DD-hindi_inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_knnvc
+  path: 34data/MAVOS-DD-hindi_knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_liveportrait
+  path: 34data/MAVOS-DD-hindi_liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_memo
+  path: 34data/MAVOS-DD-hindi_memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_roop
+  path: 34data/MAVOS-DD-hindi_roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-hindi_sonic
+  path: 34data/MAVOS-DD-hindi_sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-knnvc
+  path: 34data/MAVOS-DD-knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_echomimic
+  path: 34data/MAVOS-DD-mandarin_echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_freevc
+  path: 34data/MAVOS-DD-mandarin_freevc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_hififace
+  path: 34data/MAVOS-DD-mandarin_hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_inswapper
+  path: 34data/MAVOS-DD-mandarin_inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_knnvc
+  path: 34data/MAVOS-DD-mandarin_knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_liveportrait
+  path: 34data/MAVOS-DD-mandarin_liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_memo
+  path: 34data/MAVOS-DD-mandarin_memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_roop
+  path: 34data/MAVOS-DD-mandarin_roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-mandarin_sonic
+  path: 34data/MAVOS-DD-mandarin_sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_echomimic
+  path: 34data/MAVOS-DD-romanian_echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_freevc
+  path: 34data/MAVOS-DD-romanian_freevc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_hififace
+  path: 34data/MAVOS-DD-romanian_hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_inswapper
+  path: 34data/MAVOS-DD-romanian_inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_knnvc
+  path: 34data/MAVOS-DD-romanian_knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_liveportrait
+  path: 34data/MAVOS-DD-romanian_liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_memo
+  path: 34data/MAVOS-DD-romanian_memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_roop
+  path: 34data/MAVOS-DD-romanian_roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-romanian_sonic
+  path: 34data/MAVOS-DD-romanian_sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-russian_echomimic
+  path: 34data/MAVOS-DD-russian_echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-russian_freevc
+  path: 34data/MAVOS-DD-russian_freevc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: MAVOS-DD-russian_hififace
+  path: 34data/MAVOS-DD-russian_hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+
+- name: v15-human-vid-dfdm_cfr23-dfaker
+  path: 34data/v15-human-vid-dfdm_cfr23-dfaker
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dfdm_cfr23-dfl-h128
+  path: 34data/v15-human-vid-dfdm_cfr23-dfl-h128
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dfdm_cfr23-iae
+  path: 34data/v15-human-vid-dfdm_cfr23-iae
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dfdm_cfr23-lightweight
+  path: 34data/v15-human-vid-dfdm_cfr23-lightweight
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dfdm_cfr23-real
+  path: 34data/v15-human-vid-dfdm_cfr23-real
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dh-facevid-1k-0002-part_1
+  path: 34data/v15-human-vid-dh-facevid-1k-0002-part_1
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dh-facevid-1k-0002-part_2
+  path: 34data/v15-human-vid-dh-facevid-1k-0002-part_2
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dh-facevid-1k-0002-part_3
+  path: 34data/v15-human-vid-dh-facevid-1k-0002-part_3
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dh-facevid-1k-0002-part_4
+  path: 34data/v15-human-vid-dh-facevid-1k-0002-part_4
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dh-facevid-1k-0002-part_5
+  path: 34data/v15-human-vid-dh-facevid-1k-0002-part_5
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dh-facevid-1k-0003-part_1
+  path: 34data/v15-human-vid-dh-facevid-1k-0003-part_1
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-dh-facevid-1k-0003-part_2
+  path: 34data/v15-human-vid-dh-facevid-1k-0003-part_2
+  modality: video
+  media_type: real
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-digifakeav_echomimic_21501_22000
+  path: 34data/v15-human-vid-digifakeav_echomimic_21501_22000
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-digifakeavfvfa_with_audio
+  path: 34data/v15-human-vid-digifakeavfvfa_with_audio
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-arabic-echomimic
+  path: 34data/v15-human-vid-mavos-dd-arabic-echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-arabic-hififace
+  path: 34data/v15-human-vid-mavos-dd-arabic-hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-arabic-inswapper
+  path: 34data/v15-human-vid-mavos-dd-arabic-inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-arabic-liveportrait
+  path: 34data/v15-human-vid-mavos-dd-arabic-liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-arabic-roop
+  path: 34data/v15-human-vid-mavos-dd-arabic-roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-arabic-sonic
+  path: 34data/v15-human-vid-mavos-dd-arabic-sonic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_echomimic
+  path: 34data/v15-human-vid-mavos-dd-english_echomimic
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_freevc
+  path: 34data/v15-human-vid-mavos-dd-english_freevc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_hififace
+  path: 34data/v15-human-vid-mavos-dd-english_hififace
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_inswapper
+  path: 34data/v15-human-vid-mavos-dd-english_inswapper
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_knnvc
+  path: 34data/v15-human-vid-mavos-dd-english_knnvc
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_liveportrait
+  path: 34data/v15-human-vid-mavos-dd-english_liveportrait
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_memo
+  path: 34data/v15-human-vid-mavos-dd-english_memo
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+- name: v15-human-vid-mavos-dd-english_roop
+  path: 34data/v15-human-vid-mavos-dd-english_roop
+  modality: video
+  media_type: synthetic
+  source_format: mp4
+  media_per_archive: -1
+  archives_per_dataset: -1
+  notes: "Released from v15 bmcore holdouts"
+
+

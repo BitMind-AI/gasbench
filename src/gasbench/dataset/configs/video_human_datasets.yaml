@@ -126,14 +126,6 @@ datasets:
   archives_per_dataset: -1
   notes: "Released from v15 bmcore holdouts"
 
-- name: DH-FaceVid-1K-0003-part_4
-  path: 34data/DH-FaceVid-1K-0003-part_4
-  modality: video
-  media_type: real
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: "Released from v15 bmcore holdouts"
 
 - name: DH-FaceVid-1K-0003-part_5
   path: 34data/DH-FaceVid-1K-0003-part_5
@@ -513,14 +505,6 @@ datasets:
   archives_per_dataset: -1
   notes: "Released from v15 bmcore holdouts"
 
-- name: v15-human-vid-celebv-hq
-  path: 34data/v15-human-vid-celebv-hq
-  modality: video
-  media_type: real
-  source_format: mp4
-  media_per_archive: -1
-  archives_per_dataset: -1
-  notes: "Released from v15 bmcore holdouts"
 
 - name: v15-human-vid-dfdm_cfr23-dfaker
   path: 34data/v15-human-vid-dfdm_cfr23-dfaker

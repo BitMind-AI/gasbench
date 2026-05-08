@@ -8,7 +8,7 @@ benchmark_size: 26000
 
 datasets:
   - name: gasstation-generated-videos
-    path: gasstation/gs-videos-v3
+    path: gasstation/gs-videos-v4
     modality: video
     media_type: synthetic
     source_format: parquet

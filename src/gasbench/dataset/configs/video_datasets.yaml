@@ -1172,4 +1172,114 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v15 bmcore holdouts"
 
+# ── Released v16 holdouts ─────────────────────────────────────────────────
+
+  - name: fomm
+    path: 34data/fomm
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: fsgan
+    path: 34data/fsgan
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: hyperreenact
+    path: 34data/hyperreenact
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: inswap
+    path: 34data/inswap
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: lia
+    path: 34data/lia
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: videofeedback-videos
+    path: 34data/videofeedback-videos
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: or-video
+    path: 34data/or-video
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: utd-mhad
+    path: 34data/utd-mhad
+    modality: video
+    media_type: real
+    source_format: avi
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: vatex-2
+    path: 34data/vatex-2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: dh-facevid-1k-0000-part-05
+    path: 34data/dh-facevid-1k-0000-part-05
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: dh-facevid-1k-0000-part-06
+    path: 34data/dh-facevid-1k-0000-part-06
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
+  - name: dh-facevid-1k-0000-part-07
+    path: 34data/dh-facevid-1k-0000-part-07
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v16 bmcore holdouts"
+
 

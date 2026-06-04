@@ -38,7 +38,7 @@ def compute_generalization_coefficient(
     df: pd.DataFrame,
     *,
     probe_accuracy_threshold: float = 0.70,
-    ges_threshold: float = 0.5,
+    ges_variance_threshold: float = 0.70,
     min_embedding_coverage: float = 0.8,
 ) -> Dict:
     """Compute the generalization coefficient and per-gate diagnostics.
@@ -51,11 +51,13 @@ def compute_generalization_coefficient(
             predicted, embedding.
         probe_accuracy_threshold: Minimum balanced accuracy a linear probe
             trained on public-corpus embeddings must achieve on holdout
-            embeddings for Gate 2 to pass.
-        ges_threshold: Minimum mean pairwise cosine similarity between
-            per-generator mean embeddings for Gate 3 to pass.
+            embeddings for Gate 2 to pass (default 0.70).
+        ges_variance_threshold: Minimum variance explained by the top-2
+            singular components of the generator-mean embedding matrix for
+            Gate 3 to pass (default 0.70). Values below ~0.40 indicate
+            per-generator memorization.
         min_embedding_coverage: Minimum fraction of holdout samples that must
-            have non-null embeddings for Gate 1 to pass.
+            have non-null embeddings for Gate 1 to pass (default 0.80).
 
     Returns:
         Dict with keys: coefficient, gates (per-gate diagnostics).
@@ -98,8 +100,8 @@ def compute_generalization_coefficient(
         coef = 0.5 if g1["coverage"] >= min_embedding_coverage else 0.3
         return {"coefficient": coef, "gates": gates}
 
-    # ---- Gate 3: GES (Generator Entanglement Score) ----
-    g3 = _gate_ges(df_holdout, ges_threshold)
+    # ---- Gate 3: GES (Generator Entanglement via SVD) ----
+    g3 = _gate_ges_svd(df_holdout, top_k_variance_threshold=ges_variance_threshold)
     gates["ges"] = g3
     if not g3["passed"]:
         return {"coefficient": 0.7, "gates": gates}
@@ -225,10 +227,30 @@ def _gate_probe_accuracy(
     }
 
 
-def _gate_ges(df_holdout: pd.DataFrame, threshold: float) -> Dict:
-    """Generator Entanglement Score: mean pairwise cosine similarity between
-    per-generator mean embeddings. High GES = all generators point in the
-    same "synthetic" direction. Low GES = per-generator detector circuits."""
+def _gate_ges_svd(
+    df_holdout: pd.DataFrame,
+    top_k_variance_threshold: float = 0.70,
+    min_generators: int = 2,
+) -> Dict:
+    """Generator Entanglement Score via SVD on generator-mean embeddings.
+
+    Builds a matrix where each row is the mean penultimate embedding for one
+    holdout generator (unit-normalised). SVD decomposes this matrix to
+    measure how many orthogonal directions span the generator subspace.
+
+    - Top-2 components explain > 70% of variance → all generators point
+      in roughly the same direction → unified "synthetic" concept.
+    - Top-5 components explain < 40% of variance → generators occupy
+      many orthogonal directions → per-generator detector circuits.
+
+    This is a simpler version of the method in S³ (2606.01843), which
+    trains a linear probe for forgery method classification and SVDs the
+    weight matrix to extract the dominant shortcut subspace.
+
+    Reference:
+      Suppressing Forgery-Specific Shortcuts (S³), arXiv 2606.01843
+      — Section 3.2: "Shortcut Subspace Extraction via SVD"
+    """
     embedded = df_holdout[df_holdout["embedding"].notna()]
     if embedded.empty:
         return {"passed": False, "error": "No holdout embeddings"}
@@ -239,7 +261,7 @@ def _gate_ges(df_holdout: pd.DataFrame, threshold: float) -> Dict:
     except (ValueError, TypeError):
         return {"passed": False, "error": "Could not stack embeddings"}
 
-    # Normalise to unit length for cosine similarity
+    # Unit-normalise each embedding for direction-only comparison
     norms = np.linalg.norm(all_emb, axis=1, keepdims=True)
     norms = np.where(norms == 0, 1.0, norms)
     all_emb = all_emb / norms
@@ -253,28 +275,30 @@ def _gate_ges(df_holdout: pd.DataFrame, threshold: float) -> Dict:
         grp_emb = grp_emb / grp_norms
         generator_means[ds_name] = grp_emb.mean(axis=0)
 
-    means_matrix = np.stack(list(generator_means.values()))
-    sim_matrix = means_matrix @ means_matrix.T
-
-    # Upper triangle (excluding diagonal)
     n = len(generator_means)
-    if n < 2:
-        # Single generator — can't measure entanglement, skip gate
+    if n < min_generators:
         return {
             "passed": True,
             "value": 1.0,
-            "threshold": threshold,
-            "note": "Only 1 holdout generator, GES undefined — gate skipped",
-            "num_generators": 1,
+            "top_k_variance_threshold": top_k_variance_threshold,
+            "note": f"Only {n} holdout generator(s), GES undefined — gate skipped",
+            "num_generators": n,
         }
 
-    triu = sim_matrix[np.triu_indices(n, k=1)]
-    ges = float(triu.mean())
+    # SVD on the generator-mean matrix (n_generators × embedding_dim)
+    means_matrix = np.stack(list(generator_means.values()))
+    _, S, _ = np.linalg.svd(means_matrix, full_matrices=False)
+
+    # Variance explained by top-2 singular components
+    total_var = float(np.sum(S ** 2))
+    top2_var = float(np.sum(S[:2] ** 2)) if len(S) >= 2 else total_var
+    top2_ratio = top2_var / total_var if total_var > 0 else 0.0
 
     return {
-        "passed": ges >= threshold,
-        "value": ges,
-        "threshold": threshold,
+        "passed": top2_ratio >= top_k_variance_threshold,
+        "value": top2_ratio,
+        "top_k_variance_threshold": top_k_variance_threshold,
+        "singular_values": S.tolist(),
         "num_generators": int(n),
         "generators": list(generator_means.keys()),
     }

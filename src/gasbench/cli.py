@@ -721,8 +721,130 @@ Examples:
 
     verify_parser.set_defaults(func=command_verify_cache)
 
+    # ========== ANALYZE-FEATURES COMMAND ==========
+    analyze_parser = subparsers.add_parser(
+        "analyze-features",
+        help="Compute feature-space generalization gates from parquet",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Compute gates from a benchmark parquet file
+  gasbench analyze-features --parquet results/image_20250101/records.parquet
+
+  # Output gate report as JSON
+  gasbench analyze-features --parquet records.parquet --output report.json
+
+  # Show embedding stats only
+  gasbench analyze-features --parquet records.parquet --stats-only
+        """,
+    )
+
+    analyze_parser.add_argument(
+        "--parquet",
+        type=str,
+        required=True,
+        metavar="PATH",
+        help="Path to benchmark records parquet file",
+    )
+    analyze_parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Write JSON gate report to file (default: print to stdout)",
+    )
+    analyze_parser.add_argument(
+        "--stats-only",
+        action="store_true",
+        help="Print embedding coverage stats only, skip gate computation",
+    )
+    analyze_parser.add_argument(
+        "--probe-threshold",
+        type=float,
+        default=0.70,
+        help="Balanced accuracy threshold for probe accuracy gate (default: 0.70)",
+    )
+    analyze_parser.add_argument(
+        "--ges-threshold",
+        type=float,
+        default=0.70,
+        help="Top-2 SVD variance explained threshold for GES gate (default: 0.70). < 0.40 = memorization, > 0.70 = unified concept.",
+    )
+
+    analyze_parser.set_defaults(func=command_analyze_features)
+
     args = parser.parse_args()
     return args.func(args)
+
+
+def command_analyze_features(args):
+    """Execute the feature-space analysis command."""
+    import pandas as pd
+    from .benchmarks.feature_gates import (
+        compute_generalization_coefficient,
+        embedding_stats,
+    )
+
+    parquet_path = Path(args.parquet)
+    if not parquet_path.exists():
+        print(f"Error: Parquet file not found: {parquet_path}")
+        return 1
+
+    print(f"\n🔬 Analyzing features from: {parquet_path}")
+    df = pd.read_parquet(str(parquet_path))
+    print(f"   Total rows: {len(df):,}")
+
+    # Embedding stats
+    stats = embedding_stats(df)
+    print(f"\n📊 Embedding stats:")
+    print(f"   Available: {stats['embeddings_available']}")
+    if stats["embeddings_available"]:
+        print(f"   Coverage:  {stats['coverage']:.1%} ({stats['with_embeddings']}/{stats['total_ok']} ok samples)")
+        print(f"   Dim:       {stats['embedding_dim']}")
+
+    if args.stats_only:
+        return 0
+
+    # Full gate computation
+    print(f"\n🚪 Walking generalization gates...")
+    result = compute_generalization_coefficient(
+        df,
+        probe_accuracy_threshold=args.probe_threshold,
+        ges_variance_threshold=args.ges_threshold,
+    )
+
+    print(f"\n📋 Gate results:")
+    for gate_name, gate_val in result["gates"].items():
+        status = "✅ PASS" if gate_val.get("passed") else "❌ FAIL"
+        detail = f"value={gate_val.get('value', 'N/A')}"
+        if "threshold" in gate_val:
+            detail += f", threshold={gate_val['threshold']}"
+        if "coverage" in gate_val:
+            detail += f", coverage={gate_val['coverage']:.1%}"
+        if "note" in gate_val:
+            detail += f" ({gate_val['note']})"
+        print(f"   {gate_name:30s} {status:8s}  {detail}")
+
+    print(f"\n🎯 Generalization coefficient: {result['coefficient']}")
+
+    if args.output:
+        output_path = Path(args.output)
+        import json
+        # Convert numpy values for JSON serialization
+        def _json_safe(obj):
+            if isinstance(obj, (np.floating,)):
+                return float(obj)
+            if isinstance(obj, (np.integer,)):
+                return int(obj)
+            if isinstance(obj, dict):
+                return {k: _json_safe(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_json_safe(v) for v in obj]
+            return obj
+        output_path.write_text(json.dumps(_json_safe(result), indent=2))
+        print(f"\n📄 Report written to: {output_path}")
+
+    return 0
 
 
 def command_preprocess(args):

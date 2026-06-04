@@ -20,9 +20,14 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import balanced_accuracy_score
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils import resample
 
 logger = logging.getLogger(__name__)
+
+# Fixed random seed for reproducibility across runs.
+_RGS_SEED = 42
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -32,7 +37,7 @@ logger = logging.getLogger(__name__)
 def compute_generalization_coefficient(
     df: pd.DataFrame,
     *,
-    rgs_threshold: float = 0.85,
+    probe_accuracy_threshold: float = 0.70,
     ges_threshold: float = 0.5,
     min_embedding_coverage: float = 0.8,
 ) -> Dict:
@@ -44,8 +49,11 @@ def compute_generalization_coefficient(
     Args:
         df: Parquet DataFrame with columns status, dataset_name, label,
             predicted, embedding.
-        rgs_threshold: Minimum RGS for Gate 2 to pass.
-        ges_threshold: Minimum GES for Gate 3 to pass.
+        probe_accuracy_threshold: Minimum balanced accuracy a linear probe
+            trained on public-corpus embeddings must achieve on holdout
+            embeddings for Gate 2 to pass.
+        ges_threshold: Minimum mean pairwise cosine similarity between
+            per-generator mean embeddings for Gate 3 to pass.
         min_embedding_coverage: Minimum fraction of holdout samples that must
             have non-null embeddings for Gate 1 to pass.
 
@@ -80,9 +88,12 @@ def compute_generalization_coefficient(
             "rgs": {"passed": False, "error": "Could not build embedding matrices"},
         }}
 
-    # ---- Gate 2: RGS (Linear Probe Transfer Gap) ----
-    g2 = _gate_rgs(X_pub, y_pub, X_hold, y_hold, rgs_threshold)
-    gates["rgs"] = g2
+    # ---- Gate 2: Linear Probe Accuracy ----
+    g2 = _gate_probe_accuracy(
+        X_pub, y_pub, X_hold, y_hold,
+        threshold=probe_accuracy_threshold,
+    )
+    gates["probe_accuracy"] = g2
     if not g2["passed"]:
         coef = 0.5 if g1["coverage"] >= min_embedding_coverage else 0.3
         return {"coefficient": coef, "gates": gates}
@@ -139,35 +150,79 @@ def _build_embedding_matrix(
     return X, y
 
 
-def _gate_rgs(
+def _gate_probe_accuracy(
     X_pub: np.ndarray,
     y_pub: np.ndarray,
     X_hold: np.ndarray,
     y_hold: np.ndarray,
     threshold: float,
+    num_repeats: int = 1,
 ) -> Dict:
-    """Linear Probe Transfer Gap: how well does a linear probe trained on
-    public-corpus embeddings generalise to holdout embeddings?"""
-    try:
+    """Linear probe feature-quality gate.
+
+    Trains a fixed-hyperparameter logistic regression on public-corpus
+    embeddings, then evaluates its balanced accuracy on holdout embeddings.
+    A high score means the model's features are linearly separable by
+    real/synthetic in a way that transfers across data distributions —
+    i.e. the features are genuinely useful, not overfitted to specific
+    generators.
+
+    Design decisions:
+    - Data: subsample the larger of public/holdout to match the smaller
+      (stratified) so the probe has no unfair sample-count advantage.
+    - Hyperparams: fixed (C=1.0, L2, max_iter=2000). This is a measurement
+      instrument, not a model to tune.
+    - Metric: balanced accuracy to handle class imbalance.
+    """
+    n_pub = len(y_pub)
+    n_hold = len(y_hold)
+
+    if n_pub == 0 or n_hold == 0:
+        return {"passed": False, "error": "Empty public or holdout data"}
+
+    target_n = min(n_pub, n_hold)
+    probe_accs = []
+
+    for repeat in range(num_repeats):
+        seed = _RGS_SEED + repeat
+
+        X_pub_sub, y_pub_sub = _subsample_stratified(
+            X_pub, y_pub, target_n, random_state=seed
+        )
+        X_hold_sub, y_hold_sub = _subsample_stratified(
+            X_hold, y_hold, target_n, random_state=seed + 1000
+        )
+
         scaler = StandardScaler()
-        X_pub_s = scaler.fit_transform(X_pub)
-        X_hold_s = scaler.transform(X_hold)
+        X_pub_s = scaler.fit_transform(X_pub_sub)
+        X_hold_s = scaler.transform(X_hold_sub)
 
-        probe = LogisticRegression(max_iter=2000, random_state=42)
-        probe.fit(X_pub_s, y_pub)
+        probe = LogisticRegression(
+            C=1.0,
+            penalty="l2",
+            solver="lbfgs",
+            max_iter=2000,
+            random_state=seed,
+        )
+        probe.fit(X_pub_s, y_pub_sub)
 
-        probe_acc = float(probe.score(X_hold_s, y_hold))
+        y_pred = probe.predict(X_hold_s)
+        probe_accs.append(float(balanced_accuracy_score(y_hold_sub, y_pred)))
 
-        return {
-            "passed": probe_acc >= threshold,
-            "value": probe_acc,
-            "threshold": threshold,
-            "num_public": len(y_pub),
-            "num_holdout": len(y_hold),
-            "embedding_dim": int(X_pub.shape[1]),
-        }
-    except Exception as e:
-        return {"passed": False, "error": str(e)}
+    probe_bal_acc = float(np.mean(probe_accs))
+    probe_std = float(np.std(probe_accs)) if num_repeats > 1 else 0.0
+
+    return {
+        "passed": probe_bal_acc >= threshold,
+        "value": probe_bal_acc,
+        "threshold": threshold,
+        "probe_std": probe_std,
+        "num_public_original": n_pub,
+        "num_holdout_original": n_hold,
+        "training_size": target_n,
+        "num_repeats": num_repeats,
+        "embedding_dim": int(X_pub.shape[1]),
+    }
 
 
 def _gate_ges(df_holdout: pd.DataFrame, threshold: float) -> Dict:
@@ -228,6 +283,24 @@ def _gate_ges(df_holdout: pd.DataFrame, threshold: float) -> Dict:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _subsample_stratified(
+    X: np.ndarray,
+    y: np.ndarray,
+    n: int,
+    random_state: int = _RGS_SEED,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Subsample X, y to exactly n samples, stratified by label."""
+    if len(y) <= n:
+        return X, y
+    return resample(
+        X, y,
+        replace=False,
+        n_samples=n,
+        stratify=y,
+        random_state=random_state,
+    )
 
 
 def _no_data_result(reason: str) -> Dict:

@@ -906,3 +906,177 @@ datasets:
 
   # ── Carried over from v13 holdouts (internal/scraped) ────────────────────
     notes: "Released from v14 bmcore holdouts"
+
+# ── Released v17 holdouts ─────────────────────────────────────────────────
+
+  - name: human-fg-net-real-face
+    path: 34data/human-fg-net-real-face
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: inst-it-dataset-videos-raw
+    path: 34data/inst-it-dataset-videos-raw
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: inst-it-dataset-videos-vpt
+    path: 34data/inst-it-dataset-videos-vpt
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: sg2-n10k-arc-r14-lang-v1
+    path: 34data/sg2-n10k-arc-r14-lang-v1
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: vtuav-dataset-test-lt-001
+    path: 34data/vtuav-dataset-test-lt-001
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: arc2face-1
+    path: 34data/arc2face-1
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: casia_web_face_part1
+    path: 34data/casia_web_face_part1
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: casia_web_face_part10
+    path: 34data/casia_web_face_part10
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: casia_web_face_part11
+    path: 34data/casia_web_face_part11
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: casia_web_face_part12
+    path: 34data/casia_web_face_part12
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: casia_web_face_part13
+    path: 34data/casia_web_face_part13
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: posedreamer28
+    path: 34data/posedreamer28
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: posedreamer29
+    path: 34data/posedreamer29
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: posedreamer30
+    path: 34data/posedreamer30
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: posedreamer31
+    path: 34data/posedreamer31
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: posedreamer32
+    path: 34data/posedreamer32
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: real-human-faces-data-set
+    path: 34data/real-human-faces-data-set
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: shhq-1.0
+    path: 34data/shhq-1.0
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: spoof_png
+    path: 34data/spoof_png
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+

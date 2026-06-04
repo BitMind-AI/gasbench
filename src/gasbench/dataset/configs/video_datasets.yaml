@@ -1282,4 +1282,194 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v16 bmcore holdouts"
 
+# ── Released v17 holdouts ─────────────────────────────────────────────────
+
+  - name: haa500-v1-0
+    path: 34data/haa500-v1-0
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mcnet
+    path: 34data/mcnet
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mobileswap
+    path: 34data/mobileswap
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mraa
+    path: 34data/mraa
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: oneshot
+    path: 34data/oneshot
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: oops-dataset
+    path: 34data/oops-dataset
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: pirender
+    path: 34data/pirender
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: vatex-3
+    path: 34data/vatex-3
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: deepaction-v1
+    path: 34data/deepaction-v1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: dh-facevid-1k-0000-part-08
+    path: 34data/dh-facevid-1k-0000-part-08
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: dh-facevid-1k-0000-part-09
+    path: 34data/dh-facevid-1k-0000-part-09
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: dh-facevid-1k-0000-part-10
+    path: 34data/dh-facevid-1k-0000-part-10
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: dh-facevid-1k-0005-part_2
+    path: 34data/dh-facevid-1k-0005-part_2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: dh-facevid-1k-0005-part_3
+    path: 34data/dh-facevid-1k-0005-part_3
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: dh-facevid-1k-0005-part_4
+    path: 34data/dh-facevid-1k-0005-part_4
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: dh-facevid-1k-0005-part_5
+    path: 34data/dh-facevid-1k-0005-part_5
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mavos-dd-arabic-real
+    path: 34data/mavos-dd-arabic-real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mavos-dd-english_real
+    path: 34data/mavos-dd-english_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mavos-dd-german_real
+    path: 34data/mavos-dd-german_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mavos-dd-hindi_real
+    path: 34data/mavos-dd-hindi_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
+
+  - name: mavos-dd-mandarin_real
+    path: 34data/mavos-dd-mandarin_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: "Released from v17 bmcore holdouts"
 

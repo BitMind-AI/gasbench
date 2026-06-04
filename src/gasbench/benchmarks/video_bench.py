@@ -235,10 +235,15 @@ def process_video_batch(
     batch_inference_time = (time.time() - start) * 1000
     per_sample_time = batch_inference_time / len(batch_videos)
 
+    embeddings = None
+    if hasattr(session, 'embeddings_available') and session.embeddings_available:
+        embeddings = session.get_last_embedding()
+
     for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
         batch_metadata
     ):
         predicted, pred_probs = process_model_output(outputs[0][i])
+        sample_embedding = embeddings[i] if embeddings is not None else None
         tracker.add_ok(
             dataset_name=dataset_name,
             sample_index=sample_index,
@@ -251,6 +256,7 @@ def process_video_batch(
             batch_id=batch_id,
             batch_size=len(batch_videos),
             sample_seed=sample_seed,
+            embedding=sample_embedding,
         )
 
 

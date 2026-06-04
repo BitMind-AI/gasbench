@@ -34,6 +34,10 @@ class BenchmarkRunRecorder:
         self.crop_prob = crop_prob
         self.rows: List[Dict[str, Any]] = []
 
+        # Embedding tracking — set once when the first non-None embedding arrives.
+        self._embedding_dim: Optional[int] = None
+        self._embeddings_available: bool = False
+
         # Incremental per-dataset counters — updated in add_ok/add_skip so that
         # log_dataset_summary never has to materialise a full DataFrame.
         # Structure: {dataset_name: {"ok": int, "correct": int, "skipped": int}}
@@ -57,6 +61,7 @@ class BenchmarkRunRecorder:
         batch_id: int,
         batch_size: int,
         sample_seed: Optional[int],
+        embedding: Optional[np.ndarray] = None,
     ):
         # Normalize probabilities to a list of floats for parquet friendliness
         try:
@@ -92,7 +97,17 @@ class BenchmarkRunRecorder:
             "sample_seed": None if sample_seed is None else int(sample_seed),
             "skip_reason": None,
             "error_message": None,
+            "embedding": None,
         }
+
+        if embedding is not None:
+            row["embedding"] = embedding.tolist()
+            if self._embedding_dim is None:
+                self._embedding_dim = len(row["embedding"])
+                self._embeddings_available = True
+                logger.info(
+                    f"Embeddings available: dim={self._embedding_dim}"
+                )
 
         row.update(
             {
@@ -158,6 +173,7 @@ class BenchmarkRunRecorder:
             "sample_seed": None,
             "skip_reason": reason,
             "error_message": None,
+            "embedding": None,
         }
         row.update(
             {
@@ -217,6 +233,7 @@ class BenchmarkRunRecorder:
             "sample_seed": None,
             "skip_reason": None,
             "error_message": error_message[:300],
+            "embedding": None,
         }
         row.update(
             {

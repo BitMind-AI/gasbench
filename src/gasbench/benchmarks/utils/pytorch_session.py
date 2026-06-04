@@ -87,10 +87,71 @@ class PyTorchInferenceSession:
             logger.info("Using CPU")
         logger.info(f"Inference dtype: {self.dtype}")
 
+        # Embedding extraction via self.classifier pre-hook.
+        # Miners expose the final classification layer as `self.classifier`
+        # (torch.nn.Linear). We capture its input, which is the model's
+        # penultimate representation (the embedding).
+        self._captured_embedding: Optional[torch.Tensor] = None
+        self._embeddings_available = False
+        self._embedding_dim: Optional[int] = None
+        self._setup_embedding_hook()
+
         # Setup input/output specs
         self._input_name = "input"
         self._input_shape = self._infer_input_shape()
         self._num_classes = self.config.get("model", {}).get("num_classes", 2)
+
+    def _setup_embedding_hook(self):
+        """Register a forward pre-hook on self.model.classifier if it exists.
+
+        The hook fires before the final Linear layer and captures its input
+        tensor — the model's penultimate representation. Models without a
+        discoverable classifier will have embeddings_available == False and
+        will receive the minimum generalization coefficient.
+        """
+        classifier = getattr(self.model, "classifier", None)
+        if not isinstance(classifier, torch.nn.Linear):
+            logger.warning(
+                "Model does not expose a 'self.classifier' of type nn.Linear. "
+                "Embedding extraction disabled — generalization coefficient "
+                "will be set to the floor value."
+            )
+            return
+
+        n_classes = self.config.get("model", {}).get("num_classes", 2)
+        if classifier.out_features != n_classes:
+            logger.warning(
+                f"self.classifier.out_features ({classifier.out_features}) != "
+                f"num_classes ({n_classes}). Embedding extraction disabled."
+            )
+            return
+
+        self._embedding_dim = classifier.in_features
+
+        def _capture(module, input):
+            self._captured_embedding = input[0].detach()
+
+        classifier.register_forward_pre_hook(_capture)
+        self._embeddings_available = True
+        logger.info(
+            f"Embedding extraction enabled via self.classifier "
+            f"(nn.Linear({self._embedding_dim}, {n_classes})). "
+            f"Embedding dim: {self._embedding_dim}"
+        )
+
+    @property
+    def embeddings_available(self) -> bool:
+        return self._embeddings_available
+
+    def get_last_embedding(self) -> Optional[np.ndarray]:
+        """Return the batch embedding captured from self.classifier's pre-hook.
+
+        Returns a numpy array of shape (batch_size, embedding_dim), or None
+        if embeddings are not available.
+        """
+        if self._captured_embedding is None:
+            return None
+        return self._captured_embedding.cpu().to(torch.float32).numpy()
 
     def _infer_input_shape(self) -> List:
         """Infer input shape from preprocessing config."""

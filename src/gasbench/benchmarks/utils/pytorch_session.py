@@ -102,42 +102,96 @@ class PyTorchInferenceSession:
         self._num_classes = self.config.get("model", {}).get("num_classes", 2)
 
     def _setup_embedding_hook(self):
-        """Register a forward pre-hook on self.model.classifier if it exists.
+        """Register a forward pre-hook on the model's classification head.
 
-        The hook fires before the final Linear layer and captures its input
-        tensor — the model's penultimate representation. Models without a
-        discoverable classifier will have embeddings_available == False and
-        will receive the minimum generalization coefficient.
+        First looks for an explicit self.model.classifier of type nn.Linear.
+        Falls back to a heuristic: the deepest nn.Linear with out_features
+        == num_classes (useful for testing legacy models). Models without
+        any discoverable head will have embeddings_available == False.
         """
-        classifier = getattr(self.model, "classifier", None)
-        if not isinstance(classifier, torch.nn.Linear):
-            logger.warning(
-                "Model does not expose a 'self.classifier' of type nn.Linear. "
-                "Embedding extraction disabled — generalization coefficient "
-                "will be set to the floor value."
-            )
-            return
-
         n_classes = self.config.get("model", {}).get("num_classes", 2)
-        if classifier.out_features != n_classes:
+
+        head = self._find_classifier_explicit(n_classes)
+        if head is None:
+            head = self._find_classifier_heuristic(n_classes)
+
+        if head is None:
             logger.warning(
-                f"self.classifier.out_features ({classifier.out_features}) != "
-                f"num_classes ({n_classes}). Embedding extraction disabled."
+                "No classification head found. Model should expose a "
+                "self.classifier of type nn.Linear for embedding extraction. "
+                "Generalization coefficient will be set to the floor value."
             )
             return
 
-        self._embedding_dim = classifier.in_features
+        self._embedding_dim = head["in_features"]
 
         def _capture(module, input):
             self._captured_embedding = input[0].detach()
 
-        classifier.register_forward_pre_hook(_capture)
+        head["module"].register_forward_pre_hook(_capture)
         self._embeddings_available = True
         logger.info(
-            f"Embedding extraction enabled via self.classifier "
+            f"Embedding extraction enabled via {head['source']} "
             f"(nn.Linear({self._embedding_dim}, {n_classes})). "
             f"Embedding dim: {self._embedding_dim}"
         )
+
+    def _find_classifier_explicit(
+        self, n_classes: int
+    ) -> Optional[dict]:
+        """Try self.model.classifier."""
+        head = getattr(self.model, "classifier", None)
+        if not isinstance(head, torch.nn.Linear):
+            return None
+        if head.out_features != n_classes:
+            logger.warning(
+                f"self.classifier.out_features ({head.out_features}) != "
+                f"num_classes ({n_classes}); skipping explicit lookup."
+            )
+            return None
+        return {
+            "module": head,
+            "in_features": head.in_features,
+            "source": "self.classifier (explicit)",
+        }
+
+    def _find_classifier_heuristic(
+        self, n_classes: int
+    ) -> Optional[dict]:
+        """Fallback: find the deepest nn.Linear with out_features == n_classes.
+
+        Depth is measured as the number of parent modules between the layer
+        and self.model. The classification head is always the deepest
+        candidate (closest to the output).
+        """
+        candidates: list[dict] = []
+        for name, module in self.model.named_modules():
+            if isinstance(module, torch.nn.Linear) and module.out_features == n_classes:
+                depth = name.count(".")
+                candidates.append({
+                    "module": module,
+                    "in_features": module.in_features,
+                    "depth": depth,
+                    "name": name,
+                })
+
+        if not candidates:
+            return None
+
+        # Deepest candidate wins. Tie-break: larger in_features.
+        candidates.sort(key=lambda c: (c["depth"], c["in_features"]), reverse=True)
+        best = candidates[0]
+        logger.warning(
+            f"Model does not expose self.classifier — using heuristic "
+            f"fallback: '{best['name']}' (nn.Linear({best['in_features']}, "
+            f"{n_classes}), depth={best['depth']}). Miners should add an "
+            f"explicit self.classifier for reliable embedding extraction."
+        )
+        return {
+            "module": best["module"],
+            "in_features": best["in_features"],
+            "source": f"{best['name']} (heuristic fallback)",
+        }
 
     @property
     def embeddings_available(self) -> bool:

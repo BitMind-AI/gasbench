@@ -39,7 +39,6 @@ def compute_generalization_coefficient(
     *,
     probe_accuracy_threshold: float = 0.70,
     ges_variance_threshold: float = 0.70,
-    min_embedding_coverage: float = 0.8,
 ) -> Dict:
     """Compute the generalization coefficient and per-gate diagnostics.
 
@@ -56,8 +55,6 @@ def compute_generalization_coefficient(
             singular components of the generator-mean embedding matrix for
             Gate 3 to pass (default 0.70). Values below ~0.40 indicate
             per-generator memorization.
-        min_embedding_coverage: Minimum fraction of holdout samples that must
-            have non-null embeddings for Gate 1 to pass (default 0.80).
 
     Returns:
         Dict with keys: coefficient, gates (per-gate diagnostics).
@@ -75,7 +72,7 @@ def compute_generalization_coefficient(
     df_holdout = ok[is_holdout]
 
     # ---- Gate 1: Embeddings available ----
-    g1 = _gate_embeddings_available(df_holdout, min_embedding_coverage)
+    g1 = _gate_embeddings_available(df_holdout)
     gates["embeddings_available"] = g1
     if not g1["passed"]:
         return {"coefficient": 0.3, "gates": gates}
@@ -97,7 +94,7 @@ def compute_generalization_coefficient(
     )
     gates["probe_accuracy"] = g2
     if not g2["passed"]:
-        coef = 0.5 if g1["coverage"] >= min_embedding_coverage else 0.3
+        coef = 0.5  # Gate 1 already passed (coverage ≈ 100%)
         return {"coefficient": coef, "gates": gates}
 
     # ---- Gate 3: GES (Generator Entanglement via SVD) ----
@@ -115,16 +112,20 @@ def compute_generalization_coefficient(
 # ---------------------------------------------------------------------------
 
 
-def _gate_embeddings_available(
-    df_holdout: pd.DataFrame, min_coverage: float
-) -> Dict:
-    coverage = df_holdout["embedding"].notna().mean() if len(df_holdout) > 0 else 0.0
+def _gate_embeddings_available(df_holdout: pd.DataFrame) -> Dict:
+    """Check whether embeddings are present.
+
+    A compliant model with self.classifier produces an embedding for every
+    inference call, so coverage is effectively binary: ~100% or ~0%.
+    """
+    num_ok = len(df_holdout)
+    num_with = int(df_holdout["embedding"].notna().sum())
+    coverage = num_with / num_ok if num_ok > 0 else 0.0
     return {
-        "passed": coverage >= min_coverage,
+        "passed": coverage >= 0.999,  # effectively 100%
         "coverage": float(coverage),
-        "threshold": min_coverage,
-        "num_holdout_samples": len(df_holdout),
-        "num_with_embeddings": int(df_holdout["embedding"].notna().sum()),
+        "num_holdout_samples": num_ok,
+        "num_with_embeddings": num_with,
     }
 
 

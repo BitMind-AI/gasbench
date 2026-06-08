@@ -87,11 +87,11 @@ class PyTorchInferenceSession:
             logger.info("Using CPU")
         logger.info(f"Inference dtype: {self.dtype}")
 
-        # Embedding extraction via self.classifier pre-hook.
-        # Miners expose the final classification layer as `self.classifier`
-        # (torch.nn.Linear). We capture its input, which is the model's
-        # penultimate representation (the embedding).
-        self._captured_embedding: Optional[torch.Tensor] = None
+        # Embedding extraction via self.classifier(s) pre-hook.
+        # Supports single-head models (self.classifier) and ensembles
+        # (self.classifiers as nn.ModuleList). Captures each head's input
+        # and concatenates them into one embedding.
+        self._captured_embeddings: List[torch.Tensor] = []
         self._embeddings_available = False
         self._embedding_dim: Optional[int] = None
         self._setup_embedding_hook()
@@ -102,110 +102,98 @@ class PyTorchInferenceSession:
         self._num_classes = self.config.get("model", {}).get("num_classes", 2)
 
     def _setup_embedding_hook(self):
-        """Register a forward pre-hook on the model's classification head.
+        """Register forward pre-hooks on all classification heads.
 
-        First looks for an explicit self.model.classifier of type nn.Linear.
-        Falls back to a heuristic: the deepest nn.Linear with out_features
-        == num_classes (useful for testing legacy models). Models without
-        any discoverable head will have embeddings_available == False.
+        Supports single-head models (one nn.Linear), ensemble models
+        (self.classifiers as nn.ModuleList), and heuristic fallback.
+        Hooks all heads and concatenates their input embeddings.
         """
         n_classes = self.config.get("model", {}).get("num_classes", 2)
 
-        head = self._find_classifier_explicit(n_classes)
-        if head is None:
-            head = self._find_classifier_heuristic(n_classes)
+        heads = self._find_classifier_explicit(n_classes)
+        if heads is None:
+            heads = self._find_classifier_heuristic(n_classes)
 
-        if head is None:
+        if not heads:
             logger.warning(
-                "No classification head found. Model should expose a "
+                "No classification head(s) found. Model should expose a "
                 "self.classifier of type nn.Linear for embedding extraction. "
                 "Generalization coefficient will be set to the floor value."
             )
             return
 
-        self._embedding_dim = head["in_features"]
+        self._embedding_dim = sum(h["in_features"] for h in heads)
 
-        def _capture(module, input):
-            self._captured_embedding = input[0].detach().cpu()
-
-        head["module"].register_forward_pre_hook(_capture)
-        self._embeddings_available = True
-        logger.info(
-            f"Embedding extraction enabled via {head['source']} "
-            f"(nn.Linear({self._embedding_dim}, {n_classes})). "
-            f"Embedding dim: {self._embedding_dim}"
+        # Clear accumulated embeddings before each forward pass
+        self.model.register_forward_pre_hook(
+            lambda _m, _inp: self._captured_embeddings.clear()
         )
 
-    def _find_classifier_explicit(
-        self, n_classes: int
-    ) -> Optional[dict]:
-        """Try self.model.classifier."""
-        head = getattr(self.model, "classifier", None)
-        if not isinstance(head, torch.nn.Linear):
-            return None
-        if head.out_features != n_classes:
-            logger.warning(
-                f"self.classifier.out_features ({head.out_features}) != "
-                f"num_classes ({n_classes}); skipping explicit lookup."
+        for h in heads:
+            target = h["module"]
+            target.register_forward_pre_hook(
+                lambda _mod, inp, _t=target: self._captured_embeddings.append(
+                    inp[0].detach().cpu()
+                )
             )
-            return None
-        return {
-            "module": head,
-            "in_features": head.in_features,
-            "source": "self.classifier (explicit)",
-        }
 
-    def _find_classifier_heuristic(
-        self, n_classes: int
-    ) -> Optional[dict]:
-        """Fallback: find the deepest nn.Linear with out_features == n_classes.
+        self._embeddings_available = True
+        sources = ", ".join(h["source"] for h in heads)
+        logger.info(
+            f"Embedding extraction enabled via {len(heads)} head(s): "
+            f"{sources}. Total embedding dim: {self._embedding_dim}"
+        )
 
-        Depth is measured as the number of parent modules between the layer
-        and self.model. The classification head is always the deepest
-        candidate (closest to the output).
-        """
-        candidates: list[dict] = []
+    def _find_classifier_explicit(self, n_classes: int) -> Optional[list]:
+        """Explicit: self.classifiers (ModuleList) or self.classifier (single)."""
+        classifiers = getattr(self.model, "classifiers", None)
+        if isinstance(classifiers, torch.nn.ModuleList):
+            heads = []
+            for i, head in enumerate(classifiers):
+                if isinstance(head, torch.nn.Linear) and head.out_features == n_classes:
+                    heads.append(dict(module=head, in_features=head.in_features,
+                                      source=f"self.classifiers[{i}] (explicit)"))
+            if heads:
+                return heads
+        head = getattr(self.model, "classifier", None)
+        if isinstance(head, torch.nn.Linear) and head.out_features == n_classes:
+            return [dict(module=head, in_features=head.in_features,
+                         source="self.classifier (explicit)")]
+        return None
+
+    def _find_classifier_heuristic(self, n_classes: int) -> Optional[list]:
+        """Fallback: all nn.Linear(out_features==n_classes) at max depth."""
+        cands: list[dict] = []
         for name, module in self.model.named_modules():
             if isinstance(module, torch.nn.Linear) and module.out_features == n_classes:
-                depth = name.count(".")
-                candidates.append({
-                    "module": module,
-                    "in_features": module.in_features,
-                    "depth": depth,
-                    "name": name,
-                })
-
-        if not candidates:
+                cands.append(dict(module=module, in_features=module.in_features,
+                                  depth=name.count("."), name=name))
+        if not cands:
             return None
-
-        # Deepest candidate wins. Tie-break: larger in_features.
-        candidates.sort(key=lambda c: (c["depth"], c["in_features"]), reverse=True)
-        best = candidates[0]
+        max_depth = max(c["depth"] for c in cands)
+        deepest = [c for c in cands if c["depth"] == max_depth]
         logger.warning(
-            f"Model does not expose self.classifier — using heuristic "
-            f"fallback: '{best['name']}' (nn.Linear({best['in_features']}, "
-            f"{n_classes}), depth={best['depth']}). Miners should add an "
-            f"explicit self.classifier for reliable embedding extraction."
+            f"Model has no self.classifier — using heuristic fallback: "
+            f"{len(deepest)} head(s) at depth {max_depth}: "
+            f"{', '.join(c['name'] for c in deepest)}. "
+            f"Miners should add an explicit self.classifier(s)."
         )
-        return {
-            "module": best["module"],
-            "in_features": best["in_features"],
-            "source": f"{best['name']} (heuristic fallback)",
-        }
+        return [dict(module=c["module"], in_features=c["in_features"],
+                     source=f"{c['name']} (heuristic)") for c in deepest]
 
     @property
     def embeddings_available(self) -> bool:
         return self._embeddings_available
 
     def get_last_embedding(self) -> Optional[np.ndarray]:
-        """Return the batch embedding captured from self.classifier's pre-hook.
+        """Return concatenated embeddings from all classification heads.
 
-        Returns a numpy array of shape (batch_size, embedding_dim), or None
-        if embeddings are not available.
+        Returns a numpy array of shape (batch_size, total_embedding_dim),
+        or None if embeddings are not available or not yet captured.
         """
-        if self._captured_embedding is None:
+        if not self._captured_embeddings:
             return None
-        return self._captured_embedding.to(torch.float32).numpy()
+        return torch.cat(self._captured_embeddings, dim=1).to(torch.float32).numpy()
 
     def _infer_input_shape(self) -> List:
         """Infer input shape from preprocessing config."""

@@ -126,7 +126,7 @@ class PyTorchInferenceSession:
         self._embedding_dim = head["in_features"]
 
         def _capture(module, input):
-            self._captured_embedding = input[0].detach()
+            self._captured_embedding = input[0].detach().cpu()
 
         head["module"].register_forward_pre_hook(_capture)
         self._embeddings_available = True
@@ -205,7 +205,7 @@ class PyTorchInferenceSession:
         """
         if self._captured_embedding is None:
             return None
-        return self._captured_embedding.cpu().to(torch.float32).numpy()
+        return self._captured_embedding.to(torch.float32).numpy()
 
     def _infer_input_shape(self) -> List:
         """Infer input shape from preprocessing config."""

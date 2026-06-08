@@ -215,6 +215,10 @@ class DatasetIterator:
             if field in sample:
                 metadata[field] = sample.get(field)
 
+        # generator family for GES gate grouping
+        if self.config.generator_family:
+            metadata["generator_family"] = self.config.generator_family
+
         return metadata
 
     def _select_sample_to_evict(

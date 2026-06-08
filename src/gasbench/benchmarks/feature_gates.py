@@ -267,14 +267,16 @@ def _gate_ges_svd(
     norms = np.where(norms == 0, 1.0, norms)
     all_emb = all_emb / norms
 
-    # Per-generator mean embeddings
+    # Per-generator mean embeddings — group by generator_family if present
+    group_key = "generator_family" if "generator_family" in embedded.columns and embedded["generator_family"].notna().any() else "dataset_name"
     generator_means: Dict[str, np.ndarray] = {}
-    for ds_name, grp in embedded.groupby("dataset_name"):
+    for key, grp in embedded.groupby(group_key):
+        key = str(key) if group_key == "generator_family" else key
         grp_emb = np.stack(grp["embedding"].tolist()).astype(np.float32)
         grp_norms = np.linalg.norm(grp_emb, axis=1, keepdims=True)
         grp_norms = np.where(grp_norms == 0, 1.0, grp_norms)
         grp_emb = grp_emb / grp_norms
-        generator_means[ds_name] = grp_emb.mean(axis=0)
+        generator_means[key] = grp_emb.mean(axis=0)
 
     n = len(generator_means)
     if n < min_generators:

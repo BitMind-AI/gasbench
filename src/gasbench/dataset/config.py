@@ -74,6 +74,8 @@ class BenchmarkDatasetConfig:
     # For holdout datasets: stores the original name before obfuscation
     original_name: Optional[str] = None
 
+    generator_family: Optional[str] = None
+
 
 def get_benchmark_size(
     modality: str, mode: str = "full", yaml_path: Optional[str] = None
@@ -407,6 +409,7 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                 data_columns=dataset_dict.get("data_columns"),
                 filter_column=dataset_dict.get("filter_column"),
                 filter_value=dataset_dict.get("filter_value"),
+                generator_family=dataset_dict.get("generator_family"),
             )
             if modality in result:
                 result[modality].append(config)
@@ -533,6 +536,7 @@ def load_holdout_datasets_from_yaml(
                 notes=dataset_dict.get("notes", ""),
                 filter_column=dataset_dict.get("filter_column"),
                 filter_value=dataset_dict.get("filter_value"),
+                generator_family=dataset_dict.get("generator_family"),
             )
             configs.append(config)
         
@@ -699,6 +703,7 @@ def load_benchmark_datasets_from_yaml(
                                 notes=dataset_dict.get("notes"),
                                 filter_column=dataset_dict.get("filter_column"),
                                 filter_value=dataset_dict.get("filter_value"),
+                                generator_family=dataset_dict.get("generator_family"),
                             )
                             result[modality].append(config)
                 
@@ -731,6 +736,7 @@ def load_benchmark_datasets_from_yaml(
                                 notes=dataset_dict.get("notes"),
                                 filter_column=dataset_dict.get("filter_column"),
                                 filter_value=dataset_dict.get("filter_value"),
+                                generator_family=dataset_dict.get("generator_family"),
                             )
                             result[modality].append(config)
                 return result
@@ -768,6 +774,7 @@ def load_benchmark_datasets_from_yaml(
                             notes=dataset_dict.get("notes"),
                             filter_column=dataset_dict.get("filter_column"),
                             filter_value=dataset_dict.get("filter_value"),
+                            generator_family=dataset_dict.get("generator_family"),
                         )
                         result[modality].append(config)
             except Exception as e:

@@ -123,6 +123,7 @@ class BenchmarkRunRecorder:
                 "generator_uid": sample.get("generator_uid"),
                 "generator_name": sample.get("generator_name"),
                 "generator_model": sample.get("model_name"),
+                "generator_family": sample.get("generator_family"),
             }
         )
 
@@ -189,6 +190,7 @@ class BenchmarkRunRecorder:
                 "generator_uid": sample.get("generator_uid"),
                 "generator_name": sample.get("generator_name"),
                 "generator_model": sample.get("model_name"),
+                "generator_family": sample.get("generator_family"),
             }
         )
         row["sample_id"] = build_sample_id(row)
@@ -249,6 +251,7 @@ class BenchmarkRunRecorder:
                 "generator_uid": sample.get("generator_uid"),
                 "generator_name": sample.get("generator_name"),
                 "generator_model": sample.get("model_name"),
+                "generator_family": sample.get("generator_family"),
             }
         )
         row["sample_id"] = build_sample_id(row)

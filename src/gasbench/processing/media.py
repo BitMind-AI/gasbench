@@ -7,7 +7,6 @@ from typing import Dict, Tuple, Optional
 
 import cv2
 import numpy as np
-from decord import VideoReader, cpu
 from io import BytesIO
 from PIL import Image
 import torch
@@ -15,12 +14,103 @@ import torch
 from ..logger import get_logger
 from ..constants import MEDIA_TYPE_TO_LABEL
 
+# decord is the primary video decoder (fast, frame-accurate random access).
+# It has no macOS ARM wheel, so on Darwin we fall back to OpenCV —
+# suitable for local development / smoke-testing but NOT for benchmark
+# runs that need to be comparable to Linux results.
+try:
+    from decord import VideoReader, cpu
+    _HAS_DECORD = True
+except ImportError:
+    _HAS_DECORD = False
+    logger = None  # placeholder, will be reassigned below
+
 try:
     from torchcodec.decoders import AudioDecoder
 except Exception:
     AudioDecoder = None
 
 logger = get_logger(__name__)
+
+if not _HAS_DECORD:
+    logger.info(
+        "decord not available — using OpenCV fallback "
+        "(fine for dev/testing, not recommended for benchmark runs)"
+    )
+
+
+class _VideoReader:
+    """Video frame reader — decord (production) or cv2 (macOS dev fallback).
+
+    decord is the preferred backend: fast random access and frame-accurate
+    seeking.  cv2 is only used when decord is unavailable (macOS) and
+    falls back to sequential decode to guarantee identical frame selection.
+
+    Both backends return RGB uint8 numpy arrays of shape (H, W, C).
+    """
+
+    def __init__(self, path: str):
+        if _HAS_DECORD:
+            self._vr = VideoReader(path, ctx=cpu(0), num_threads=1)
+            self._cap = None
+        else:
+            self._vr = None
+            self._cap = cv2.VideoCapture(path)
+
+    @property
+    def total_frames(self) -> int:
+        if self._vr is not None:
+            return len(self._vr)
+        return int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    @property
+    def fps(self):
+        """Average FPS, or None if unavailable."""
+        if self._vr is not None:
+            return self._vr.get_avg_fps()
+        f = self._cap.get(cv2.CAP_PROP_FPS)
+        return f if f > 0 else None
+
+    def read_frames(self, indices):
+        """Read frames at *indices* (sorted list of ints).
+
+        Returns list of RGB uint8 (H, W, C) arrays.  Frames that fail
+        to decode are silently skipped.
+        """
+        if self._vr is not None:
+            # decord: true random access
+            frames = []
+            for i in indices:
+                frame = self._vr[i].asnumpy()  # Already RGB
+                if frame is None or frame.size == 0:
+                    logger.warning(f"Skipping invalid frame at index {i}")
+                    continue
+                frames.append(frame)
+            return frames
+        else:
+            # cv2: sequential scan — cv2 seeking is imprecise, so we
+            # decode every frame and keep only the ones we want.  This
+            # matches decord's frame selection exactly but is slower,
+            # hence only used as a macOS dev fallback.
+            frames = []
+            idx_set = set(indices)
+            max_idx = max(indices) if indices else -1
+            for i in range(max_idx + 1):
+                ok, frame = self._cap.read()
+                if not ok or frame is None:
+                    break
+                if i in idx_set:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    if frame is None or frame.size == 0:
+                        logger.warning(f"Skipping invalid frame at index {i}")
+                        continue
+                    frames.append(frame)
+            return frames
+
+    def close(self):
+        if self._cap is not None:
+            self._cap.release()
+        # decord VideoReader needs no explicit cleanup
 
 
 def configure_huggingface_cache(volume_dir: str = "/benchmark_data"):
@@ -47,10 +137,14 @@ def process_video_bytes_sample(
     num_frames: int = 16,
     frame_rate: Optional[float] = None,
 ) -> Tuple[any, int]:
-    """Process a video sample that contains raw video bytes using decord.
+    """Process a video sample that contains raw video bytes.
 
-    Returns uint8 data for ONNX models in RGB format.
-    Decord outputs RGB directly (no BGR->RGB conversion needed).
+    Uses decord (the preferred, production decoder) when available.
+    On macOS where decord has no wheel, falls back to OpenCV — suitable
+    for local development but benchmark comparisons should be run on
+    Linux with decord.
+
+    Both backends return uint8 RGB frames of shape (H, W, C).
 
     Args:
         sample: Dict containing 'video_bytes' and metadata.
@@ -79,15 +173,15 @@ def process_video_bytes_sample(
             temp_video.flush()
             temp_video.close()
 
-            vr = VideoReader(temp_video_path, ctx=cpu(0), num_threads=1)
-            total_frames = len(vr)
+            vr = _VideoReader(temp_video_path)
+            total_frames = vr.total_frames
 
             if total_frames == 0:
-                logger.warning(f"No frames in video")
+                logger.warning("No frames in video")
                 return None, None
 
             if frame_rate is not None:
-                video_fps = vr.get_avg_fps()
+                video_fps = vr.fps
                 if not video_fps or video_fps <= 0:
                     logger.warning("Video has no fps metadata, assuming 30fps")
                     video_fps = 30.0
@@ -96,16 +190,10 @@ def process_video_bytes_sample(
             else:
                 frame_indices = list(range(min(num_frames, total_frames)))
 
-            frames = []
-            for i in frame_indices:
-                frame = vr[i].asnumpy()  # Already RGB, shape (H, W, C)
-                if frame is None or frame.size == 0:
-                    logger.warning(f"Skipping invalid frame at index {i}")
-                    continue
-                frames.append(frame)
+            frames = vr.read_frames(frame_indices)
 
             if len(frames) == 0:
-                logger.warning(f"No frames extracted from video")
+                logger.warning("No frames extracted from video")
                 return None, None
 
             if len(frames) < num_frames:
@@ -120,6 +208,10 @@ def process_video_bytes_sample(
         finally:
             try:
                 os.unlink(temp_video_path)
+            except:
+                pass
+            try:
+                vr.close()
             except:
                 pass
 

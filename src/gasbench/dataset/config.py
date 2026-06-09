@@ -21,11 +21,12 @@ GASSTATION_DATASET_MAX_SAMPLES = 10000
 GASSTATION_WEIGHT_MULTIPLIER = 5.0  # Gasstation datasets get 5x more samples
 UNIFORM_SAMPLING_MULTIPLIER = 3  # Allow up to 3x the base allocation per dataset
 
-# Total sample overrides for debug/small modes (for faster testing)
-# In "full" mode, values are loaded from YAML (image_benchmark_size, video_benchmark_size)
+# Total sample overrides for all benchmark modes.
+# Full-mode sizes moved here from YAML configs — single source of truth.
 BENCHMARK_TOTAL_OVERRIDES = {
     "debug": {"image": 100, "video": 50, "audio": 50},
     "small": {"image": 1800, "video": 600, "audio": 600},
+    "full":  {"image": 55000, "video": 26000, "audio": 37000},
 }
 
 # Per-dataset download limits (only applied in debug/small modes for faster testing)
@@ -87,7 +88,8 @@ def get_benchmark_size(
     Args:
         modality: "image", "video", or "audio"
         mode: "debug", "small", or "full"
-        yaml_path: Optional path to custom yaml config (for full mode)
+        yaml_path: Optional path to custom yaml config. Only used in full mode
+            when a custom config is provided; its benchmark_size field is used.
 
     Returns:
         Target number of samples for the benchmark
@@ -95,44 +97,20 @@ def get_benchmark_size(
     if mode in BENCHMARK_TOTAL_OVERRIDES:
         return BENCHMARK_TOTAL_OVERRIDES[mode][modality]
 
-    # Full mode: load from YAML
-    try:
-        if yaml_path is not None:
+    # Custom config path: load benchmark_size from the YAML
+    if yaml_path is not None:
+        try:
             with open(yaml_path, "r") as f:
                 data = yaml.safe_load(f)
-            
-            # Check if legacy format
-            if "image_benchmark_size" in data or "video_benchmark_size" in data:
-                size_key = f"{modality}_benchmark_size"
-                if size_key in data:
-                    return data[size_key]
-            # New format
-            elif "benchmark_size" in data:
+            if "benchmark_size" in data:
                 return data["benchmark_size"]
-        else:
-            # Load from split real + synthetic configs
-            try:
-                benchmark_size, _ = _load_modality_config(modality)
-                return benchmark_size
-            except Exception:
-                pass
+        except Exception as e:
+            logger.warning(f"Failed to load benchmark size from {yaml_path}: {e}")
 
-        logger.warning(f"'benchmark_size' not found in config for {modality}, using default")
-        if modality == "image":
-            return 10000
-        elif modality == "video":
-            return 5000
-        else:  # audio
-            return 5000
-
-    except Exception as e:
-        logger.warning(f"Failed to load benchmark size from YAML: {e}, using default")
-        if modality == "image":
-            return 10000
-        elif modality == "video":
-            return 5000
-        else:  # audio
-            return 5000
+    # Fallback defaults
+    logger.warning(f"No benchmark_size found for {modality} {mode}, using default")
+    defaults = {"image": 10000, "video": 5000, "audio": 5000}
+    return defaults.get(modality, 5000)
 
 
 def apply_mode_to_datasets(
@@ -605,7 +583,7 @@ def _load_bundled_config(filename: str) -> Dict:
         raise FileNotFoundError(f"Could not load bundled config {filename}: {e}")
 
 
-def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> tuple:
+def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> list:
     """Load configuration for a specific modality.
     
     Args:
@@ -613,14 +591,12 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> t
         custom_path: Optional custom YAML file path
     
     Returns:
-        Tuple of (benchmark_size, datasets_list)
+        List of dataset dicts (merged from real + synthetic split files)
     """
     if custom_path:
         with open(custom_path, "r") as f:
             data = yaml.safe_load(f)
-        benchmark_size = data.get("benchmark_size", 10000)
-        datasets = data.get("datasets", [])
-        return benchmark_size, datasets
+        return data.get("datasets", [])
     
     # Load from split real + synthetic configs and merge
     SPLIT_CONFIGS = {
@@ -634,16 +610,10 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> t
         return 10000, []
     
     all_datasets = []
-    benchmark_size = 0
     for filename in pairs:
         try:
             data = _load_bundled_config(filename)
             if isinstance(data, dict):
-                # Use synthetic benchmark_size as the canonical size
-                if "synthetic" in filename and "benchmark_size" in data:
-                    benchmark_size = data["benchmark_size"]
-                elif benchmark_size == 0 and "benchmark_size" in data:
-                    benchmark_size = data["benchmark_size"]
                 if "datasets" in data and isinstance(data["datasets"], list):
                     all_datasets.extend(data["datasets"])
         except FileNotFoundError:
@@ -651,7 +621,7 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> t
         except Exception as e:
             logger.warning(f"Failed to load {filename}: {e}, skipping")
     
-    return benchmark_size or 10000, all_datasets
+    return all_datasets
 
 
 def _load_all_bundled_configs() -> Dict:
@@ -670,8 +640,6 @@ def _load_all_bundled_configs() -> Dict:
             try:
                 data = _load_bundled_config(filename)
                 if isinstance(data, dict):
-                    if "benchmark_size" in data:
-                        merged_data[f"{modality}_benchmark_size"] = data["benchmark_size"]
                     if "datasets" in data and isinstance(data["datasets"], list):
                         modality_datasets.extend(data["datasets"])
             except FileNotFoundError:
@@ -785,7 +753,7 @@ def load_benchmark_datasets_from_yaml(
         all_errors = []
         for modality in ["image", "video", "audio"]:
             try:
-                _, datasets_list = _load_modality_config(modality)
+                datasets_list = _load_modality_config(modality)
                 
                 for idx, dataset_dict in enumerate(datasets_list):
                     if not isinstance(dataset_dict, dict):

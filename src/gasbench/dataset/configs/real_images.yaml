@@ -1,6 +1,5 @@
 # Image Dataset Configurations -- Real
 #
-benchmark_size: 20000
 
 datasets:
 

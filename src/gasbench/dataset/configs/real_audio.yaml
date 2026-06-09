@@ -1,6 +1,5 @@
 # Audio Dataset Configurations -- Real
 #
-benchmark_size: 5000
 
 datasets:
 

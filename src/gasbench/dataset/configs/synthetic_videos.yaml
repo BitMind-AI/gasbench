@@ -1,6 +1,5 @@
 # Video Dataset Configurations -- Synthetic + Semisynthetic
 #
-benchmark_size: 13000
 
 datasets:
 

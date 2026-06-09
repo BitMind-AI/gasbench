@@ -1,0 +1,582 @@
+# Audio Dataset Configurations -- Synthetic
+#
+benchmark_size: 5000
+
+datasets:
+
+  # -- diverse --
+
+  - name: DeepDialogue-orpheus
+    path: SALT-Research/DeepDialogue-orpheus
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 1
+    archives_per_dataset: 500
+    include_paths: [segments]
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: arabic-deepfake
+    path: DeepFake-Audio-Rangers/Arabic_Audio_Deepfake
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 4
+    notes: Arabic language deepfake audio
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: asvspoof2021-df-eval
+    path: 34data/asvspoof2021-df-eval
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: ASVspoof 2021 DeepFake track evaluation set
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: asvspoof2021-la-eval
+    path: 34data/asvspoof2021-la-eval
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: ASVspoof 2021 Logical Access track evaluation set
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: asvspoof2021-pa-eval
+    path: 34data/asvspoof2021-pa-eval
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: ASVspoof 2021 Physical Access track evaluation set
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: cfad-fake
+    path: 34data/cfad-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: CFAD Chinese Fake Audio Detection — fake/synthetic audio
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: deepfake-urdu-fake
+    path: CSALT/deepfake_detection_dataset_urdu
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: [Spoofed_TTS, Spoofed_Tacotron]
+    notes: Urdu language deepfake detection - spoofed speech
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: elevenlabs-dataset
+    path: skypro1111/elevenlabs_dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: elevenlabs-latin
+    path: velocity-engg/eleven_labs_datase_latin
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: elevenlabs-neoboy
+    path: NeoBoy/elevenlabsSpeechTest
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: elevenlabs-sh1man
+    path: Sh1man/elevenlabs
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: 1100
+    archives_per_dataset: 1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: elevenlabs-velocity
+    path: velocity-engg/eleven_labs_dataset
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: scdf-en
+    path: 34data/scdf-en
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: SCDF English subset — scalable deepfake speech detection corpus
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_01
+    path: 34data/v14-MLAAD-Fake-part_01
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_02
+    path: 34data/v14-MLAAD-Fake-part_02
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_03
+    path: 34data/v14-MLAAD-Fake-part_03
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_04
+    path: 34data/v14-MLAAD-Fake-part_04
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_05
+    path: 34data/v14-MLAAD-Fake-part_05
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_06
+    path: 34data/v14-MLAAD-Fake-part_06
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_07
+    path: 34data/v14-MLAAD-Fake-part_07
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_08
+    path: 34data/v14-MLAAD-Fake-part_08
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_09
+    path: 34data/v14-MLAAD-Fake-part_09
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-MLAAD-Fake-part_10
+    path: 34data/v14-MLAAD-Fake-part_10
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-diffgan-tts-aux
+    path: 34data/v14-fake-diffgan-tts-aux
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-diffgan-tts-naive
+    path: 34data/v14-fake-diffgan-tts-naive
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-diffgan-tts-shallow
+    path: 34data/v14-fake-diffgan-tts-shallow
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-fast-pitch
+    path: 34data/v14-fake-fast-pitch
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-glow-tts
+    path: 34data/v14-fake-glow-tts
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-grad-tts
+    path: 34data/v14-fake-grad-tts
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-prodiff
+    path: 34data/v14-fake-prodiff
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-somos
+    path: 34data/v14-fake-somos
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-tacotron2-dca
+    path: 34data/v14-fake-tacotron2-dca
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-tacotron2-dca-bddm
+    path: 34data/v14-fake-tacotron2-dca-bddm
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-tacotron2-dca-diffwave
+    path: 34data/v14-fake-tacotron2-dca-diffwave
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-tacotron2-dca-wavegrad
+    path: 34data/v14-fake-tacotron2-dca-wavegrad
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-vcapv-t2a
+    path: 34data/v14-fake-vcapv-t2a
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-vits
+    path: 34data/v14-fake-vits
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-vits-1
+    path: 34data/v14-fake-vits-1
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: v14-fake-wavegrad2
+    path: 34data/v14-fake-wavegrad2
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: vcc2020-fake
+    path: 34data/vcc2020-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: Voice Conversion Challenge 2020 — converted (fake) speech
+    generator_family: mixed-generation
+    content_category: diverse
+
+  # -- music --
+
+  - name: audiospoofing-mini-fake
+    path: 34data/audiospoofing-mini-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: AudioSpoofing mini dataset — synthetic speech subset
+    generator_family: mixed-generation
+    content_category: music
+
+  # -- sounds --
+
+  - name: fakesound2-fake
+    path: 34data/fakesound2-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: FakeSound 2 — AI-generated environmental/ambient audio
+    generator_family: mixed-generation
+    content_category: sounds
+
+  # -- speech --
+
+  - name: ShiftySpeech
+    path: ash56/ShiftySpeech
+    modality: audio
+    media_type: synthetic
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: [TTS]
+    notes: 3000 hours of synthetic speech from 7 domains, 6 TTS systems, 12 vocoders, and 3 languages.
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: cosyvoice-instruct
+    path: LALM-emotional-vulnerability/cosyvoice-instruct
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: cvoice-small-fake
+    path: 34data/cvoice-small-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: Common Voice small subset — TTS/voice-converted fake speech
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: emovoice-db
+    path: yhaha/EmoVoice-DB
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: Synthetic emotional voice database
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: fake-voices
+    path: unfake/fake_voices
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 50
+    archives_per_dataset: 20
+    notes: Synthetic fake voices
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: gemini-flash-speech
+    path: shb777/gemini-flash-2.0-speech
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 333
+    archives_per_dataset: 1
+    data_columns: [kore, puck]
+    notes: Gemini Flash 2.0 Speech
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: laion-reference-ai-voices
+    path: laion/reference_ai_voices_with_timbre_annotations
+    modality: audio
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 200
+    archives_per_dataset: 2
+    notes: Reference AI Voices with Timbre Annotations
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: thorsten-voice
+    path: Thorsten-Voice/TV-44kHz-Full
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+    notes: German TTS voice - Thorsten
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ultravoice-cjk
+    path: tutu0604/UltraVoice
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 100
+    archives_per_dataset: 10
+    notes: Chinese/Japanese/Korean TTS voices
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: v14-fake-natspeech-diffspeech
+    path: 34data/v14-fake-natspeech-diffspeech
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: speech

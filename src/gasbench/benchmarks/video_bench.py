@@ -280,6 +280,7 @@ async def run_video_benchmark(
     skip_missing: bool = False,
     holdout_weight: float = 1.0,
     holdouts_only: bool = False,
+    content_category: Optional[str] = None,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -329,6 +330,7 @@ async def run_video_benchmark(
             dataset_filters=dataset_filters,
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
+            content_category=content_category,
         )
         plan = build_plan(logger, run_config, input_specs)
         if not plan:

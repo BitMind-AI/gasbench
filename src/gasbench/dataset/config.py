@@ -76,6 +76,8 @@ class BenchmarkDatasetConfig:
 
     generator_family: Optional[str] = None
 
+    content_category: Optional[str] = None
+
 
 def get_benchmark_size(
     modality: str, mode: str = "full", yaml_path: Optional[str] = None
@@ -189,8 +191,14 @@ def discover_benchmark_datasets(
     gasstation_only: bool = False,
     no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
+    content_category: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark datasets for a given modality ("image", "video", or "audio")."""
+    """Return list of available benchmark datasets for a given modality.
+
+    Args:
+        content_category: If set, only include datasets matching this
+            content_category (e.g., "faces", "documents").
+    """
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
     if modality not in dataset_source:
         return []
@@ -201,6 +209,9 @@ def discover_benchmark_datasets(
 
     if no_gasstation:
         datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+
+    if content_category:
+        datasets = [d for d in datasets if d.content_category == content_category]
 
     datasets = apply_mode_to_datasets(datasets, mode)
 
@@ -410,6 +421,7 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
                 filter_column=dataset_dict.get("filter_column"),
                 filter_value=dataset_dict.get("filter_value"),
                 generator_family=dataset_dict.get("generator_family"),
+                content_category=dataset_dict.get("content_category"),
             )
             if modality in result:
                 result[modality].append(config)
@@ -537,6 +549,7 @@ def load_holdout_datasets_from_yaml(
                 filter_column=dataset_dict.get("filter_column"),
                 filter_value=dataset_dict.get("filter_value"),
                 generator_family=dataset_dict.get("generator_family"),
+                content_category=dataset_dict.get("content_category"),
             )
             configs.append(config)
         
@@ -704,6 +717,7 @@ def load_benchmark_datasets_from_yaml(
                                 filter_column=dataset_dict.get("filter_column"),
                                 filter_value=dataset_dict.get("filter_value"),
                                 generator_family=dataset_dict.get("generator_family"),
+                                content_category=dataset_dict.get("content_category"),
                             )
                             result[modality].append(config)
                 
@@ -737,6 +751,7 @@ def load_benchmark_datasets_from_yaml(
                                 filter_column=dataset_dict.get("filter_column"),
                                 filter_value=dataset_dict.get("filter_value"),
                                 generator_family=dataset_dict.get("generator_family"),
+                                content_category=dataset_dict.get("content_category"),
                             )
                             result[modality].append(config)
                 return result
@@ -775,6 +790,7 @@ def load_benchmark_datasets_from_yaml(
                             filter_column=dataset_dict.get("filter_column"),
                             filter_value=dataset_dict.get("filter_value"),
                             generator_family=dataset_dict.get("generator_family"),
+                            content_category=dataset_dict.get("content_category"),
                         )
                         result[modality].append(config)
             except Exception as e:

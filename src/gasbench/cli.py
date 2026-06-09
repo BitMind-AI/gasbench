@@ -143,6 +143,7 @@ def command_run(args):
                 holdout_weight=getattr(args, "holdout_weight", 1.0),
                 holdouts_only=holdouts_only,
                 dataset_filters=getattr(args, "datasets", None),
+                content_category=args.content_category,
             )
         )
 
@@ -527,6 +528,14 @@ See docs/Safetensors.md for detailed requirements.
         default=None,
         help="Only run datasets whose names contain one of these substrings (case-insensitive). "
              "E.g. --datasets 34data/ pica-100k",
+    )
+
+    run_parser.add_argument(
+        "--content-category",
+        type=str,
+        default=None,
+        metavar="CATEGORY",
+        help="Only run datasets matching a content_category (e.g. faces, documents)",
     )
 
     run_parser.set_defaults(func=command_run)

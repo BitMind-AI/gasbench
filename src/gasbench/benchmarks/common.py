@@ -39,6 +39,7 @@ class BenchmarkRunConfig:
     dataset_filters: Optional[List[str]] = None
     holdout_weight: float = 1.0  # Weight multiplier for holdout datasets in final score
     holdouts_only: bool = False  # If True, only run holdout datasets (requires holdout_config_path)
+    content_category: Optional[str] = None  # Filter datasets by content_category (e.g. "faces")
 
 
 @dataclass
@@ -73,6 +74,7 @@ def build_plan(
             mode=config.mode,
             gasstation_only=config.gasstation_only,
             yaml_path=config.dataset_config_path,
+            content_category=config.content_category,
         )
 
     if config.holdout_config_path and not config.gasstation_only:

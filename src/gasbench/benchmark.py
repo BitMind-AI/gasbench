@@ -35,6 +35,7 @@ async def run_benchmark(
     skip_missing: bool = False,
     holdout_weight: float = 1.0,
     holdouts_only: bool = False,
+    content_category: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -49,6 +50,7 @@ async def run_benchmark(
         dataset_config: Optional path to custom dataset YAML config file (default: uses bundled config)
         dataset_filters: Optional list of dataset name patterns to filter by (case-insensitive partial matches)
         skip_missing: If True, skip datasets that are not already cached (do not download)
+        content_category: Optional content category to filter datasets by (e.g. "faces")
         holdout_weight: Weight multiplier for holdout datasets in final score calculation.
             Holdout datasets (identified by '-holdout-' in name) get this weight, regular
             datasets get weight=1.0. Higher values give holdout datasets more impact on
@@ -111,6 +113,7 @@ async def run_benchmark(
             skip_missing,
             holdout_weight,
             holdouts_only,
+            content_category,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -205,10 +208,11 @@ async def execute_benchmark(
     skip_missing: bool = False,
     holdout_weight: float = 1.0,
     holdouts_only: bool = False,
+    content_category: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category})")
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
@@ -230,6 +234,7 @@ async def execute_benchmark(
             skip_missing=skip_missing,
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
+            content_category=content_category,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -251,6 +256,7 @@ async def execute_benchmark(
             skip_missing=skip_missing,
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
+            content_category=content_category,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
@@ -272,6 +278,7 @@ async def execute_benchmark(
             skip_missing=skip_missing,
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
+            content_category=content_category,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

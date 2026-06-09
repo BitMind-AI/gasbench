@@ -191,8 +191,14 @@ def discover_benchmark_datasets(
     gasstation_only: bool = False,
     no_gasstation: bool = False,
     yaml_path: Optional[str] = None,
+    content_category: Optional[str] = None,
 ) -> List[BenchmarkDatasetConfig]:
-    """Return list of available benchmark datasets for a given modality ("image", "video", or "audio")."""
+    """Return list of available benchmark datasets for a given modality.
+
+    Args:
+        content_category: If set, only include datasets matching this
+            content_category (e.g., "faces", "documents").
+    """
     dataset_source = load_benchmark_datasets_from_yaml(yaml_path)
     if modality not in dataset_source:
         return []
@@ -203,6 +209,9 @@ def discover_benchmark_datasets(
 
     if no_gasstation:
         datasets = [d for d in datasets if "gasstation" not in d.name.lower()]
+
+    if content_category:
+        datasets = [d for d in datasets if d.content_category == content_category]
 
     datasets = apply_mode_to_datasets(datasets, mode)
 

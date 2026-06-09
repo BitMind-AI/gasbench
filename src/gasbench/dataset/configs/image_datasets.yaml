@@ -16,6 +16,8 @@ datasets:
     archives_per_dataset: -1
     generator_family: mixed-generation
     notes: "Gas station specific synthetic images"
+    generator_family: gasstation
+    content_category: diverse
 
   - name: flickr30k
     path: nlphuji/flickr30k
@@ -25,6 +27,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: ideogram-27k
     path: bitmind/ideogram-27k
@@ -34,6 +38,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: ideogram
+    generator_family: ideogram
+    content_category: diverse
 
   - name: Dalle-3-1M
     path: bitmind/Dalle-3-1M
@@ -44,6 +50,8 @@ datasets:
     archives_per_dataset: 5
     generator_family: dalle
     generator_variant: dalle-3
+    generator_family: dalle
+    content_category: diverse
 
   - name: SFHQ-part1
     path: bitmind/SyntheticFacesHQ
@@ -55,6 +63,9 @@ datasets:
     include_paths: ["SFHQ-part1.zip"]
     generator_family: stylegan
     generator_variant: stylegan2
+    generator_family: stylegan
+    generator_variant: stylegan2
+    content_category: faces
 
   - name: SFHQ-part2
     path: bitmind/SyntheticFacesHQ
@@ -66,6 +77,9 @@ datasets:
     include_paths: ["SFHQ-part2.zip"]
     generator_family: stylegan
     generator_variant: stylegan2
+    generator_family: stylegan
+    generator_variant: stylegan2
+    content_category: faces
 
   - name: SFHQ-part3
     path: bitmind/SyntheticFacesHQ
@@ -77,6 +91,9 @@ datasets:
     include_paths: ["SFHQ-part3.zip"]
     generator_family: stylegan
     generator_variant: stylegan2
+    generator_family: stylegan
+    generator_variant: stylegan2
+    content_category: faces
 
   - name: SFHQ-part4
     path: bitmind/SyntheticFacesHQ
@@ -88,6 +105,9 @@ datasets:
     include_paths: ["SFHQ-part4.zip"]
     generator_family: stylegan
     generator_variant: stylegan2
+    generator_family: stylegan
+    generator_variant: stylegan2
+    content_category: faces
 
   - name: leonardo-stablecog
     path: bitmind/Deepfake-leonardo-stablecog
@@ -97,6 +117,8 @@ datasets:
     archives_per_dataset: 4
     generator_family: sd
     generator_variant: leonardo-stablecog
+    generator_family: leonardo
+    content_category: diverse
 
   - name: fashionpedia
     path: detection-datasets/fashionpedia
@@ -106,6 +128,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: fashion
 
   - name: megalith-10m
     path: drawthingsai/megalith-10m
@@ -115,6 +139,8 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: eidon-image
     path: bitmind/bm-eidon-image
@@ -123,6 +149,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: celeb-a-hq
     path: bitmind/celeb-a-hq
@@ -131,6 +159,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: ffhq-256
     path: bitmind/ffhq-256
@@ -139,6 +169,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: ms-coco-unique
     path: bitmind/MS-COCO-unique-256
@@ -147,6 +179,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: journeydb
     path: bitmind/JourneyDB
@@ -155,6 +189,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: midjourney
+    generator_family: midjourney
+    content_category: diverse
 
   - name: genimage-midjourney
     path: bitmind/GenImage_MidJourney
@@ -163,6 +199,8 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
     generator_family: midjourney
+    generator_family: midjourney
+    content_category: diverse
 
   - name: aura-imagegen
     path: bitmind/bm-aura-imagegen
@@ -172,6 +210,8 @@ datasets:
     archives_per_dataset: 5
     generator_family: sora
     generator_variant: aura
+    generator_family: aura
+    content_category: diverse
 
   - name: imagine-grok
     path: bitmind/bm-imagine
@@ -181,6 +221,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: grok
+    generator_family: grok
+    content_category: diverse
 
   - name: face-swap
     path: bitmind/face-swap
@@ -190,6 +232,8 @@ datasets:
     archives_per_dataset: 3
     generator_family: faceswap
     generator_variant: insightface-inswapper
+    generator_family: faceswap
+    content_category: faces
 
   - name: open-image-v7
     path: bitmind/open-image-v7-256
@@ -198,6 +242,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: afhq
     path: bitmind/AFHQ
@@ -206,6 +252,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: animals
 
   - name: lfw
     path: bitmind/lfw
@@ -214,6 +262,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: caltech-256
     path: bitmind/caltech-256
@@ -222,6 +272,8 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 4
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: caltech-101
     path: bitmind/caltech-101
@@ -230,6 +282,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: dtd-textures
     path: bitmind/dtd
@@ -238,6 +292,8 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    generator_family: real
+    content_category: art
 
   - name: idoc-mugshots
     path: bitmind/idoc-mugshots-images
@@ -246,6 +302,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: klingai-images
     path: bitmind/klingai-images
@@ -257,6 +315,8 @@ datasets:
     generator_family: klingai
 
   # FakeClue dataset - reorganized with label/category hierarchy
+    generator_family: klingai
+    content_category: diverse
   - name: fakeclue-fake-chameleon
     path: bitmind/FakeClue
     modality: image
@@ -266,6 +326,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/fake/chameleon/"]
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: fakeclue-fake-doc
     path: bitmind/FakeClue
@@ -276,6 +338,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/fake/doc/"]
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: documents
 
   - name: fakeclue-fake-ffpp
     path: bitmind/FakeClue
@@ -286,6 +350,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/fake/ff++/"]
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: fakeclue-fake-genimage
     path: bitmind/FakeClue
@@ -296,6 +362,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/fake/genimage/"]
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: fakeclue-fake-satellite
     path: bitmind/FakeClue
@@ -306,6 +374,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/fake/satellite/"]
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: fakeclue-real-doc
     path: bitmind/FakeClue
@@ -316,6 +386,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/real/doc/"]
     generator_family: real
+    generator_family: real
+    content_category: documents
 
   - name: fakeclue-real-ffpp
     path: bitmind/FakeClue
@@ -326,6 +398,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/real/ff++/"]
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: fakeclue-real-genimage
     path: bitmind/FakeClue
@@ -336,6 +410,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["data/real/genimage/"]
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: fakeclue-real-satellite
     path: bitmind/FakeClue
@@ -348,6 +424,8 @@ datasets:
     generator_family: real
 
   # PICA-100K - Special: has two image columns (src_img and tgt_img)
+    generator_family: real
+    content_category: diverse
   - name: pica-100k
     path: Andrew613/PICA-100K
     modality: image
@@ -358,6 +436,8 @@ datasets:
     data_columns: ["src_img", "tgt_img"]
     notes: "Video-derived images stored in both src_img and tgt_img columns"
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: text-to-image-2m
     path: jackyhate/text-to-image-2M
@@ -368,6 +448,8 @@ datasets:
     archives_per_dataset: 2
     generator_family: flux
     generator_variant: flux-dev
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: nano-banana-150k
     path: bitmind/Nano-banana-150k
@@ -378,6 +460,8 @@ datasets:
     archives_per_dataset: 1
     generator_family: mixed-generation
     notes: "Nano Banana dataset"
+    generator_family: nanobanana
+    content_category: diverse
 
   - name: cosyn-400k
     path: allenai/CoSyn-400K
@@ -387,6 +471,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: retrievatar
     path: CausalLM/Retrievatar
@@ -396,6 +482,8 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: medvision
     path: YongchengYAO/MedVision
@@ -406,6 +494,8 @@ datasets:
     archives_per_dataset: 20
     include_paths: ["Datasets"]
     generator_family: real
+    generator_family: real
+    content_category: medical
 
   - name: food101
     path: ethz/food101
@@ -415,6 +505,8 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    generator_family: real
+    content_category: food
 
   - name: mmmu
     path: MMMU/MMMU
@@ -424,6 +516,8 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
     generator_family: real
+    generator_family: real
+    content_category: medical
 
   - name: pubmedvision
     path: FreedomIntelligence/PubMedVision
@@ -433,6 +527,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: medical
   
   - name: MMMG
     path: MMMGBench/MMMG
@@ -443,6 +539,8 @@ datasets:
     archives_per_dataset: -1
     data_columns: ["base_image"]
     generator_family: real
+    generator_family: real
+    content_category: medical
 
   - name: bananamark-dataset
     path: Rapidata/bananamark-dataset
@@ -453,6 +551,8 @@ datasets:
     archives_per_dataset: 2
     data_columns: ["image1", "image2"]
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: documents
 
   - name: wikiart
     path: huggan/wikiart
@@ -462,6 +562,8 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 4
     generator_family: real
+    generator_family: real
+    content_category: art
 
   - name: OpenScene
     path: OpenDriveLab/OpenScene
@@ -472,6 +574,8 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["openscene_sensor_test_camera", "openscene_sensor_trainval_camera"]
     generator_family: real
+    generator_family: real
+    content_category: vehicles
 
   - name: idnet-2025
     path: cactuslab/IDNet-2025
@@ -485,6 +589,8 @@ datasets:
     generator_variant: sd2
 
   # ── V11 open-source real-image datasets (parquet, "image" binary column) ──
+    generator_family: idnet
+    content_category: documents
   - name: 47-plant-species
     path: 34data/47-plant-species
     modality: image
@@ -493,6 +599,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: animals
 
   - name: animal-10
     path: 34data/animal-10
@@ -502,6 +610,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: animals
 
   - name: birds-525-species
     path: 34data/birds-525-species
@@ -511,6 +621,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: animals
 
   - name: cub-200-2011
     path: 34data/cub-200-2011
@@ -520,6 +632,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: plants
 
   - name: oxford-flower-102
     path: dpdl-benchmark/oxford_flowers102
@@ -530,6 +644,8 @@ datasets:
     archives_per_dataset: 1
     include_paths: ["train"]
     generator_family: real
+    generator_family: real
+    content_category: plants
 
   - name: animal-90
     path: 34data/animal-90
@@ -539,6 +655,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: animals
 
   - name: fruits-vegetables
     path: 34data/fruits-vegetables
@@ -548,6 +666,8 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    generator_family: real
+    content_category: food
 
   - name: sea-animals-image
     path: 34data/sea-animals-image
@@ -559,6 +679,8 @@ datasets:
     generator_family: real
 
   # ── Released v12 holdouts ─────────────────────────────────────────────────
+    generator_family: real
+    content_category: animals
   - name: nano-receipts
     path: 34data/nano-receipts
     modality: image
@@ -567,6 +689,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: documents
 
   - name: receipts-i2i
     path: 34data/receipts-i2i
@@ -576,6 +700,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: documents
 
   - name: fairface
     path: HuggingFaceM4/FairFace
@@ -586,6 +712,8 @@ datasets:
     archives_per_dataset: 2
     notes: "FairFace - balanced demographic face dataset (WACV 2021)"
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: foodseg103
     path: EduardoPacheco/FoodSeg103
@@ -596,6 +724,8 @@ datasets:
     archives_per_dataset: 2
     notes: "FoodSeg103 - food segmentation benchmark (ACM MM 2021, Apache 2.0)"
     generator_family: real
+    generator_family: real
+    content_category: food
 
   - name: openfake-fake
     path: ComplexDataLab/OpenFake
@@ -608,6 +738,8 @@ datasets:
     filter_value: fake
     notes: "OpenFake synthetic images (CC-BY-SA 4.0) — streamed with row filter"
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: openfake-real
     path: ComplexDataLab/OpenFake
@@ -622,6 +754,8 @@ datasets:
     generator_family: real
 
   # Datasets requiring 34data upload before use
+    generator_family: real
+    content_category: diverse
   - name: bdd100k-weather-classification
     path: 34data/bdd100k-weather-classification
     modality: image
@@ -631,6 +765,8 @@ datasets:
     archives_per_dataset: 1
     notes: "BDD100K weather classification subset - requires 34data upload"
     generator_family: real
+    generator_family: real
+    content_category: vehicles
 
   - name: human-action-recognition-har-dataset
     path: Bingsu/Human_Action_Recognition
@@ -644,6 +780,8 @@ datasets:
     generator_family: real
 
   # ── Released v13 holdouts ─────────────────────────────────────────────────
+    generator_family: real
+    content_category: action
   - name: digi2real
     path: 34data/digi2real
     modality: image
@@ -654,6 +792,8 @@ datasets:
     notes: "digiface processed by arcface based realism pipeline"
     generator_family: sd
     generator_variant: arc2face
+    generator_family: mixed-generation
+    content_category: faces
 
   - name: fake-animals-images
     path: 34data/fake-animals-images
@@ -665,6 +805,9 @@ datasets:
     notes: "AI-generated fake animal images"
     generator_family: sd
     generator_variant: sd35
+    generator_family: sd
+    generator_variant: sd35
+    content_category: animals
 
   - name: animalweb
     path: 34data/animalweb
@@ -675,6 +818,8 @@ datasets:
     archives_per_dataset: 1
     notes: "AnimalWeb animal face detection and alignment dataset"
     generator_family: real
+    generator_family: real
+    content_category: animals
 
   - name: labelme-12-50k
     path: 34data/labelme-12-50k
@@ -685,6 +830,8 @@ datasets:
     archives_per_dataset: 1
     notes: "LabelMe 12-class 50k image dataset"
     generator_family: real
+    generator_family: real
+    content_category: documents
 
   - name: uagd
     path: 34data/uagd
@@ -695,6 +842,8 @@ datasets:
     archives_per_dataset: 1
     notes: "UAGD urban AI-generated detection dataset — real images"
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: imdb-crop
     path: 34data/imdb-crop
@@ -707,6 +856,8 @@ datasets:
     generator_family: real
 
 # ── Released v14 holdouts ─────────────────────────────────────────────────
+    generator_family: real
+    content_category: faces
   - name: Synthetic-Images-Fire-Scenario
     path: 34data/Synthetic-Images-Fire-Scenario
     modality: image
@@ -716,6 +867,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: synthetic-dataset
     path: 34data/synthetic-dataset
@@ -727,6 +880,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: mixed-generation
     generator_variant: sidtd
+    generator_family: mixed-generation
+    generator_variant: sidtd
+    content_category: diverse
 
   - name: Midjourneyv5-5K
     path: 34data/Midjourneyv5-5K
@@ -738,6 +894,8 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: midjourney
     generator_variant: midjourney-v5
+    generator_family: midjourney
+    content_category: diverse
 
   - name: fake_sdxl_12k-part-1
     path: 34data/fake_sdxl_12k-part-1
@@ -749,6 +907,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
     generator_variant: sdxl
+    generator_family: sd
+    generator_variant: sdxl
+    content_category: art
 
   - name: fake_sdxl_12k-part-2
     path: 34data/fake_sdxl_12k-part-2
@@ -760,6 +921,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
     generator_variant: sdxl
+    generator_family: sd
+    generator_variant: sdxl
+    content_category: art
 
   - name: fake_sdxl_12k-part-3
     path: 34data/fake_sdxl_12k-part-3
@@ -771,6 +935,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
     generator_variant: sdxl
+    generator_family: sd
+    generator_variant: sdxl
+    content_category: art
 
   - name: fake_sdxl_12k-part-4
     path: 34data/fake_sdxl_12k-part-4
@@ -782,6 +949,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
     generator_variant: sdxl
+    generator_family: sd
+    generator_variant: sdxl
+    content_category: art
 
   - name: Synthetic-Dog-Images
     path: 34data/Synthetic-Dog-Images
@@ -793,6 +963,9 @@ datasets:
     notes: "JuggernautXL"
     generator_family: sd
     generator_variant: sdxl
+    generator_family: sd
+    generator_variant: sdxl
+    content_category: animals
 
   - name: synthetic_data_0.1
     path: 34data/synthetic_data_0.1
@@ -803,6 +976,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
+    generator_family: sd
+    content_category: diverse
 
   - name: syntheticdata_0.15
     path: 34data/syntheticdata_0.15
@@ -813,6 +988,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: ptd-synthetic
     path: 34data/ptd-synthetic
@@ -823,6 +1000,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
+    generator_family: sd
+    content_category: diverse
 
   - name: image_patches_raw
     path: 34data/image_patches_raw
@@ -833,6 +1012,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: stable-imagenet1k-flat
     path: 34data/stable-imagenet1k-flat
@@ -844,6 +1025,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
     generator_variant: sd21
+    generator_family: sd
+    generator_variant: sd21
+    content_category: diverse
 
   - name: SDv15R-dpmsolver-25-15K-part0
     path: 34data/SDv15R-dpmsolver-25-15K-part0
@@ -855,6 +1039,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
     generator_variant: sd15
+    generator_family: sd
+    generator_variant: sd15
+    content_category: art
 
   - name: SDv15R-dpmsolver-25-15K-part1
     path: 34data/SDv15R-dpmsolver-25-15K-part1
@@ -866,6 +1053,9 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: sd
     generator_variant: sd15
+    generator_family: sd
+    generator_variant: sd15
+    content_category: art
 
   - name: SDv15R-dpmsolver-25-15K-part3
     path: 34data/SDv15R-dpmsolver-25-15K-part3
@@ -876,6 +1066,9 @@ datasets:
     archives_per_dataset: -1
     generator_family: sd
     generator_variant: sd15
+    generator_family: sd
+    generator_variant: sd15
+    content_category: art
 
   - name: 60k-car
     path: 34data/60k-car
@@ -885,6 +1078,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: vehicles
 
   - name: large-receipt-image-dataset-SRD
     path: 34data/large-receipt-image-dataset-SRD
@@ -895,6 +1090,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: documents
 
   - name: FaceDisguiseDatabase-image
     path: 34data/FaceDisguiseDatabase-image
@@ -905,6 +1102,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: SoloFace
     path: 34data/SoloFace
@@ -915,6 +1114,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: Mandrillus-Face
     path: 34data/Mandrillus-Face
@@ -925,6 +1126,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: Aslan-mingye-OCR-Quality
     path: 34data/Aslan-mingye-OCR-Quality
@@ -935,6 +1138,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: documents
 
   - name: FDDB_Dataset
     path: 34data/FDDB_Dataset
@@ -945,6 +1150,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: nepali-food-images
     path: 34data/nepali-food-images
@@ -955,6 +1162,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: food
 
   - name: Shooter-real
     path: 34data/Shooter-real
@@ -965,6 +1174,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: action
 
   - name: M6Doc_test
     path: 34data/M6Doc_test
@@ -975,6 +1186,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: documents
 
   - name: SmartDoc-QA
     path: 34data/SmartDoc-QA
@@ -985,6 +1198,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: documents
 
   - name: nepali-currency-dataset
     path: 34data/nepali-currency-dataset
@@ -994,6 +1209,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: currency
 
   - name: v14-Images-vivid
     path: 34data/v14-Images-vivid
@@ -1004,6 +1221,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: v14-vil100-png
     path: 34data/v14-vil100-png
@@ -1014,6 +1233,8 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: real
+    generator_family: real
+    content_category: aerial
 
   - name: v14-vil100-jpeg
     path: 34data/v14-vil100-jpeg
@@ -1023,6 +1244,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: aerial
 
   - name: human-fg-net-real-face
     path: 34data/human-fg-net-real-face
@@ -1032,6 +1255,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: inst-it-dataset-videos-raw
     path: 34data/inst-it-dataset-videos-raw
@@ -1041,6 +1266,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: inst-it-dataset-videos-vpt
     path: 34data/inst-it-dataset-videos-vpt
@@ -1050,6 +1277,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: diverse
 
   - name: sg2-n10k-arc-r14-lang-v1
     path: 34data/sg2-n10k-arc-r14-lang-v1
@@ -1059,6 +1288,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    generator_family: mixed-generation
+    content_category: diverse
 
   - name: vtuav-dataset-test-lt-001
     path: 34data/vtuav-dataset-test-lt-001
@@ -1068,6 +1299,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: aerial
 
   - name: arc2face-1
     path: 34data/arc2face-1
@@ -1078,6 +1311,8 @@ datasets:
     archives_per_dataset: -1
     generator_family: sd
     generator_variant: arc2face
+    generator_family: arc2face
+    content_category: faces
 
   - name: casia_web_face_part1
     path: 34data/casia_web_face_part1
@@ -1087,6 +1322,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: casia_web_face_part10
     path: 34data/casia_web_face_part10
@@ -1096,6 +1333,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: casia_web_face_part11
     path: 34data/casia_web_face_part11
@@ -1105,6 +1344,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: casia_web_face_part12
     path: 34data/casia_web_face_part12
@@ -1114,6 +1355,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: casia_web_face_part13
     path: 34data/casia_web_face_part13
@@ -1124,56 +1367,23 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
 
-  - name: posedreamer28
-    path: 34data/posedreamer28
+
+  # ── PoseDreamer — diffusion-based photorealistic human generation ──
+    generator_family: real
+    content_category: faces
+
+  - name: posedreamer
+    path: prosperolo/PoseDreamer
     modality: image
     media_type: synthetic
     source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
+    data_columns: ["image"]
+    media_per_archive: 500
+    archives_per_dataset: 5
+    notes: "500K+ synthetic human images with 3D pose labels"
     generator_family: sd
+    content_category: faces
     generator_variant: posedreamer
-
-  - name: posedreamer29
-    path: 34data/posedreamer29
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: sd
-    generator_variant: posedreamer
-
-  - name: posedreamer30
-    path: 34data/posedreamer30
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: sd
-    generator_variant: posedreamer
-
-  - name: posedreamer31
-    path: 34data/posedreamer31
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: sd
-    generator_variant: posedreamer
-
-  - name: posedreamer32
-    path: 34data/posedreamer32
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: sd
-    generator_variant: posedreamer
-
   - name: real-human-faces-data-set
     path: 34data/real-human-faces-data-set
     modality: image
@@ -1182,6 +1392,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: shhq-1.0
     path: 34data/shhq-1.0
@@ -1191,6 +1403,8 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    generator_family: real
+    content_category: faces
 
   - name: spoof_png
     path: 34data/spoof_png
@@ -1201,3 +1415,5 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     generator_variant: presentation-attack
+    generator_family: real
+    content_category: faces

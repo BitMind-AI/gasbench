@@ -15,6 +15,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: gasstation
+    content_category: diverse
 
   - name: eidon-video
     path: bitmind/bm-eidon-video
@@ -24,6 +25,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: imagenet-vidvrd
     path: shangxd/imagenet-vidvrd
@@ -33,6 +35,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: diverse
 
   - name: pe-video
     path: facebook/PE-Video
@@ -42,6 +45,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: diverse
 
   - name: veo3-preferences
     path: Rapidata/text-2-video-human-preferences-veo3
@@ -51,6 +55,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: veo3
+    content_category: diverse
 
   - name: veo2-preferences
     path: Rapidata/text-2-video-human-preferences-veo2
@@ -61,6 +66,7 @@ datasets:
     archives_per_dataset: -1
     generator_family: veo
     generator_variant: veo2
+    content_category: diverse
 
   - name: aura-video
     path: bitmind/aura-video
@@ -70,6 +76,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: sora
+    content_category: diverse
 
   - name: aislop-videos
     path: bitmind/aislop-videos
@@ -79,6 +86,7 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: semisynthetic-video
     path: bitmind/semisynthetic-video
@@ -88,6 +96,7 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: fakeparts-t2v
     path: hi-paris/FakeParts
@@ -98,6 +107,7 @@ datasets:
     archives_per_dataset: 10
     include_paths: ["T2V/"]
     generator_family: mixed-generation
+    content_category: art
 
   - name: fakeparts-faceswap
     path: hi-paris/FakeParts
@@ -108,6 +118,7 @@ datasets:
     archives_per_dataset: 10
     include_paths: ["Faceswap/"]
     generator_family: mixed-generation
+    content_category: faces
 
   - name: fakeparts-inpainting
     path: hi-paris/FakeParts
@@ -118,6 +129,7 @@ datasets:
     archives_per_dataset: 10
     include_paths: ["Inpainting/"]
     generator_family: mixed-generation
+    content_category: art
 
   - name: fakeparts-outpainting
     path: hi-paris/FakeParts
@@ -128,6 +140,7 @@ datasets:
     archives_per_dataset: 10
     include_paths: ["Outpainting/"]
     generator_family: mixed-generation
+    content_category: art
 
   - name: fakeparts-stylechange
     path: hi-paris/FakeParts
@@ -138,6 +151,7 @@ datasets:
     archives_per_dataset: 10
     include_paths: ["Change_of_style/"]
     generator_family: mixed-generation
+    content_category: art
 
   - name: deepaction-pexels
     path: faridlab/deepaction_v1
@@ -148,6 +162,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["Pexels/"]
     generator_family: real
+    content_category: action
 
   - name: deepaction-bdanimate
     path: faridlab/deepaction_v1
@@ -159,6 +174,7 @@ datasets:
     include_paths: ["BDAnimateDiffLightning/"]
     generator_family: animatediff
     generator_variant: bdanimate
+    content_category: action
 
   - name: deepaction-cogvideox5b
     path: faridlab/deepaction_v1
@@ -170,6 +186,7 @@ datasets:
     include_paths: ["CogVideoX5B/"]
     generator_family: cogvideox
     generator_variant: cogvideox
+    content_category: action
 
   - name: deepaction-runwayml
     path: faridlab/deepaction_v1
@@ -180,6 +197,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["RunwayML/"]
     generator_family: runway
+    content_category: action
 
   - name: deepaction-stablediffusion
     path: faridlab/deepaction_v1
@@ -190,6 +208,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["StableDiffusion/"]
     generator_family: mixed-generation
+    content_category: action
 
   - name: deepaction-veo
     path: faridlab/deepaction_v1
@@ -200,6 +219,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["Veo/"]
     generator_family: veo
+    content_category: action
 
   - name: deepaction-videopoet
     path: faridlab/deepaction_v1
@@ -210,6 +230,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["VideoPoet/"]
     generator_family: videopoet
+    content_category: action
 
   - name: moviegen-bench
     path: saiyan-world/Goku-MovieGenBench
@@ -219,6 +240,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: goku
+    content_category: diverse
 
   - name: klingai-videos
     path: bitmind/klingai-videos
@@ -228,6 +250,7 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
     generator_family: klingai
+    content_category: diverse
 
   - name: physics-101
     path: Hemgg/Physics-101-Video-dataset
@@ -237,6 +260,7 @@ datasets:
     media_per_archive: 100
     archives_per_dataset: 10
     generator_family: real
+    content_category: diverse
 
   - name: vidprom
     path: bitmind/VidProM
@@ -246,6 +270,7 @@ datasets:
     media_per_archive: 200
     archives_per_dataset: 5
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: moments-in-time
     path: Pai3dot14/Moments_in_Time_Raw_50k
@@ -255,6 +280,7 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    content_category: action
 
   - name: ucf101-fullvideo
     path: bitmind/UCF101Fullvideo
@@ -264,6 +290,7 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    content_category: diverse
 
   - name: vap-data
     path: BianYx/VAP-Data
@@ -275,6 +302,7 @@ datasets:
 
   ## naming nuances noted in comments
     generator_family: mixed-generation
+    content_category: diverse
   - name: dfd-real
     path: Hemgg/deep-fake-detection-dfd-entire-original-datasett # extra t
     modality: video
@@ -284,6 +312,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["DFD_original sequences"] # space
     generator_family: real
+    content_category: faces
 
   - name: dfd-fake
     path: Hemgg/deep-fake-detection-dfd-entire-original-datasett # extra t
@@ -294,6 +323,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["DFD_manipulated_sequences"]
     generator_family: mixed-generation
+    content_category: faces
 
   - name: ByteDance_Synthetic_Videos
     path: kevinzzz8866/ByteDance_Synthetic_Videos
@@ -303,6 +333,7 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: rendered
+    content_category: diverse
 
   - name: first-impressions-v2
     path: yeray142/first-impressions-v2
@@ -312,6 +343,7 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    content_category: faces
 
   - name: VideoUFO
     path: WenhaoWang/VideoUFO
@@ -322,6 +354,7 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["VideoUFO_tar"]
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: VideoDPO-10k
     path: chungimungi/VideoDPO-10k
@@ -331,6 +364,7 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: text-2-video-human-preferences-wan2.1
     path: Rapidata/text-2-video-human-preferences-wan2.1
@@ -340,6 +374,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: soccernet-10s-5class
     path: SushantGautam/SoccerNet-10s-5Class
@@ -349,6 +384,7 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: 1
     generator_family: real
+    content_category: action
 
   - name:  sports-qa
     path: HopLeeTop/Sports-QA
@@ -358,6 +394,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: action
 
   - name: egocentric-100k
     path: builddotai/Egocentric-100K
@@ -367,6 +404,7 @@ datasets:
     media_per_archive: 5
     archives_per_dataset: 200
     generator_family: real
+    content_category: action
 
   - name: synthetic-emotions
     path: aadityaubhat/synthetic-emotions
@@ -376,6 +414,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: open-vfx
     path: sophiaa/Open-VFX
@@ -385,6 +424,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: scenes
 
   - name: lovora-real
     path: cz-5f/LoVoRA
@@ -395,6 +435,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["src_video"]
     generator_family: real
+    content_category: diverse
   
   - name: lovora-fake
     path: cz-5f/LoVoRA
@@ -405,6 +446,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["tar_video"]
     generator_family: lovora
+    content_category: diverse
   
   - name: senorita-controllable-videos
     path: SENORITADATASET/Senorita
@@ -415,6 +457,7 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["controlable_videos_upload"]
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: senorita-inpainting
     path: SENORITADATASET/Senorita
@@ -425,6 +468,7 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["inpainting_upload"]
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: senorita-local-style-transfer
     path: SENORITADATASET/Senorita
@@ -435,6 +479,7 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["local_style_transfer_upload"]
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: senorita-obj-removal-videos
     path: SENORITADATASET/Senorita
@@ -445,6 +490,7 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["obj_removal_videos_upload", "obj_removal_videos_upload2"]
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: senorita-obj-swap
     path: SENORITADATASET/Senorita
@@ -455,6 +501,7 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["obj_swap_upload"]
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: senorita-style-transfer
     path: SENORITADATASET/Senorita
@@ -465,6 +512,7 @@ datasets:
     archives_per_dataset: 2
     include_paths: ["style_transfer_upload"]
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: FreeTacMan
     path: OpenDriveLab/FreeTacMan
@@ -474,6 +522,7 @@ datasets:
     media_per_archive: 1000
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: humanoid-everyday
     path: USC-GVL/humanoid-everyday
@@ -484,6 +533,7 @@ datasets:
     archives_per_dataset: -1
     include_paths: ["videos"]
     generator_family: real
+    content_category: action
 
   - name: workout-vids
     path: 34data/workout-vids
@@ -493,6 +543,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: human-activity-recognition
     path: 34data/human-activity-recognition
@@ -502,6 +553,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: action
 
   - name: include-50
     path: 34data/include-50
@@ -511,6 +563,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: action
 
   - name: real-life-violence
     path: 34data/real-life-violence
@@ -520,6 +573,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: action
 
   - name: v-librasil
     path: 34data/v-librasil
@@ -529,6 +583,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: diverse
 
   - name: video-fights
     path: 34data/video-fights
@@ -538,6 +593,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: action
 
   - name: fall-video
     path: 34data/fall-video
@@ -547,6 +603,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: diverse
 
   - name: wlasl
     path: 34data/wlasl
@@ -556,6 +613,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: action
 
   - name: rtfs-10k-real
     path: kontur-ai/rtfs-10k
@@ -567,6 +625,7 @@ datasets:
     include_paths: ["original_videos"]
     notes: "RTFS-10K real video-conference clips (Creative Commons)"
     generator_family: real
+    content_category: faces
 
   - name: rtfs-10k-inswapper
     path: kontur-ai/rtfs-10k
@@ -579,6 +638,7 @@ datasets:
     notes: "RTFS-10K inswapper face-swap deepfakes"
     generator_family: faceswap
     generator_variant: inswapper
+    content_category: faces
 
   - name: rtfs-10k-uniface
     path: kontur-ai/rtfs-10k
@@ -591,6 +651,7 @@ datasets:
     notes: "RTFS-10K uniface face-swap deepfakes"
     generator_family: faceswap
     generator_variant: uniface
+    content_category: faces
 
   - name: tencentarc-vpdata
     path: TencentARC/VPData
@@ -602,6 +663,7 @@ datasets:
     include_paths: ["videovo_raw_videos"]
     notes: "VPData - large-scale video inpainting dataset (SIGGRAPH 2025)"
     generator_family: real
+    content_category: diverse
 
   - name: xd-violence
     path: jherng/xd-violence
@@ -613,6 +675,7 @@ datasets:
     include_paths: ["data/video"]
     notes: "XD-Violence weakly-supervised violence detection benchmark (ECCV 2020)"
     generator_family: real
+    content_category: action
 
   - name: hockey-fight-videos
     path: 34data/hockey-fight-videos
@@ -622,6 +685,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: action
 
   - name: ucf50
     path: 34data/ucf50
@@ -631,6 +695,7 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
+    content_category: diverse
 
   - name: slovo
     path: 34data/slovo
@@ -641,6 +706,7 @@ datasets:
     archives_per_dataset: 2
     notes: "SLOVO Russian Sign Language dataset"
     generator_family: real
+    content_category: action
 
   - name: fmfcc-v-fake
     path: 34data/fmfcc-v-fake
@@ -651,6 +717,7 @@ datasets:
     archives_per_dataset: 2
     notes: "FMFCC-V deepfake video benchmark — manipulated videos"
     generator_family: mixed-generation
+    content_category: faces
 
   - name: fmfcc-v-real
     path: 34data/fmfcc-v-real
@@ -661,6 +728,7 @@ datasets:
     archives_per_dataset: 2
     notes: "FMFCC-V deepfake video benchmark — original real videos"
     generator_family: real
+    content_category: faces
 
   - name: polyglotfake-fake
     path: 34data/polyglotfake-fake
@@ -671,6 +739,7 @@ datasets:
     archives_per_dataset: 2
     notes: "PolyGlotFake multilingual deepfake benchmark — synthetic videos"
     generator_family: mixed-generation
+    content_category: faces
 
   - name: polyglotfake-real
     path: 34data/polyglotfake-real
@@ -681,6 +750,7 @@ datasets:
     archives_per_dataset: 2
     notes: "PolyGlotFake multilingual deepfake benchmark — real source videos"
     generator_family: real
+    content_category: faces
 
   - name: blendface
     path: 34data/blendface
@@ -692,6 +762,7 @@ datasets:
     notes: "BlendFace face-swap deepfake videos"
     generator_family: faceswap
     generator_variant: blendface
+    content_category: faces
 
   - name: dagan
     path: 34data/dagan
@@ -702,6 +773,7 @@ datasets:
     archives_per_dataset: 2
     notes: "DAGAN GAN-generated face animation deepfake videos"
     generator_family: dagan
+    content_category: faces
 
   - name: wav2lip
     path: 34data/wav2lip
@@ -712,6 +784,7 @@ datasets:
     archives_per_dataset: 2
     notes: "Wav2Lip lip-sync deepfake videos"
     generator_family: wav2lip
+    content_category: faces
 
   - name: rareact
     path: 34data/rareact
@@ -722,6 +795,7 @@ datasets:
     archives_per_dataset: 2
     notes: "RareAct YouTube rare compound action dataset"
     generator_family: real
+    content_category: action
 
   - name: vidor
     path: 34data/vidor
@@ -732,6 +806,7 @@ datasets:
     archives_per_dataset: 2
     notes: "ViDor video relation detection dataset"
     generator_family: real
+    content_category: action
 
   - name: v14-real-mmhu-h-videos
     path: 34data/v14-real-mmhu-h-videos
@@ -741,6 +816,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-mmhu-t-videos
     path: 34data/v14-real-mmhu-t-videos
@@ -750,6 +826,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-mmhu-v-videos
     path: 34data/v14-real-mmhu-v-videos
@@ -759,6 +836,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-vivid
     path: 34data/v14-real-vivid
@@ -768,6 +846,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-soccernet-10s-5class
     path: 34data/v14-real-soccernet-10s-5class
@@ -777,6 +856,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: v14-real-ofdvdnet
     path: 34data/v14-real-ofdvdnet
@@ -786,6 +866,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-or-video-mov
     path: 34data/v14-real-or-video-mov
@@ -795,6 +876,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-poultry-videos
     path: 34data/v14-real-poultry-videos
@@ -804,6 +886,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-spatialvid-group-001
     path: 34data/v14-real-spatialvid-group-001
@@ -813,6 +896,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-spatialvid-group-002
     path: 34data/v14-real-spatialvid-group-002
@@ -822,6 +906,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-spatialvid-group-003
     path: 34data/v14-real-spatialvid-group-003
@@ -831,6 +916,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-spatialvid-group-004
     path: 34data/v14-real-spatialvid-group-004
@@ -840,6 +926,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-spatialvid-group-005
     path: 34data/v14-real-spatialvid-group-005
@@ -849,6 +936,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-videoespresso-train-video-01
     path: 34data/v14-real-videoespresso-train-video-01
@@ -858,6 +946,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-videoespresso-train-video-02
     path: 34data/v14-real-videoespresso-train-video-02
@@ -867,6 +956,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-open-o3-video
     path: 34data/v14-real-open-o3-video
@@ -876,6 +966,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: scenes
 
   - name: v14-real-panflow-1
     path: 34data/v14-real-panflow-1
@@ -885,6 +976,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-panflow-2
     path: 34data/v14-real-panflow-2
@@ -894,6 +986,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-panflow-3
     path: 34data/v14-real-panflow-3
@@ -903,6 +996,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-panflow-4
     path: 34data/v14-real-panflow-4
@@ -912,6 +1006,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-dh-facevid-1k-0001
     path: 34data/v14-real-dh-facevid-1k-0001
@@ -921,6 +1016,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: v14-real-tracking-any-granularity-videos
     path: 34data/v14-real-tracking-any-granularity-videos
@@ -930,6 +1026,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-wild-animal-recognition-video-dataset
     path: 34data/v14-real-wild-animal-recognition-video-dataset
@@ -939,6 +1036,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: animals
 
   - name: v14-real-wlasl-videos
     path: 34data/v14-real-wlasl-videos
@@ -948,6 +1046,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: v14-real-wlasl-videos-1
     path: 34data/v14-real-wlasl-videos-1
@@ -957,6 +1056,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: v14-real-wlasl-raw-videos-mp4
     path: 34data/v14-real-wlasl-raw-videos-mp4
@@ -966,6 +1066,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: v14-real-youtubeclips
     path: 34data/v14-real-youtubeclips
@@ -975,6 +1076,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-fake-allegro
     path: 34data/v14-fake-allegro
@@ -984,6 +1086,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: allegro
+    content_category: diverse
 
   - name: v14-fake-animatediffturbo
     path: 34data/v14-fake-animatediffturbo
@@ -993,6 +1096,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: v14-fake-ltxvideo
     path: 34data/v14-fake-ltxvideo
@@ -1002,6 +1106,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: ltx-video
+    content_category: diverse
 
   - name: v14-fake-mochi1
     path: 34data/v14-fake-mochi1
@@ -1011,6 +1116,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mochi
+    content_category: diverse
 
   - name: v14-fake-pyramidflow
     path: 34data/v14-fake-pyramidflow
@@ -1020,6 +1126,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: v14-fake-videocrafter2
     path: 34data/v14-fake-videocrafter2
@@ -1029,6 +1136,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: videocrafter
+    content_category: documents
 
   - name: v14-fake-animatediff
     path: 34data/v14-fake-animatediff
@@ -1038,6 +1146,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: v14-fake-cogvideox
     path: 34data/v14-fake-cogvideox
@@ -1049,6 +1158,7 @@ datasets:
     notes: "Released from v14 bmcore holdouts"
     generator_family: cogvideo
     generator_variant: cogvideox
+    content_category: diverse
 
   - name: v14-fake-fastsvd
     path: 34data/v14-fake-fastsvd
@@ -1059,6 +1169,7 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: fastsvd
+    content_category: diverse
 
   - name: v14-fake-lavie
     path: 34data/v14-fake-lavie
@@ -1069,6 +1180,7 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: v14-fake-modelscope
     path: 34data/v14-fake-modelscope
@@ -1079,6 +1191,7 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: v14-fake-opensora12
     path: 34data/v14-fake-opensora12
@@ -1088,6 +1201,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: sora
+    content_category: scenes
 
   - name: v14-fake-opensora
     path: 34data/v14-fake-opensora
@@ -1097,6 +1211,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: sora
+    content_category: scenes
 
   - name: v14-fake-t2vturbo
     path: 34data/v14-fake-t2vturbo
@@ -1106,6 +1221,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: t2vturbo
+    content_category: diverse
 
   - name: v14-fake-vcapav-t2v
     path: 34data/v14-fake-vcapav-t2v
@@ -1115,6 +1231,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: vcapav
+    content_category: diverse
 
   - name: v14-fake-cameraclone-0316
     path: 34data/v14-fake-cameraclone-0316
@@ -1124,6 +1241,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: rendered
+    content_category: diverse
 
   - name: v14-fake-cameraclone-0317
     path: 34data/v14-fake-cameraclone-0317
@@ -1133,6 +1251,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: rendered
+    content_category: diverse
 
   - name: v14-fake-cameraclone-0401
     path: 34data/v14-fake-cameraclone-0401
@@ -1142,6 +1261,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: rendered
+    content_category: diverse
 
   - name: v14-fake-cameraclone-0402
     path: 34data/v14-fake-cameraclone-0402
@@ -1152,6 +1272,7 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v14 bmcore holdouts"
     generator_family: rendered
+    content_category: diverse
 
   - name: v14-fake-cameraclone-0404
     path: 34data/v14-fake-cameraclone-0404
@@ -1161,6 +1282,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: rendered
+    content_category: diverse
 
   - name: v14-fake-cameraclone-0407
     path: 34data/v14-fake-cameraclone-0407
@@ -1170,6 +1292,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: rendered
+    content_category: diverse
 
   - name: v14-fake-cameraclone-0410
     path: 34data/v14-fake-cameraclone-0410
@@ -1179,6 +1302,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: rendered
+    content_category: diverse
 
   - name: v14-real-chinese-mp4-in-audio
     path: 34data/v14-real-chinese-mp4-in-audio
@@ -1188,6 +1312,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v13-e4s
     path: 34data/v13-e4s
@@ -1197,6 +1322,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: v13-echonet-synthetic-v1
     path: 34data/v13-echonet-synthetic-v1
@@ -1206,6 +1332,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: v13-lemonade
     path: 34data/v13-lemonade
@@ -1215,6 +1342,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v13-live-whisperx-526k
     path: 34data/v13-live-whisperx-526k
@@ -1224,6 +1352,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-hallo3-training-data
     path: 34data/v14-real-hallo3-training-data
@@ -1233,6 +1362,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: v14-real-moments-in-time-raw
     path: 34data/v14-real-moments-in-time-raw
@@ -1242,6 +1372,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: fomm
     path: 34data/fomm
@@ -1251,6 +1382,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: fomm
+    content_category: faces
 
   - name: fsgan
     path: 34data/fsgan
@@ -1260,6 +1392,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: fsgan
+    content_category: faces
 
   - name: hyperreenact
     path: 34data/hyperreenact
@@ -1269,6 +1402,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: hyperreenact
+    content_category: faces
 
   - name: inswap
     path: 34data/inswap
@@ -1280,6 +1414,7 @@ datasets:
     notes: "Released from v16 bmcore holdouts"
     generator_variant: inswap
     generator_family: faceswap
+    content_category: faces
 
   - name: lia
     path: 34data/lia
@@ -1289,6 +1424,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: lia
+    content_category: faces
 
   - name: videofeedback-videos
     path: 34data/videofeedback-videos
@@ -1298,6 +1434,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: diverse
 
   - name: or-video
     path: 34data/or-video
@@ -1307,6 +1444,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: utd-mhad
     path: 34data/utd-mhad
@@ -1316,6 +1454,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: vatex-2
     path: 34data/vatex-2
@@ -1325,6 +1464,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: dh-facevid-1k-0000-part-05
     path: 34data/dh-facevid-1k-0000-part-05
@@ -1334,6 +1474,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0000-part-06
     path: 34data/dh-facevid-1k-0000-part-06
@@ -1343,6 +1484,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0000-part-07
     path: 34data/dh-facevid-1k-0000-part-07
@@ -1352,6 +1494,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: haa500-v1-0
     path: 34data/haa500-v1-0
@@ -1361,6 +1504,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: mcnet
     path: 34data/mcnet
@@ -1371,6 +1515,7 @@ datasets:
     archives_per_dataset: -1
     notes: "Released from v17 bmcore holdouts"
     generator_family: mcnet
+    content_category: faces
 
   - name: mobileswap
     path: 34data/mobileswap
@@ -1380,6 +1525,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mobileswap
+    content_category: faces
 
   - name: mraa
     path: 34data/mraa
@@ -1389,6 +1535,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mraa
+    content_category: faces
 
   - name: oneshot
     path: 34data/oneshot
@@ -1398,6 +1545,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: oneshot
+    content_category: faces
 
   - name: oops-dataset
     path: 34data/oops-dataset
@@ -1407,6 +1555,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: action
 
   - name: pirender
     path: 34data/pirender
@@ -1416,6 +1565,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: pirender
+    content_category: faces
 
   - name: vatex-3
     path: 34data/vatex-3
@@ -1425,6 +1575,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: deepaction-v1
     path: 34data/deepaction-v1
@@ -1434,6 +1585,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: mixed-generation
+    content_category: action
 
   - name: dh-facevid-1k-0000-part-08
     path: 34data/dh-facevid-1k-0000-part-08
@@ -1443,6 +1595,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0000-part-09
     path: 34data/dh-facevid-1k-0000-part-09
@@ -1452,6 +1605,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0000-part-10
     path: 34data/dh-facevid-1k-0000-part-10
@@ -1461,6 +1615,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0005-part_2
     path: 34data/dh-facevid-1k-0005-part_2
@@ -1470,6 +1625,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0005-part_3
     path: 34data/dh-facevid-1k-0005-part_3
@@ -1479,6 +1635,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0005-part_4
     path: 34data/dh-facevid-1k-0005-part_4
@@ -1488,6 +1645,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: dh-facevid-1k-0005-part_5
     path: 34data/dh-facevid-1k-0005-part_5
@@ -1497,6 +1655,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: faces
 
   - name: mavos-dd-arabic-real
     path: 34data/mavos-dd-arabic-real
@@ -1506,6 +1665,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: mavos-dd-english_real
     path: 34data/mavos-dd-english_real
@@ -1515,6 +1675,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: mavos-dd-german_real
     path: 34data/mavos-dd-german_real
@@ -1524,6 +1685,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: mavos-dd-hindi_real
     path: 34data/mavos-dd-hindi_real
@@ -1533,6 +1695,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse
 
   - name: mavos-dd-mandarin_real
     path: 34data/mavos-dd-mandarin_real
@@ -1542,3 +1705,4 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
+    content_category: diverse

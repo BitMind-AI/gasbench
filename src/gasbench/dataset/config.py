@@ -110,14 +110,12 @@ def get_benchmark_size(
             elif "benchmark_size" in data:
                 return data["benchmark_size"]
         else:
-            # Load from separate modality file
-            filename = f"{modality}_datasets.yaml"
+            # Load from split real + synthetic configs
             try:
-                data = _load_bundled_config(filename)
-                if "benchmark_size" in data:
-                    return data["benchmark_size"]
-            except FileNotFoundError:
-                data = _load_all_bundled_configs()
+                benchmark_size, _ = _load_modality_config(modality)
+                return benchmark_size
+            except Exception:
+                pass
 
         logger.warning(f"'benchmark_size' not found in config for {modality}, using default")
         if modality == "image":
@@ -620,42 +618,69 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> t
     if custom_path:
         with open(custom_path, "r") as f:
             data = yaml.safe_load(f)
-    else:
-        filename = f"{modality}_datasets.yaml"
-        data = _load_bundled_config(filename)
+        benchmark_size = data.get("benchmark_size", 10000)
+        datasets = data.get("datasets", [])
+        return benchmark_size, datasets
     
-    benchmark_size = data.get("benchmark_size", 10000)
-    datasets = data.get("datasets", [])
-    return benchmark_size, datasets
+    # Load from split real + synthetic configs and merge
+    SPLIT_CONFIGS = {
+        "image": ("real_images.yaml", "synthetic_images.yaml"),
+        "video": ("real_videos.yaml", "synthetic_videos.yaml"),
+        "audio": ("real_audio.yaml", "synthetic_audio.yaml"),
+    }
+    
+    pairs = SPLIT_CONFIGS.get(modality)
+    if not pairs:
+        return 10000, []
+    
+    all_datasets = []
+    benchmark_size = 0
+    for filename in pairs:
+        try:
+            data = _load_bundled_config(filename)
+            if isinstance(data, dict):
+                # Use synthetic benchmark_size as the canonical size
+                if "synthetic" in filename and "benchmark_size" in data:
+                    benchmark_size = data["benchmark_size"]
+                elif benchmark_size == 0 and "benchmark_size" in data:
+                    benchmark_size = data["benchmark_size"]
+                if "datasets" in data and isinstance(data["datasets"], list):
+                    all_datasets.extend(data["datasets"])
+        except FileNotFoundError:
+            logger.warning(f"Config file {filename} not found, skipping")
+        except Exception as e:
+            logger.warning(f"Failed to load {filename}: {e}, skipping")
+    
+    return benchmark_size or 10000, all_datasets
 
 
 def _load_all_bundled_configs() -> Dict:
-    """Load and merge all modality-specific config files (image, video, audio)."""
-    config_files = {
-        "image": "image_datasets.yaml", 
-        "video": "video_datasets.yaml",
-        "audio": "audio_datasets.yaml",
+    """Load and merge all split config files (real + synthetic per modality)."""
+    MODALITY_FILES = {
+        "image": ["real_images.yaml", "synthetic_images.yaml"],
+        "video": ["real_videos.yaml", "synthetic_videos.yaml"],
+        "audio": ["real_audio.yaml", "synthetic_audio.yaml"],
     }
     
     merged_data = {}
     
-    for modality, filename in config_files.items():
-        try:
-            data = _load_bundled_config(filename)
-            
-            if isinstance(data, dict):
-                if "benchmark_size" in data:
-                    merged_data[f"{modality}_benchmark_size"] = data["benchmark_size"]
-                
-                if "datasets" in data and isinstance(data["datasets"], list):
-                    merged_data[modality] = data["datasets"]
-                    
-        except FileNotFoundError:
-            logger.warning(f"Config file {filename} not found, skipping {modality}")
-            continue
-        except Exception as e:
-            logger.warning(f"Failed to load {filename}: {e}, skipping {modality}")
-            continue
+    for modality, filenames in MODALITY_FILES.items():
+        modality_datasets = []
+        for filename in filenames:
+            try:
+                data = _load_bundled_config(filename)
+                if isinstance(data, dict):
+                    if "benchmark_size" in data:
+                        merged_data[f"{modality}_benchmark_size"] = data["benchmark_size"]
+                    if "datasets" in data and isinstance(data["datasets"], list):
+                        modality_datasets.extend(data["datasets"])
+            except FileNotFoundError:
+                logger.warning(f"Config file {filename} not found, skipping {modality}")
+            except Exception as e:
+                logger.warning(f"Failed to load {filename}: {e}, skipping {modality}")
+        
+        if modality_datasets:
+            merged_data[modality] = modality_datasets
     
     return merged_data
 
@@ -756,13 +781,11 @@ def load_benchmark_datasets_from_yaml(
                             result[modality].append(config)
                 return result
         
-        # Load from separate bundled config files (new default)
+        # Load from split real + synthetic config files (new default)
         all_errors = []
         for modality in ["image", "video", "audio"]:
             try:
-                filename = f"{modality}_datasets.yaml"
-                data = _load_bundled_config(filename)
-                datasets_list = data.get("datasets", [])
+                _, datasets_list = _load_modality_config(modality)
                 
                 for idx, dataset_dict in enumerate(datasets_list):
                     if not isinstance(dataset_dict, dict):

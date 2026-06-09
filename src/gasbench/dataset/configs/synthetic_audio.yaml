@@ -1,6 +1,5 @@
 # Audio Dataset Configurations -- Synthetic
 #
-benchmark_size: 5000
 
 datasets:
 

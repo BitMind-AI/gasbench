@@ -1,6 +1,5 @@
 # Video Dataset Configurations -- Real
 #
-benchmark_size: 13000
 
 datasets:
 

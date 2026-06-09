@@ -1,6 +1,5 @@
 # Image Dataset Configurations -- Synthetic + Semisynthetic
 #
-benchmark_size: 55000
 
 datasets:
 

@@ -629,35 +629,6 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> l
     return all_datasets
 
 
-def _load_all_bundled_configs() -> Dict:
-    """Load and merge all split config files (real + synthetic per modality)."""
-    MODALITY_FILES = {
-        "image": ["real_images.yaml", "synthetic_images.yaml"],
-        "video": ["real_videos.yaml", "synthetic_videos.yaml"],
-        "audio": ["real_audio.yaml", "synthetic_audio.yaml"],
-    }
-    
-    merged_data = {}
-    
-    for modality, filenames in MODALITY_FILES.items():
-        modality_datasets = []
-        for filename in filenames:
-            try:
-                data = _load_bundled_config(filename)
-                if isinstance(data, dict):
-                    if "datasets" in data and isinstance(data["datasets"], list):
-                        modality_datasets.extend(data["datasets"])
-            except FileNotFoundError:
-                logger.warning(f"Config file {filename} not found, skipping {modality}")
-            except Exception as e:
-                logger.warning(f"Failed to load {filename}: {e}, skipping {modality}")
-        
-        if modality_datasets:
-            merged_data[modality] = modality_datasets
-    
-    return merged_data
-
-
 def load_benchmark_datasets_from_yaml(
     yaml_path: Optional[str] = None,
 ) -> Dict[str, List[BenchmarkDatasetConfig]]:

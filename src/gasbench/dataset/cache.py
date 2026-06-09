@@ -217,16 +217,6 @@ def cleanup_temp_directory(temp_dir: str):
             logger.warning(f"Failed to clean temp files: {cleanup_error}")
 
 
-def cleanup_temp_directory_full(temp_dir: str):
-    """Completely remove temporary directory."""
-    if os.path.exists(temp_dir):
-        try:
-            shutil.rmtree(temp_dir)
-            logger.info("🧹 Cleaned up consolidated temporary directory")
-        except Exception as e:
-            logger.warning(f"Failed to clean temp directory: {e}")
-
-
 def save_preprocessed_audio_tensor(
     waveform: torch.Tensor,
     label: int,
@@ -284,36 +274,6 @@ def load_preprocessed_audio_tensor(file_path: str) -> Optional[Dict]:
     except Exception as e:
         logger.warning(f"Failed to load preprocessed audio tensor from {file_path}: {e}")
         return None
-
-
-def check_preprocessed_cache_exists(dataset_config: BenchmarkDatasetConfig, base_dir: str = "/.cache/gasbench") -> bool:
-    """
-    Check if preprocessed audio tensors exist in cache.
-    
-    Args:
-        dataset_config: Dataset configuration
-        base_dir: Base cache directory
-        
-    Returns:
-        True if preprocessed cache exists and has .pt files, False otherwise
-    """
-    try:
-        if dataset_config.modality != "audio":
-            return False
-            
-        dataset_dir = os.path.join(base_dir, "datasets", dataset_config.name)
-        samples_dir = os.path.join(dataset_dir, "samples")
-        
-        if not os.path.exists(samples_dir):
-            return False
-        
-        # Check if there are any .pt files
-        pt_files = [f for f in os.listdir(samples_dir) if f.endswith('.pt')]
-        return len(pt_files) > 0
-        
-    except Exception as e:
-        logger.debug(f"Failed to check preprocessed cache for {dataset_config.name}: {e}")
-        return False
 
 
 def format_size_bytes(size_bytes: int) -> str:

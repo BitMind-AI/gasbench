@@ -347,6 +347,35 @@ def validate_dataset_config(
     return errors
 
 
+def _dataset_dict_to_config(d: dict, **overrides) -> BenchmarkDatasetConfig:
+    """Build a BenchmarkDatasetConfig from a raw YAML dict.
+
+    All fields are extracted from the dict with sensible defaults.
+    Callers can pass keyword overrides for fields that differ per context
+    (e.g. the holdout loader uses different source/media_per_archive defaults).
+    """
+    kwargs = {
+        "name": d["name"],
+        "path": d["path"],
+        "modality": d.get("modality", "unknown"),
+        "media_type": d["media_type"],
+        "source_format": d.get("source_format", ""),
+        "source": d.get("source", "huggingface"),
+        "media_per_archive": d.get("media_per_archive", 100),
+        "archives_per_dataset": d.get("archives_per_dataset", 5),
+        "include_paths": d.get("include_paths"),
+        "exclude_paths": d.get("exclude_paths"),
+        "data_columns": d.get("data_columns"),
+        "notes": d.get("notes"),
+        "filter_column": d.get("filter_column"),
+        "filter_value": d.get("filter_value"),
+        "generator_family": d.get("generator_family"),
+        "content_category": d.get("content_category"),
+    }
+    kwargs.update(overrides)
+    return BenchmarkDatasetConfig(**kwargs)
+
+
 def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetConfig]]:
     """Load benchmark dataset configurations from a YAML file.
     
@@ -382,23 +411,7 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
 
         if not validation_errors:
             modality = dataset_dict["modality"].lower()
-            config = BenchmarkDatasetConfig(
-                name=dataset_dict["name"],
-                path=dataset_dict["path"],
-                modality=modality,
-                media_type=dataset_dict["media_type"],
-                media_per_archive=dataset_dict.get("media_per_archive", 100),
-                archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
-                source_format=dataset_dict.get("source_format", ""),
-                source=dataset_dict.get("source", "huggingface"),
-                include_paths=dataset_dict.get("include_paths"),
-                exclude_paths=dataset_dict.get("exclude_paths"),
-                data_columns=dataset_dict.get("data_columns"),
-                filter_column=dataset_dict.get("filter_column"),
-                filter_value=dataset_dict.get("filter_value"),
-                generator_family=dataset_dict.get("generator_family"),
-                content_category=dataset_dict.get("content_category"),
-            )
+            config = _dataset_dict_to_config(dataset_dict, modality=modality)
             if modality in result:
                 result[modality].append(config)
 
@@ -509,23 +522,15 @@ def load_holdout_datasets_from_yaml(
         for dataset_dict in datasets_list:
             if not isinstance(dataset_dict, dict):
                 continue
-            config = BenchmarkDatasetConfig(
-                name=dataset_dict["name"],
-                path=dataset_dict["path"],
+            config = _dataset_dict_to_config(
+                dataset_dict,
                 modality=dataset_dict.get("modality", effective_modality),
-                media_type=dataset_dict["media_type"],
-                source_format=dataset_dict.get("source_format", ""),
-                source=dataset_dict.get("source", ""),
+                source="",
                 media_per_archive=dataset_dict.get("media_per_archive", -1),
                 archives_per_dataset=dataset_dict.get("archives_per_dataset", -1),
                 include_paths=dataset_dict.get("include_paths", []),
                 exclude_paths=dataset_dict.get("exclude_paths", []),
-                data_columns=dataset_dict.get("data_columns"),
                 notes=dataset_dict.get("notes", ""),
-                filter_column=dataset_dict.get("filter_column"),
-                filter_value=dataset_dict.get("filter_value"),
-                generator_family=dataset_dict.get("generator_family"),
-                content_category=dataset_dict.get("content_category"),
             )
             configs.append(config)
         
@@ -694,24 +699,7 @@ def load_benchmark_datasets_from_yaml(
                         all_errors.extend(validation_errors)
                         
                         if not validation_errors:
-                            config = BenchmarkDatasetConfig(
-                                name=dataset_dict["name"],
-                                path=dataset_dict["path"],
-                                modality=dataset_dict["modality"],
-                                media_type=dataset_dict["media_type"],
-                                media_per_archive=dataset_dict.get("media_per_archive", 100),
-                                archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
-                                source_format=dataset_dict.get("source_format", ""),
-                                source=dataset_dict.get("source", "huggingface"),
-                                include_paths=dataset_dict.get("include_paths"),
-                                exclude_paths=dataset_dict.get("exclude_paths"),
-                                data_columns=dataset_dict.get("data_columns"),
-                                notes=dataset_dict.get("notes"),
-                                filter_column=dataset_dict.get("filter_column"),
-                                filter_value=dataset_dict.get("filter_value"),
-                                generator_family=dataset_dict.get("generator_family"),
-                                content_category=dataset_dict.get("content_category"),
-                            )
+                            config = _dataset_dict_to_config(dataset_dict)
                             result[modality].append(config)
                 
                 if all_errors:
@@ -728,24 +716,7 @@ def load_benchmark_datasets_from_yaml(
                         dataset_name = dataset_dict.get("name", "unknown")
                         validation_errors = validate_dataset_config(dataset_dict, dataset_name)
                         if not validation_errors:
-                            config = BenchmarkDatasetConfig(
-                                name=dataset_dict["name"],
-                                path=dataset_dict["path"],
-                                modality=dataset_dict["modality"],
-                                media_type=dataset_dict["media_type"],
-                                media_per_archive=dataset_dict.get("media_per_archive", 100),
-                                archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
-                                source_format=dataset_dict.get("source_format", ""),
-                                source=dataset_dict.get("source", "huggingface"),
-                                include_paths=dataset_dict.get("include_paths"),
-                                exclude_paths=dataset_dict.get("exclude_paths"),
-                                data_columns=dataset_dict.get("data_columns"),
-                                notes=dataset_dict.get("notes"),
-                                filter_column=dataset_dict.get("filter_column"),
-                                filter_value=dataset_dict.get("filter_value"),
-                                generator_family=dataset_dict.get("generator_family"),
-                                content_category=dataset_dict.get("content_category"),
-                            )
+                            config = _dataset_dict_to_config(dataset_dict)
                             result[modality].append(config)
                 return result
         
@@ -765,24 +736,7 @@ def load_benchmark_datasets_from_yaml(
                     all_errors.extend(validation_errors)
                     
                     if not validation_errors:
-                        config = BenchmarkDatasetConfig(
-                            name=dataset_dict["name"],
-                            path=dataset_dict["path"],
-                            modality=dataset_dict["modality"],
-                            media_type=dataset_dict["media_type"],
-                            media_per_archive=dataset_dict.get("media_per_archive", 100),
-                            archives_per_dataset=dataset_dict.get("archives_per_dataset", 5),
-                            source_format=dataset_dict.get("source_format", ""),
-                            source=dataset_dict.get("source", "huggingface"),
-                            include_paths=dataset_dict.get("include_paths"),
-                            exclude_paths=dataset_dict.get("exclude_paths"),
-                            data_columns=dataset_dict.get("data_columns"),
-                            notes=dataset_dict.get("notes"),
-                            filter_column=dataset_dict.get("filter_column"),
-                            filter_value=dataset_dict.get("filter_value"),
-                            generator_family=dataset_dict.get("generator_family"),
-                            content_category=dataset_dict.get("content_category"),
-                        )
+                        config = _dataset_dict_to_config(dataset_dict)
                         result[modality].append(config)
             except Exception as e:
                 logger.warning(f"Failed to load {modality} datasets: {e}")

@@ -9,31 +9,39 @@ logger = get_logger(__name__)
 class Metrics:
     
     def __init__(self):
-        self.true_positives = 0
-        self.true_negatives = 0
-        self.false_positives = 0
-        self.false_negatives = 0
+        self.true_positives = 0.0
+        self.true_negatives = 0.0
+        self.false_positives = 0.0
+        self.false_negatives = 0.0
         self.binary_y_true = []
         self.binary_probs = []
+        self.binary_weights = []
     
     def update(
         self, 
         label: int,
         pred: int, 
-        pred_probs: np.ndarray = None
+        pred_probs: np.ndarray = None,
+        weight: float = 1.0,
     ):
-        """Update confusion matrix with new prediction."""
+        """Update confusion matrix with new prediction.
+
+        A sample with weight=w contributes to every metric exactly as w copies
+        of the same sample would. Default weight=1.0 reproduces unweighted
+        behavior.
+        """
         if label == 1 and pred == 1:
-            self.true_positives += 1
+            self.true_positives += weight
         elif label == 0 and pred == 0:
-            self.true_negatives += 1
+            self.true_negatives += weight
         elif label == 0 and pred == 1:
-            self.false_positives += 1
+            self.false_positives += weight
         elif label == 1 and pred == 0:
-            self.false_negatives += 1
+            self.false_negatives += weight
 
         if pred_probs is not None:
             self.binary_y_true.append(label)
+            self.binary_weights.append(weight)
             if len(pred_probs) == 3:
                 binary_prob = 1.0 - pred_probs[0]
                 self.binary_probs.append(binary_prob)
@@ -62,9 +70,10 @@ class Metrics:
 
         y_true = np.array(self.binary_y_true)
         y_prob = np.clip(np.array(self.binary_probs), 1e-7, 1 - 1e-7)
+        weights = np.array(self.binary_weights)
 
-        loss = -np.mean(y_true * np.log(y_prob) + (1 - y_true) * np.log(1 - y_prob))
-        return float(loss)
+        losses = -(y_true * np.log(y_prob) + (1 - y_true) * np.log(1 - y_prob))
+        return float(np.average(losses, weights=weights))
 
     def calculate_brier(self) -> float:
         """
@@ -83,8 +92,9 @@ class Metrics:
         
         y_true = np.array(self.binary_y_true)
         y_prob = np.clip(np.array(self.binary_probs), 1e-7, 1 - 1e-7)
-        
-        return float(np.mean((y_prob - y_true) ** 2))
+        weights = np.array(self.binary_weights)
+
+        return float(np.average((y_prob - y_true) ** 2, weights=weights))
 
     def compute_sn34_score(
         self,

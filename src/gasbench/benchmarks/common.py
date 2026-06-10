@@ -37,9 +37,10 @@ class BenchmarkRunConfig:
     records_parquet_path: Optional[str]
     run_id: Optional[str] = None
     dataset_filters: Optional[List[str]] = None
-    holdout_weight: float = 1.0  # Weight multiplier for holdout datasets in final score
+    holdout_weight: float = 1.0  # (Legacy) weight multiplier for holdout datasets in benchmark_score only
     holdouts_only: bool = False  # If True, only run holdout datasets (requires holdout_config_path)
     content_category: Optional[str] = None  # Filter datasets by content_category (e.g. "faces")
+    score_composition: Optional[Dict[str, float]] = None  # Target score weight share per provenance class, e.g. {"public": 0.5, "holdout": 0.3, "gasstation": 0.2}; weights all metrics incl. sn34_score
 
 
 @dataclass
@@ -190,7 +191,11 @@ def finalize_run(
 ):
     logger = get_logger(__name__)
     df = tracker.to_dataframe()
-    metric_pack = compute_metrics_from_df(df, holdout_weight=config.holdout_weight)
+    metric_pack = compute_metrics_from_df(
+        df,
+        holdout_weight=config.holdout_weight,
+        score_composition=config.score_composition,
+    )
     per_dataset_results = compute_per_dataset_from_df(df)
     per_source_accuracy = calculate_per_source_accuracy(
         plan.available_datasets, per_dataset_results

@@ -36,6 +36,7 @@ async def run_benchmark(
     holdout_weight: float = 1.0,
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
+    score_composition: Optional[Dict[str, float]] = None,
 ) -> Dict:
     """
     Args:
@@ -55,6 +56,12 @@ async def run_benchmark(
             Holdout datasets (identified by '-holdout-' in name) get this weight, regular
             datasets get weight=1.0. Higher values give holdout datasets more impact on
             the benchmark_score. Default is 1.0 (equal weighting).
+        score_composition: Optional target share of total score weight per sample
+            provenance class, e.g. {"public": 0.5, "holdout": 0.3, "gasstation": 0.2}.
+            When provided, per-sample weights are derived so each class contributes
+            its target share to ALL metrics (accuracy, MCC, Brier, and sn34_score).
+            Classes absent from the run are dropped and the remaining shares
+            renormalized. Supersedes holdout_weight.
 
     Returns:
         Dict with benchmark results including scores and metrics
@@ -114,6 +121,7 @@ async def run_benchmark(
             holdout_weight,
             holdouts_only,
             content_category,
+            score_composition,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -209,10 +217,11 @@ async def execute_benchmark(
     holdout_weight: float = 1.0,
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
+    score_composition: Optional[Dict[str, float]] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category}, score_composition={score_composition})")
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
@@ -235,6 +244,7 @@ async def execute_benchmark(
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
             content_category=content_category,
+            score_composition=score_composition,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -257,6 +267,7 @@ async def execute_benchmark(
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
             content_category=content_category,
+            score_composition=score_composition,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
@@ -279,6 +290,7 @@ async def execute_benchmark(
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
             content_category=content_category,
+            score_composition=score_composition,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

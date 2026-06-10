@@ -67,6 +67,22 @@ def command_run(args):
         print("Error: --holdouts-only requires --holdout-config")
         return 1
 
+    # Build target score composition from --holdout-share / --gasstation-share
+    score_composition = None
+    holdout_share = getattr(args, "holdout_share", None)
+    gasstation_share = getattr(args, "gasstation_share", None)
+    if holdout_share is not None or gasstation_share is not None:
+        holdout_share = holdout_share or 0.0
+        gasstation_share = gasstation_share or 0.0
+        if holdout_share < 0 or gasstation_share < 0 or holdout_share + gasstation_share > 1:
+            print("Error: --holdout-share and --gasstation-share must be >= 0 and sum to <= 1")
+            return 1
+        score_composition = {
+            "public": 1.0 - holdout_share - gasstation_share,
+            "holdout": holdout_share,
+            "gasstation": gasstation_share,
+        }
+
     # Validate model path - must be directory with model_config.yaml (safetensors format)
     if not model_path.exists():
         print(f"Error: Model path not found: {model_path}")
@@ -119,6 +135,8 @@ def command_run(args):
     }
     if args.cache_dir:
         config["cache_directory"] = args.cache_dir
+    if score_composition:
+        config["score_composition"] = score_composition
 
     print("\n🎯 Starting gasbench evaluation")
     print(json.dumps(config, indent=2))
@@ -142,6 +160,7 @@ def command_run(args):
                 run_id=getattr(args, "run_id", None),
                 holdout_weight=getattr(args, "holdout_weight", 1.0),
                 holdouts_only=holdouts_only,
+                score_composition=score_composition,
                 dataset_filters=getattr(args, "datasets", None),
                 content_category=args.content_category,
             )
@@ -515,6 +534,24 @@ See docs/Safetensors.md for detailed requirements.
         metavar="WEIGHT",
         help="Weight multiplier for holdout datasets in final score. Higher values give "
              "holdout datasets more impact on benchmark_score. Default: 1.0 (equal weighting)",
+    )
+    run_parser.add_argument(
+        "--holdout-share",
+        type=float,
+        default=None,
+        metavar="SHARE",
+        help="Target share of total score weight carried by holdout samples (0-1). "
+             "When set (alone or with --gasstation-share), per-sample weights are "
+             "derived so each provenance class contributes its target share to all "
+             "metrics including sn34_score. Supersedes --holdout-weight.",
+    )
+    run_parser.add_argument(
+        "--gasstation-share",
+        type=float,
+        default=None,
+        metavar="SHARE",
+        help="Target share of total score weight carried by gasstation samples (0-1). "
+             "See --holdout-share. Public corpus receives the remaining share.",
     )
     run_parser.add_argument(
         "--holdouts-only",

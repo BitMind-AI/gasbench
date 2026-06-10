@@ -525,7 +525,6 @@ def load_holdout_datasets_from_yaml(
             config = _dataset_dict_to_config(
                 dataset_dict,
                 modality=dataset_dict.get("modality", effective_modality),
-                source="",
                 media_per_archive=dataset_dict.get("media_per_archive", -1),
                 archives_per_dataset=dataset_dict.get("archives_per_dataset", -1),
                 include_paths=dataset_dict.get("include_paths", []),

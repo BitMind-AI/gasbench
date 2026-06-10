@@ -545,53 +545,13 @@ datasets:
     generator_family: real
     content_category: faces
 
-  - name: casia_web_face_part1
-    path: 34data/casia_web_face_part1
+  - name: casia_web_face
+    path: SaffalPoosh/casia_web_face
     modality: image
     media_type: real
     source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: faces
-
-  - name: casia_web_face_part10
-    path: 34data/casia_web_face_part10
-    modality: image
-    media_type: real
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: faces
-
-  - name: casia_web_face_part11
-    path: 34data/casia_web_face_part11
-    modality: image
-    media_type: real
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: faces
-
-  - name: casia_web_face_part12
-    path: 34data/casia_web_face_part12
-    modality: image
-    media_type: real
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: faces
-
-  - name: casia_web_face_part13
-    path: 34data/casia_web_face_part13
-    modality: image
-    media_type: real
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 10
     generator_family: real
     content_category: faces
 

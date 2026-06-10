@@ -1,6 +1,5 @@
-# Image Dataset Configurations -- Real
+# Image Dataset Configurations -- Real Images
 #
-
 datasets:
 
   # -- action --
@@ -550,8 +549,8 @@ datasets:
     modality: image
     media_type: real
     source_format: parquet
-    media_per_archive: 250
-    archives_per_dataset: 10
+    media_per_archive: 500
+    archives_per_dataset: 2
     generator_family: real
     content_category: faces
 
@@ -781,8 +780,8 @@ datasets:
     modality: image
     media_type: real
     source_format: zip
-    media_per_archive: 100
-    archives_per_dataset: 20
+    media_per_archive: 500
+    archives_per_dataset: 2
     include_paths: [Datasets]
     generator_family: real
     content_category: medical

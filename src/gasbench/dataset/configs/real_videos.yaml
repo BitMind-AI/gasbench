@@ -1,6 +1,5 @@
-# Video Dataset Configurations -- Real
+# Image Dataset Configurations -- Real Videos
 #
-
 datasets:
 
   # -- action --
@@ -594,8 +593,8 @@ datasets:
     modality: video
     media_type: real
     source_format: tar
-    media_per_archive: 2500
-    archives_per_dataset: 1
+    media_per_archive: 500
+    archives_per_dataset: 2
     generator_family: real
     content_category: diverse
 

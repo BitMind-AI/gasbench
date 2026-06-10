@@ -1,6 +1,5 @@
-# Image Dataset Configurations -- Synthetic + Semisynthetic
+# Image Dataset Configurations -- Synthetic Images
 #
-
 datasets:
 
   # -- animals --
@@ -66,12 +65,14 @@ datasets:
     generator_variant: sd15
     content_category: art
 
+  # -- diverse --
+
   - name: fake_sdxl_12k
     path: Kyleyee/fake_sdxl_12k
     modality: image
     media_type: synthetic
     source_format: parquet
-    media_per_archive: 1250
+    media_per_archive: 500
     archives_per_dataset: 2
     generator_family: sd
     generator_variant: sdxl
@@ -726,7 +727,7 @@ datasets:
     media_type: synthetic
     source_format: parquet
     media_per_archive: 500
-    archives_per_dataset: 5
+    archives_per_dataset: 2
     data_columns: [image]
     notes: 500K+ synthetic human images with 3D pose labels
     generator_family: sd

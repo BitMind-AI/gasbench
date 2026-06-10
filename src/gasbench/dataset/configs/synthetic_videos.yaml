@@ -1,6 +1,5 @@
-# Video Dataset Configurations -- Synthetic + Semisynthetic
+# Image Dataset Configurations -- Synthetic Videos
 #
-
 datasets:
 
   # -- action --

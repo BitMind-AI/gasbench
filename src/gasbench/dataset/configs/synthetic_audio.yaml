@@ -1,6 +1,5 @@
-# Audio Dataset Configurations -- Synthetic
+# Image Dataset Configurations -- Synthetic Audio
 #
-
 datasets:
 
   # -- diverse --

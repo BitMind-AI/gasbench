@@ -1,6 +1,5 @@
-# Audio Dataset Configurations -- Real
+# Image Dataset Configurations -- Real Audio
 #
-
 datasets:
 
   # -- diverse --

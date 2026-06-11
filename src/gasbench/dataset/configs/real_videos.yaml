@@ -675,8 +675,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v15 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -686,8 +686,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v15 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -697,8 +697,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v15 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -708,8 +708,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v16 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -719,8 +719,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v16 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -730,8 +730,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v16 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -741,8 +741,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v16 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -752,8 +752,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v16 bmcore holdouts
     generator_family: real
     content_category: faces
@@ -763,8 +763,8 @@ datasets:
     modality: video
     media_type: real
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 250
+    archives_per_dataset: 2
     notes: Released from v16 bmcore holdouts
     generator_family: real
     content_category: faces

@@ -252,6 +252,14 @@ def download_and_extract(
                             logger.info(
                                 f"Found {len(filenames)} files with format {fallback_format}"
                             )
+                            # Recalculate n_files for the actual format found — the
+                            # original n_files was computed for source_format (e.g. mp4)
+                            # which treats each file as one media item, but an archive
+                            # format (parquet/zip/tar) should only download
+                            # archives_per_dataset files, not media_per_archive.
+                            n_files = _calculate_files_to_download(
+                                dataset, fallback_format, media_per_archive, archives_per_dataset
+                            )
                             break
 
                 if not filenames:
@@ -304,25 +312,19 @@ def download_and_extract(
             else:
                 max_download_workers = min(10, len(to_download))
 
-                downloaded_files = download_files(
+                successfully_processed = 0
+                any_downloaded = False
+                for downloaded_file in _stream_downloads(
                     to_download,
                     temp_dir_root,
                     chunk_size=8192,
                     max_workers=max_download_workers,
                     hf_token=hf_token,
-                )
-
-                if not downloaded_files:
-                    logger.warning(
-                        f"No files successfully downloaded for {dataset.name}"
-                    )
-                    return
-
-                successfully_processed = 0
-                for downloaded_file in downloaded_files:
+                ):
                     if not downloaded_file or not downloaded_file.exists():
                         continue
 
+                    any_downloaded = True
                     try:
                         iso_week = extract_iso_week_from_path(str(downloaded_file))
                         successfully_processed += 1
@@ -343,8 +345,14 @@ def download_and_extract(
                         except OSError:
                             pass
 
+                if not any_downloaded:
+                    logger.warning(
+                        f"No files successfully downloaded for {dataset.name}"
+                    )
+                    return
+
                 logger.info(
-                    f"Downloaded and processed {successfully_processed}/{len(downloaded_files)} files "
+                    f"Downloaded and processed {successfully_processed} files "
                     f"for {dataset.name}"
                 )
 
@@ -1526,6 +1534,34 @@ def _is_tar_file(filename_lower: str) -> bool:
 def _is_parquet_file(filename_lower: str) -> bool:
     """Return True if filename looks like a parquet file."""
     return filename_lower.endswith(".parquet")
+
+
+def _stream_downloads(
+    urls: List[str],
+    output_dir: Path,
+    chunk_size: int = 8192,
+    max_workers: int = 10,
+    hf_token: Optional[str] = None,
+) -> Generator[Optional[Path], None, None]:
+    """Like download_files but yields each path as soon as its download completes."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if not urls:
+        return
+
+    def download_url(url):
+        try:
+            return download_single_file(url, output_dir, chunk_size, hf_token)
+        except (requests.RequestException, OSError) as e:
+            logger.error(f"Error downloading {url}: {e}")
+            return None
+
+    workers = min(max_workers, len(urls))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(download_url, url): url for url in urls}
+        for future in as_completed(futures):
+            yield future.result()
 
 
 def download_files(

@@ -15,12 +15,17 @@ Example usage:
     )
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from .benchmarks.image_bench import run_image_benchmark
 from .benchmarks.video_bench import run_video_benchmark
 from .benchmark import run_benchmark, print_benchmark_summary, format_benchmark_summary, save_results_to_json
 from .benchmarks.utils.inference import create_inference_session
 
-__version__ = "0.6.7"
+try:
+    __version__ = version("gasbench")
+except PackageNotFoundError:  # source checkout without an installed dist
+    __version__ = "0.0.0+unknown"
 __author__ = "bmbm"
 
 __all__ = [

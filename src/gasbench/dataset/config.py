@@ -260,12 +260,21 @@ def calculate_weighted_dataset_sampling(
     regular_cap = int(samples_per_weight_unit)
     gasstation_cap = int(samples_per_weight_unit * gasstation_weight)
 
-    regular_cap = min(
-        REGULAR_DATASET_MAX_SAMPLES, max(REGULAR_DATASET_MIN_SAMPLES, regular_cap)
+    # The static per-dataset floors can silently inflate the run far beyond
+    # target_total_samples when the corpus is large (e.g. small mode targets
+    # 600 video samples, but 238 datasets x MIN 100 = 23,800). Scale the
+    # floors down to an even share of the target so mode budgets hold; with
+    # generous budgets (full mode) the original floors apply unchanged.
+    even_share = max(1, target_total_samples // (num_regular + num_gasstation))
+    regular_min = min(REGULAR_DATASET_MIN_SAMPLES, even_share)
+    gasstation_min = min(
+        GASSTATION_DATASET_MIN_SAMPLES, max(1, int(even_share * gasstation_weight))
     )
+
+    regular_cap = min(REGULAR_DATASET_MAX_SAMPLES, max(regular_min, regular_cap))
     gasstation_cap = min(
         GASSTATION_DATASET_MAX_SAMPLES,
-        max(GASSTATION_DATASET_MIN_SAMPLES, gasstation_cap),
+        max(gasstation_min, gasstation_cap),
     )
 
     sampling_dict = {}

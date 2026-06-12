@@ -595,6 +595,7 @@ datasets:
     source_format: tar
     media_per_archive: 500
     archives_per_dataset: 2
+    include_paths: [videos]
     generator_family: real
     content_category: diverse
 

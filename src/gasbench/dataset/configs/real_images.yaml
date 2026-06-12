@@ -775,17 +775,6 @@ datasets:
     generator_family: real
     content_category: medical
 
-  - name: medvision
-    path: YongchengYAO/MedVision
-    modality: image
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [Datasets]
-    generator_family: real
-    content_category: medical
-
   - name: mmmu
     path: MMMU/MMMU
     modality: image

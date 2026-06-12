@@ -350,22 +350,83 @@ def build_sample_id(row: Dict[str, Any]) -> str:
     return hashlib.sha256(id_string.encode()).hexdigest()[:16]
 
 
+SCORE_PROVENANCE_CLASSES = ("public", "holdout", "gasstation")
+
+
+def classify_sample_provenance(dataset_name: Any) -> str:
+    """Classify a sample's provenance from its dataset name.
+
+    - 'holdout': dataset name contains '-holdout-' (obfuscated holdout naming)
+    - 'gasstation': dataset name contains 'gasstation' (generative miner data)
+    - 'public': everything else (public benchmark corpus)
+    """
+    name = str(dataset_name).lower()
+    if "-holdout-" in name:
+        return "holdout"
+    if "gasstation" in name:
+        return "gasstation"
+    return "public"
+
+
+def derive_provenance_weights(
+    class_counts: Dict[str, int], score_composition: Dict[str, float]
+) -> Dict[str, float]:
+    """Derive per-class sample weights that realize a target score composition.
+
+    Args:
+        class_counts: Realized sample counts per provenance class. Only classes
+            with count > 0 are weighted; absent classes are dropped and the
+            remaining target shares renormalized.
+        score_composition: Target share of total score weight per class, e.g.
+            {"public": 0.5, "holdout": 0.3, "gasstation": 0.2}. Values are
+            normalized over the present classes, so they need not sum to 1.
+
+    Returns:
+        Dict mapping each present class to its per-sample weight. Weights are
+        scaled so the mean sample weight is 1.0 (sum of weights == n samples).
+    """
+    present = {c: n for c, n in class_counts.items() if n > 0}
+    if not present:
+        return {}
+
+    targets = {c: max(0.0, float(score_composition.get(c, 0.0))) for c in present}
+    total_target = sum(targets.values())
+    if total_target <= 0:
+        return {c: 1.0 for c in present}
+
+    total_count = sum(present.values())
+    weights = {}
+    for c, n in present.items():
+        share = targets[c] / total_target
+        weights[c] = share * total_count / n
+    return weights
+
+
 def compute_metrics_from_df(
-    df: pd.DataFrame, holdout_weight: float = 1.0
+    df: pd.DataFrame,
+    holdout_weight: float = 1.0,
+    score_composition: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     """Compute benchmark metrics from a DataFrame of results.
 
     Args:
         df: DataFrame containing benchmark results with 'status', 'correct',
             'dataset_name', etc.
-        holdout_weight: Weight multiplier for holdout dataset samples when
-            computing the benchmark_score. Holdout datasets are identified by
-            having '-holdout-' in their name. Regular datasets get weight=1.0,
-            holdout datasets get weight=holdout_weight. Default is 1.0 (equal
-            weighting).
+        holdout_weight: (Legacy) Weight multiplier for holdout dataset samples
+            when computing the benchmark_score (accuracy) only. Ignored when
+            score_composition is provided. Default is 1.0 (equal weighting).
+        score_composition: Optional target share of total score weight per
+            provenance class, e.g. {"public": 0.5, "holdout": 0.3,
+            "gasstation": 0.2}. When provided, per-sample weights are derived
+            so each class contributes its target share to ALL metrics
+            (accuracy, MCC, Brier, CE — and therefore sn34_score). Classes
+            absent from the run are dropped and remaining shares renormalized.
 
     Returns:
         Dict with benchmark_score, timing metrics, and other computed metrics.
+        When score_composition is given, also includes 'score_composition'
+        (target), 'realized_composition' (unweighted sample shares), and
+        'provenance_weights' (per-class sample weight applied).
     """
     result: Dict[str, Any] = {}
     if df is None or df.empty:
@@ -391,10 +452,34 @@ def compute_metrics_from_df(
             "sn34_score": 0.0,
         }
 
-    # Compute weighted accuracy based on holdout_weight
-    # Holdout datasets are identified by having '-holdout-' in the name
-    if holdout_weight != 1.0 and "dataset_name" in ok_df.columns:
-        # Assign weights: holdout datasets get holdout_weight, others get 1.0
+    # Derive per-sample weights.
+    # New path: score_composition assigns each provenance class (public /
+    # holdout / gasstation) a target share of total score weight, applied to
+    # ALL metrics. Legacy path: holdout_weight scales holdout samples in the
+    # accuracy (benchmark_score) only, preserving historical behavior.
+    composition_fields: Dict[str, Any] = {}
+    sample_weights = np.ones(len(ok_df), dtype=float)
+    if score_composition and "dataset_name" in ok_df.columns:
+        provenance = ok_df["dataset_name"].map(classify_sample_provenance)
+        class_counts = provenance.value_counts().to_dict()
+        class_weights = derive_provenance_weights(class_counts, score_composition)
+        sample_weights = provenance.map(class_weights).astype(float).values
+        total = float(sum(class_counts.values()))
+        composition_fields = {
+            "score_composition": {
+                c: float(score_composition.get(c, 0.0))
+                for c in SCORE_PROVENANCE_CLASSES
+            },
+            "realized_composition": {
+                c: class_counts.get(c, 0) / total if total else 0.0
+                for c in SCORE_PROVENANCE_CLASSES
+            },
+            "provenance_weights": {c: float(w) for c, w in class_weights.items()},
+        }
+        correct_arr = ok_df["correct"].astype(float).values
+        accuracy = float(np.average(correct_arr, weights=sample_weights))
+    elif holdout_weight != 1.0 and "dataset_name" in ok_df.columns:
+        # Legacy: holdout_weight affects accuracy only (not MCC/Brier/sn34)
         is_holdout = ok_df["dataset_name"].str.contains("-holdout-", na=False)
         weights = np.where(is_holdout, holdout_weight, 1.0)
         
@@ -412,7 +497,7 @@ def compute_metrics_from_df(
     p95_time = float(np.percentile(times, 95)) if times is not None else 0.0
 
     metrics = Metrics()
-    for _, r in ok_df.iterrows():
+    for (_, r), weight in zip(ok_df.iterrows(), sample_weights):
         try:
             probs = [
                 float(x)
@@ -430,6 +515,7 @@ def compute_metrics_from_df(
             label,
             pred,
             probs,
+            weight=float(weight),
         )
 
     result.update(
@@ -443,6 +529,7 @@ def compute_metrics_from_df(
             "sn34_score": metrics.compute_sn34_score(),
         }
     )
+    result.update(composition_fields)
     return result
 
 

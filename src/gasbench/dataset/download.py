@@ -123,7 +123,7 @@ def download_and_extract(
                     f"Successfully loaded {cached_samples_count} samples from cache for {dataset.name}"
                 )
                 return
-            except Exception as e:
+            except (OSError, json.JSONDecodeError, FileNotFoundError) as e:
                 logger.warning(f"Failed to load {dataset.name} from cache: {e}")
                 logger.info(
                     f"Fallback to download: {dataset.name} will be downloaded fresh"
@@ -134,7 +134,7 @@ def download_and_extract(
         if temp_dir is not None:
             try:
                 Path(temp_dir).mkdir(parents=True, exist_ok=True)
-            except Exception:
+            except OSError:
                 pass
         temp_dir_root = Path(tempfile.mkdtemp(dir=temp_dir))
 
@@ -252,6 +252,14 @@ def download_and_extract(
                             logger.info(
                                 f"Found {len(filenames)} files with format {fallback_format}"
                             )
+                            # Recalculate n_files for the actual format found — the
+                            # original n_files was computed for source_format (e.g. mp4)
+                            # which treats each file as one media item, but an archive
+                            # format (parquet/zip/tar) should only download
+                            # archives_per_dataset files, not media_per_archive.
+                            n_files = _calculate_files_to_download(
+                                dataset, fallback_format, media_per_archive, archives_per_dataset
+                            )
                             break
 
                 if not filenames:
@@ -304,25 +312,19 @@ def download_and_extract(
             else:
                 max_download_workers = min(10, len(to_download))
 
-                downloaded_files = download_files(
+                successfully_processed = 0
+                any_downloaded = False
+                for downloaded_file in _stream_downloads(
                     to_download,
                     temp_dir_root,
                     chunk_size=8192,
                     max_workers=max_download_workers,
                     hf_token=hf_token,
-                )
-
-                if not downloaded_files:
-                    logger.warning(
-                        f"No files successfully downloaded for {dataset.name}"
-                    )
-                    return
-
-                successfully_processed = 0
-                for downloaded_file in downloaded_files:
+                ):
                     if not downloaded_file or not downloaded_file.exists():
                         continue
 
+                    any_downloaded = True
                     try:
                         iso_week = extract_iso_week_from_path(str(downloaded_file))
                         successfully_processed += 1
@@ -340,11 +342,17 @@ def download_and_extract(
                         try:
                             if downloaded_file.exists():
                                 downloaded_file.unlink()
-                        except Exception:
+                        except OSError:
                             pass
 
+                if not any_downloaded:
+                    logger.warning(
+                        f"No files successfully downloaded for {dataset.name}"
+                    )
+                    return
+
                 logger.info(
-                    f"Downloaded and processed {successfully_processed}/{len(downloaded_files)} files "
+                    f"Downloaded and processed {successfully_processed} files "
                     f"for {dataset.name}"
                 )
 
@@ -743,14 +751,14 @@ def _process_gasstation(
                         parquet_samples += 1
                         total_samples += 1
                         yield sample
-                except Exception as e:
+                except (OSError, pyarrow.ArrowInvalid) as e:
                     logger.warning(f"Failed to process archive {archive_path}: {e}")
                     continue
                 finally:
                     try:
                         if archive_path.exists():
                             archive_path.unlink()
-                    except Exception:
+                    except OSError:
                         pass
 
             total_archives += len(downloaded_archive_files)
@@ -764,7 +772,7 @@ def _process_gasstation(
                 f"✅ Parquet {original_basename}: {parquet_samples} samples "
                 f"from {len(downloaded_archive_files)} archives"
             )
-        except Exception as e:
+        except (OSError, pyarrow.ArrowInvalid) as e:
             logger.warning(f"Failed to process parquet {parquet_path}: {e}")
             continue
         finally:
@@ -772,7 +780,7 @@ def _process_gasstation(
             try:
                 if parquet_path and parquet_path.exists():
                     parquet_path.unlink()
-            except Exception:
+            except (OSError, pyarrow.ArrowInvalid):
                 pass
 
     logger.info(
@@ -799,7 +807,7 @@ def _extract_unique_archive_filenames(parquet_path: Path) -> set:
 
         archive_filenames = set(df["archive_filename"].dropna().unique())
         return archive_filenames
-    except Exception as e:
+    except (OSError, pyarrow.ArrowInvalid) as e:
         logger.warning(f"Failed to extract archive filenames from {parquet_path}: {e}")
         return set()
 
@@ -838,7 +846,7 @@ def _build_parquet_metadata_map(
             metadata_map[key] = extract_row_metadata(row, "")
 
         return metadata_map
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, FileNotFoundError) as e:
         logger.warning(f"Failed to build metadata map from {parquet_path}: {e}")
         return {}
 
@@ -911,7 +919,7 @@ def _process_tar_with_metadata(
                     if dataset.modality == "image":
                         try:
                             media_obj = Image.open(BytesIO(data_bytes))
-                        except Exception as e:
+                        except (OSError, FileNotFoundError) as e:
                             logger.warning(f"Failed to open image {member.name}: {e}")
                             continue
                     else:
@@ -1007,7 +1015,7 @@ def _process_zip_or_tar(
                     if dataset.modality == "image":
                         try:
                             media_obj = Image.open(BytesIO(data_bytes))
-                        except Exception:
+                        except (OSError, FileNotFoundError):
                             logger.warning(
                                 f"Failed to open image {get_name(entry)} from {source_path}"
                             )
@@ -1104,9 +1112,9 @@ def _clean_to_json_serializable(value: Any) -> Any:
         try:
             json.dumps(value)
             return value
-        except Exception:
+        except (TypeError, ValueError):
             return str(value)
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 
@@ -1126,7 +1134,7 @@ def _extract_parquet_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
                 metadata["generator_hotkey"] = cleaned
             if "uid" in col_lower and "generator_uid" not in metadata:
                 metadata["generator_uid"] = cleaned
-    except Exception:
+    except (OSError, json.JSONDecodeError, FileNotFoundError):
         pass
     return metadata
 
@@ -1175,7 +1183,7 @@ def _download_filtered_sequential(
         finally:
             try:
                 parquet_path.unlink()
-            except Exception:
+            except (OSError, pyarrow.ArrowInvalid):
                 pass
 
     logger.info(
@@ -1292,7 +1300,7 @@ def _process_parquet(
 
                         try:
                             img = Image.open(BytesIO(media_data))
-                        except Exception:
+                        except (OSError, FileNotFoundError):
                             if isinstance(media_data, str):
                                 media_data = base64.b64decode(media_data)
                             img = Image.open(BytesIO(media_data))
@@ -1312,7 +1320,7 @@ def _process_parquet(
                                 buffer = io.BytesIO()
                                 sf.write(buffer, audio_array, sr, format='WAV')
                                 media_data = buffer.getvalue()
-                            except Exception as e:
+                            except (ValueError, TypeError, OSError) as e:
                                 logger.warning(f"Failed to convert audio array to bytes: {e}")
                                 continue
                         elif not isinstance(media_data, (bytes, bytearray)):
@@ -1528,6 +1536,34 @@ def _is_parquet_file(filename_lower: str) -> bool:
     return filename_lower.endswith(".parquet")
 
 
+def _stream_downloads(
+    urls: List[str],
+    output_dir: Path,
+    chunk_size: int = 8192,
+    max_workers: int = 10,
+    hf_token: Optional[str] = None,
+) -> Generator[Optional[Path], None, None]:
+    """Like download_files but yields each path as soon as its download completes."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if not urls:
+        return
+
+    def download_url(url):
+        try:
+            return download_single_file(url, output_dir, chunk_size, hf_token)
+        except (requests.RequestException, OSError) as e:
+            logger.error(f"Error downloading {url}: {e}")
+            return None
+
+    workers = min(max_workers, len(urls))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(download_url, url): url for url in urls}
+        for future in as_completed(futures):
+            yield future.result()
+
+
 def download_files(
     urls: List[str],
     output_dir: Path,
@@ -1555,7 +1591,7 @@ def download_files(
     def download_url(url):
         try:
             return download_single_file(url, output_dir, chunk_size, hf_token)
-        except Exception as e:
+        except (requests.RequestException, OSError) as e:
             logger.error(f"Error downloading {url}: {e}")
             return None
 
@@ -1747,7 +1783,7 @@ def _is_dataset_cached(dataset, cache_dir: str = "/.cache/gasbench") -> bool:
             and os.path.exists(metadata_file)
             and len(os.listdir(samples_dir)) > 0
         )
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, FileNotFoundError) as e:
         logger.warning(f"Error checking cache for dataset {dataset.name}: {e}")
         return False
 
@@ -1840,7 +1876,7 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
                     }
                     yield sample
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, FileNotFoundError) as e:
             logger.warning(
                 f"Failed to load cached sample {filename} from {dataset.name}: {e}"
             )

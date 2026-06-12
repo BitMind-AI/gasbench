@@ -20,7 +20,7 @@ import huggingface_hub as hf_hub
 logger = get_logger(__name__)
 
 DEFAULT_MAX_SAMPLES = 10000
-CACHE_MAX_SAMPLES = 2000
+CACHE_MAX_SAMPLES = 500
 GASSTATION_CACHE_MAX_SAMPLES = 10000
 
 

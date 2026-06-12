@@ -1,0 +1,853 @@
+# Image Dataset Configurations -- Real Images
+#
+datasets:
+
+  # -- action --
+
+  - name: Shooter-real
+    path: 34data/Shooter-real
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: action
+
+  - name: human-action-recognition-har-dataset
+    path: Bingsu/Human_Action_Recognition
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: [train]
+    notes: Human Action Recognition (HAR) - 15 activity classes (Kaggle via Bingsu/Human_Action_Recognition)
+    generator_family: real
+    content_category: action
+
+  # -- aerial --
+
+  - name: v14-vil100-jpeg
+    path: 34data/v14-vil100-jpeg
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: aerial
+
+  - name: v14-vil100-png
+    path: 34data/v14-vil100-png
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: aerial
+
+  - name: vtuav-dataset-test-lt-001
+    path: 34data/vtuav-dataset-test-lt-001
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: aerial
+
+  # -- animals --
+
+  - name: 47-plant-species
+    path: 34data/47-plant-species
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: animals
+
+  - name: afhq
+    path: bitmind/AFHQ
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: animals
+
+  - name: animal-10
+    path: 34data/animal-10
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: animals
+
+  - name: animal-90
+    path: 34data/animal-90
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: animals
+
+  - name: animalweb
+    path: 34data/animalweb
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: AnimalWeb animal face detection and alignment dataset
+    generator_family: real
+    content_category: animals
+
+  - name: birds-525-species
+    path: 34data/birds-525-species
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: animals
+
+  - name: sea-animals-image
+    path: 34data/sea-animals-image
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: animals
+
+  # -- art --
+
+  - name: dtd-textures
+    path: bitmind/dtd
+    modality: image
+    media_type: real
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: art
+
+  - name: wikiart
+    path: huggan/wikiart
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 4
+    generator_family: real
+    content_category: art
+
+  # -- currency --
+
+  - name: nepali-currency-dataset
+    path: 34data/nepali-currency-dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: currency
+
+  # -- diverse --
+
+  - name: FDDB_Dataset
+    path: 34data/FDDB_Dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: caltech-101
+    path: bitmind/caltech-101
+    modality: image
+    media_type: real
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: diverse
+
+  - name: caltech-256
+    path: bitmind/caltech-256
+    modality: image
+    media_type: real
+    media_per_archive: 250
+    archives_per_dataset: 4
+    generator_family: real
+    content_category: diverse
+
+  - name: cosyn-400k
+    path: allenai/CoSyn-400K
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: diverse
+
+  - name: fakeclue-real-ffpp
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: [data/real/ff++/]
+    generator_family: real
+    content_category: diverse
+
+  - name: fakeclue-real-genimage
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: [data/real/genimage/]
+    generator_family: real
+    content_category: diverse
+
+  - name: fakeclue-real-satellite
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: [data/real/satellite/]
+    generator_family: real
+    content_category: diverse
+
+  - name: flickr30k
+    path: nlphuji/flickr30k
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: diverse
+
+  - name: inst-it-dataset-videos-raw
+    path: 34data/inst-it-dataset-videos-raw
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: inst-it-dataset-videos-vpt
+    path: 34data/inst-it-dataset-videos-vpt
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: megalith-10m
+    path: drawthingsai/megalith-10m
+    modality: image
+    media_type: real
+    source_format: tar
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: ms-coco-unique
+    path: bitmind/MS-COCO-unique-256
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: diverse
+
+  - name: open-image-v7
+    path: bitmind/open-image-v7-256
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: diverse
+
+  - name: openfake-real
+    path: ComplexDataLab/OpenFake
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    filter_column: label
+    filter_value: real
+    notes: OpenFake real images (CC-BY-SA 4.0) — streamed with row filter
+    generator_family: real
+    content_category: diverse
+
+  - name: retrievatar
+    path: CausalLM/Retrievatar
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: diverse
+
+  - name: uagd
+    path: 34data/uagd
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: UAGD urban AI-generated detection dataset — real images
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-Images-vivid
+    path: 34data/v14-Images-vivid
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  # -- documents --
+
+  - name: Aslan-mingye-OCR-Quality
+    path: 34data/Aslan-mingye-OCR-Quality
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: documents
+
+  - name: M6Doc_test
+    path: 34data/M6Doc_test
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: documents
+
+  - name: SmartDoc-QA
+    path: 34data/SmartDoc-QA
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: documents
+
+  - name: fakeclue-real-doc
+    path: bitmind/FakeClue
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: [data/real/doc/]
+    generator_family: real
+    content_category: documents
+
+  - name: labelme-12-50k
+    path: 34data/labelme-12-50k
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: LabelMe 12-class 50k image dataset
+    generator_family: real
+    content_category: documents
+
+  - name: large-receipt-image-dataset-SRD
+    path: 34data/large-receipt-image-dataset-SRD
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: documents
+
+  # -- faces --
+
+  - name: 140k-real-fake-faces-real
+    path: 34data/140k-real-fake-faces-real
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: AgeDB
+    path: 34data/AgeDB
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: CACD
+    path: 34data/CACD
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: FaceDisguiseDatabase
+    path: 34data/FaceDisguiseDatabase
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: FaceDisguiseDatabase-image
+    path: 34data/FaceDisguiseDatabase-image
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: FantasyID-real
+    path: 34data/FantasyID-real
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: MAPIR-Faces
+    path: 34data/MAPIR-Faces
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: Mandrillus-Face
+    path: 34data/Mandrillus-Face
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: SoloFace
+    path: 34data/SoloFace
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: UTKFace
+    path: 34data/UTKFace
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: WarpDoc_merged
+    path: 34data/WarpDoc_merged
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: affectnet
+    path: 34data/affectnet
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: casia_web_face
+    path: SaffalPoosh/casia_web_face
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: faces
+
+  - name: celeb-a-hq
+    path: bitmind/celeb-a-hq
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: faces
+
+  - name: fairface
+    path: HuggingFaceM4/FairFace
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: FairFace - balanced demographic face dataset (WACV 2021)
+    generator_family: real
+    content_category: faces
+
+  - name: ffhq-256
+    path: bitmind/ffhq-256
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: faces
+
+  - name: human-fg-net-real-face
+    path: 34data/human-fg-net-real-face
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+
+  - name: idoc-mugshots
+    path: bitmind/idoc-mugshots-images
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: faces
+
+  - name: imdb-crop
+    path: 34data/imdb-crop
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: IMDB-WIKI face crops — real face images
+    generator_family: real
+    content_category: faces
+
+  - name: lfw
+    path: bitmind/lfw
+    modality: image
+    media_type: real
+    media_per_archive: 200
+    archives_per_dataset: 5
+    generator_family: real
+    content_category: faces
+
+  - name: nepali-cultural-dress-dataset
+    path: 34data/nepali-cultural-dress-dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: nepali-ethnic-groups-Face-emotions
+    path: 34data/nepali-ethnic-groups-Face-emotions
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: or-real-id
+    path: 34data/or-real-id
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: real-human-faces-data-set
+    path: 34data/real-human-faces-data-set
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+
+  - name: scface_dataset
+    path: 34data/scface_dataset
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: faces
+
+  - name: shhq-1.0
+    path: 34data/shhq-1.0
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+
+  - name: spoof_png
+    path: 34data/spoof_png
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    generator_variant: presentation-attack
+    content_category: faces
+
+  # -- food --
+
+  - name: food101
+    path: ethz/food101
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: food
+
+  - name: foodseg103
+    path: EduardoPacheco/FoodSeg103
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: FoodSeg103 - food segmentation benchmark (ACM MM 2021, Apache 2.0)
+    generator_family: real
+    content_category: food
+
+  - name: fruits-vegetables
+    path: 34data/fruits-vegetables
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: food
+
+  - name: nepali-food-images
+    path: 34data/nepali-food-images
+    modality: image
+    media_type: real
+    source_format: jpeg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: food
+
+  # -- humans --
+
+  - name: eidon-image
+    path: bitmind/bm-eidon-image
+    modality: image
+    media_type: real
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: humans
+
+  - name: fashionpedia
+    path: detection-datasets/fashionpedia
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: humans
+
+  # -- medical --
+
+  - name: MMMG
+    path: MMMGBench/MMMG
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    data_columns: [base_image]
+    generator_family: real
+    content_category: medical
+
+  - name: mmmu
+    path: MMMU/MMMU
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+    generator_family: real
+    content_category: medical
+
+  - name: pubmedvision
+    path: FreedomIntelligence/PubMedVision
+    modality: image
+    media_type: real
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  # -- plants --
+
+  - name: cub-200-2011
+    path: 34data/cub-200-2011
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: plants
+
+  - name: oxford-flower-102
+    path: dpdl-benchmark/oxford_flowers102
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: [train]
+    generator_family: real
+    content_category: plants
+
+  # -- vehicles --
+
+  - name: 60k-car
+    path: 34data/60k-car
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: vehicles
+
+  - name: OpenScene
+    path: OpenDriveLab/OpenScene
+    modality: image
+    media_type: real
+    source_format: tgz
+    media_per_archive: 500
+    archives_per_dataset: 2
+    include_paths: [openscene_sensor_test_camera, openscene_sensor_trainval_camera]
+    generator_family: real
+    content_category: vehicles
+
+  - name: bdd100k-weather-classification
+    path: 34data/bdd100k-weather-classification
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: BDD100K weather classification subset - requires 34data upload
+    generator_family: real
+    content_category: vehicles

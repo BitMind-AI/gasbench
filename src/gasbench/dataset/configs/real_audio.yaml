@@ -1,0 +1,598 @@
+# Image Dataset Configurations -- Real Audio
+#
+datasets:
+
+  # -- diverse --
+
+  - name: cfad-real
+    path: 34data/cfad-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: CFAD Chinese Fake Audio Detection — real/genuine audio
+    generator_family: real
+    content_category: diverse
+
+  - name: crema-d
+    path: myleslinder/crema-d
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: CREMA-D - emotional speech, actors
+    generator_family: real
+    content_category: diverse
+
+  - name: deepfake-urdu-real
+    path: CSALT/deepfake_detection_dataset_urdu
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: [Bonafide]
+    notes: Urdu language deepfake detection - real speech
+    generator_family: real
+    content_category: diverse
+
+  - name: english-dialects
+    path: ylacombe/english_dialects
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+    notes: English dialect variations
+    generator_family: real
+    content_category: diverse
+
+  - name: omnilingual-asr-corpus
+    path: facebook/omnilingual-asr-corpus
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 20
+    archives_per_dataset: 50
+    notes: Facebook - 1600+ languages, research quality
+    generator_family: real
+    content_category: diverse
+
+  - name: raddromur_asr
+    path: language-and-voice-lab/raddromur_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: diverse
+
+  - name: samromur_children
+    path: language-and-voice-lab/samromur_children
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: diverse
+
+  - name: slr1
+    path: 34data/slr1
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: slr101
+    path: 34data/slr101
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: slr120
+    path: 34data/slr120
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: slr133
+    path: 34data/slr133
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: slr149
+    path: 34data/slr149
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: slr41
+    path: 34data/slr41
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: slr66
+    path: 34data/slr66
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: OpenSLR 66 Telugu (male + female) - requires 34data upload
+    generator_family: real
+    content_category: diverse
+
+  - name: slr70
+    path: 34data/slr70
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: OpenSLR 70 - requires 34data upload
+    generator_family: real
+    content_category: diverse
+
+  - name: slr97
+    path: 34data/slr97
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: diverse
+
+  - name: slurp
+    path: qmeeus/slurp
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_01
+    path: 34data/v14-WaxalNLP-TTS-part_01
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_02
+    path: 34data/v14-WaxalNLP-TTS-part_02
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_03
+    path: 34data/v14-WaxalNLP-TTS-part_03
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_04
+    path: 34data/v14-WaxalNLP-TTS-part_04
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_05
+    path: 34data/v14-WaxalNLP-TTS-part_05
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_06
+    path: 34data/v14-WaxalNLP-TTS-part_06
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_07
+    path: 34data/v14-WaxalNLP-TTS-part_07
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_08
+    path: 34data/v14-WaxalNLP-TTS-part_08
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_09
+    path: 34data/v14-WaxalNLP-TTS-part_09
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-WaxalNLP-TTS-part_10
+    path: 34data/v14-WaxalNLP-TTS-part_10
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-bci-datasets
+    path: 34data/v14-real-bci-datasets
+    modality: audio
+    media_type: real
+    source_format: m4a
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-chichewa-dataset
+    path: 34data/v14-real-chichewa-dataset
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-daps
+    path: 34data/v14-real-daps
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-fastpitch-hifigan
+    path: 34data/v14-real-fastpitch-hifigan
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-kallaama
+    path: 34data/v14-real-kallaama
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-natural-odss
+    path: 34data/v14-real-natural-odss
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-nisqa-corpus-dataset
+    path: 34data/v14-real-nisqa-corpus-dataset
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-real-vivos
+    path: 34data/v14-real-vivos
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: diverse
+
+  - name: vcc2020-real
+    path: 34data/vcc2020-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: Voice Conversion Challenge 2020 — source (real) speech
+    generator_family: real
+    content_category: diverse
+
+  # -- music --
+
+  - name: audioset-sl
+    path: 34data/audioset-sl
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: AudioSet Sound Level subset — real environmental audio (FLAC)
+    generator_family: real
+    content_category: music
+
+  - name: audiospoofing-mini-real
+    path: 34data/audiospoofing-mini-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: AudioSpoofing mini dataset — genuine speech subset
+    generator_family: real
+    content_category: music
+
+  - name: v14-dag-asr-audio
+    path: 34data/v14-dag-asr-audio
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: music
+
+  - name: v14-real-vcapcv-vggsound-test-15446-audio-cut
+    path: 34data/v14-real-vcapcv-vggsound-test-15446-audio-cut
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: music
+
+  # -- sounds --
+
+  - name: fakesound2-real
+    path: 34data/fakesound2-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: FakeSound 2 — genuine environmental/ambient audio
+    generator_family: real
+    content_category: sounds
+
+  # -- speech --
+
+  - name: MediaSpeech
+    path: ymoslem/MediaSpeech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 4
+    generator_family: real
+    content_category: speech
+
+  - name: ami-corpus
+    path: edinburghcstr/ami
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 5
+    include_paths: [ihm/, sdm/]
+    generator_family: real
+    content_category: speech
+
+  - name: common-voice-17
+    path: fixie-ai/common_voice_17_0
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: 10
+    exclude_paths: [invalidated]
+    notes: Mozilla Common Voice 17.0 - 100+ languages, volunteer recordings
+    generator_family: real
+    content_category: speech
+
+  - name: cvoice-small-real
+    path: 34data/cvoice-small-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: Common Voice small subset — genuine human speech
+    generator_family: real
+    content_category: speech
+
+  - name: genshin-voice
+    path: simon3000/genshin-voice
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: speech
+
+  - name: gigaspeech
+    path: speechcolab/gigaspeech
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: [audio]
+    notes: GigaSpeech - 10K hours English, diverse sources
+    generator_family: real
+    content_category: speech
+
+  - name: indian-ted-talks-chunked
+    path: edwixxx/indian_ted_talks_chunked
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    notes: Indian TED Talks (chunked)
+    generator_family: real
+    content_category: speech
+
+  - name: librispeech-asr-clean
+    path: openslr/librispeech_asr
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+    include_paths: [all]
+    notes: LibriSpeech ASR corpus - clean subset
+    generator_family: real
+    content_category: speech
+
+  - name: mls-eng-10k
+    path: parler-tts/mls_eng_10k
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 5
+    notes: MLS English 10K subset
+    generator_family: real
+    content_category: speech
+
+  - name: peoples-speech
+    path: MLCommons/peoples_speech
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 250
+    archives_per_dataset: 5
+    exclude_paths: [microsplit]
+    notes: MLCommons People's Speech - large English corpus
+    generator_family: real
+    content_category: speech
+
+  - name: speechocean762
+    path: mispeech/speechocean762
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: SpeechOcean762 - non-native English pronunciation assessment corpus
+    generator_family: real
+    content_category: speech
+
+  - name: v14-real-ravdess-speech-16k
+    path: 34data/v14-real-ravdess-speech-16k
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v14 bmcore holdouts
+    generator_family: real
+    content_category: speech
+
+  - name: voxpopuli
+    path: facebook/voxpopuli
+    modality: audio
+    media_type: real
+    source_format: tar.gz
+    media_per_archive: 100
+    archives_per_dataset: 10
+    notes: EU Parliament speeches - 18 languages, professional quality
+    generator_family: real
+    content_category: speech

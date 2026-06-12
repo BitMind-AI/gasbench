@@ -25,7 +25,7 @@ UNIFORM_SAMPLING_MULTIPLIER = 3  # Allow up to 3x the base allocation per datase
 # Full-mode sizes moved here from YAML configs — single source of truth.
 BENCHMARK_TOTAL_OVERRIDES = {
     "debug": {"image": 100, "video": 50, "audio": 50},
-    "small": {"image": 1800, "video": 600, "audio": 600},
+    "small": {"image": 5000, "video": 5000, "audio": 5000},
     "full":  {"image": 55000, "video": 26000, "audio": 37000},
 }
 

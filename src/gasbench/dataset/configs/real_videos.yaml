@@ -588,17 +588,6 @@ datasets:
     generator_family: real
     content_category: diverse
 
-  - name: spatialvid
-    path: SpatialVID/SpatialVID
-    modality: video
-    media_type: real
-    source_format: tar
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [videos]
-    generator_family: real
-    content_category: diverse
-
   - name: v14-real-tracking-any-granularity-videos
     path: 34data/v14-real-tracking-any-granularity-videos
     modality: video

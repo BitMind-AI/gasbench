@@ -610,16 +610,6 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: MAVOS-DD-freevc
-    path: 34data/MAVOS-DD-freevc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-german_echomimic
     path: 34data/MAVOS-DD-german_echomimic
@@ -632,16 +622,6 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: MAVOS-DD-german_freevc
-    path: 34data/MAVOS-DD-german_freevc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-german_hififace
     path: 34data/MAVOS-DD-german_hififace
@@ -665,16 +645,6 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-  - name: MAVOS-DD-german_knnvc
-    path: 34data/MAVOS-DD-german_knnvc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-german_liveportrait
     path: 34data/MAVOS-DD-german_liveportrait
@@ -753,16 +723,6 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-  - name: MAVOS-DD-hindi_knnvc
-    path: 34data/MAVOS-DD-hindi_knnvc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-hindi_liveportrait
     path: 34data/MAVOS-DD-hindi_liveportrait
@@ -808,16 +768,6 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: MAVOS-DD-knnvc
-    path: 34data/MAVOS-DD-knnvc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-mandarin_echomimic
     path: 34data/MAVOS-DD-mandarin_echomimic
@@ -830,16 +780,6 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: MAVOS-DD-mandarin_freevc
-    path: 34data/MAVOS-DD-mandarin_freevc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-mandarin_hififace
     path: 34data/MAVOS-DD-mandarin_hififace
@@ -863,16 +803,6 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-  - name: MAVOS-DD-mandarin_knnvc
-    path: 34data/MAVOS-DD-mandarin_knnvc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-mandarin_liveportrait
     path: 34data/MAVOS-DD-mandarin_liveportrait
@@ -929,16 +859,6 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: MAVOS-DD-romanian_freevc
-    path: 34data/MAVOS-DD-romanian_freevc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-romanian_hififace
     path: 34data/MAVOS-DD-romanian_hififace
@@ -962,16 +882,6 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-  - name: MAVOS-DD-romanian_knnvc
-    path: 34data/MAVOS-DD-romanian_knnvc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-romanian_liveportrait
     path: 34data/MAVOS-DD-romanian_liveportrait
@@ -1028,16 +938,6 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: MAVOS-DD-russian_freevc
-    path: 34data/MAVOS-DD-russian_freevc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: MAVOS-DD-russian_hififace
     path: 34data/MAVOS-DD-russian_hififace
@@ -1389,16 +1289,6 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: v15-human-vid-mavos-dd-english_freevc
-    path: 34data/v15-human-vid-mavos-dd-english_freevc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: v15-human-vid-mavos-dd-english_hififace
     path: 34data/v15-human-vid-mavos-dd-english_hififace
@@ -1422,16 +1312,6 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-  - name: v15-human-vid-mavos-dd-english_knnvc
-    path: 34data/v15-human-vid-mavos-dd-english_knnvc
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
 
   - name: v15-human-vid-mavos-dd-english_liveportrait
     path: 34data/v15-human-vid-mavos-dd-english_liveportrait

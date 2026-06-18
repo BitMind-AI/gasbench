@@ -76,6 +76,141 @@ def ensure_mask_3d(mask: np.ndarray) -> np.ndarray:
     return mask
 
 
+def apply_robustness_augmentations(
+    image_array,
+    target_size,
+    seed=None,
+    jpeg_quality=55,
+    scale_factor=0.5,
+):
+    """Fixed augmentation suite for image augmentation robustness evaluation.
+
+    Simulates the dominant real-world internet distribution pipeline:
+      1. Downscale + upscale — thumbnail/CDN resize chain
+      2. JPEG roundtrip at jpeg_quality — first platform upload (e.g. WhatsApp ~55)
+      3. Second JPEG roundtrip at 80 — re-share / re-host recompression
+
+    Returns the same 4-tuple as apply_random_augmentations for drop-in use
+    in PrefetchPipeline when robustness_pass=True.  Deterministic given seed
+    so paired base/augmented samples share sample_id for degradation join.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    img = image_array.copy()
+    if img.dtype != np.uint8:
+        img = np.clip(img, 0, 255).astype(np.uint8)
+
+    h, w = img.shape[:2]
+
+    # Downscale then upscale — simulates share/thumbnail pipeline artifacts
+    if scale_factor < 1.0:
+        small_h = max(1, int(round(h * scale_factor)))
+        small_w = max(1, int(round(w * scale_factor)))
+        img = cv2.resize(img, (small_w, small_h), interpolation=cv2.INTER_AREA)
+        img = cv2.resize(img, (w, h), interpolation=cv2.INTER_LINEAR)
+
+    # First JPEG pass — heavy platform compression (WhatsApp/Telegram ~q55)
+    img = compress_image_jpeg_pil(img, quality=jpeg_quality)
+
+    # Second JPEG pass — lighter re-share recompression (Twitter/Instagram ~q80)
+    img = compress_image_jpeg_pil(img, quality=80)
+
+    # Resize to model input size (same crop+resize as base pipeline)
+    tforms = get_base_transforms(target_size, (1.0, 1.0))
+    aug_hwc, _ = tforms(img, None, reuse_params=False)
+
+    params = {"jpeg_quality": jpeg_quality, "scale_factor": scale_factor, "jpeg_quality_2": 80}
+    return aug_hwc, None, "robustness", params
+
+
+def apply_video_robustness_augmentations(
+    video_array,
+    target_size,
+    seed=None,
+    crf=23,
+    fps=25,
+):
+    """H.264 compression roundtrip for video augmentation robustness evaluation.
+
+    Mirrors the FaceForensics++ c23/c40 evaluation protocol — encode to H.264
+    at a given CRF then decode back, simulating platform re-encoding pipelines.
+    CRF 23 = light (FF++ c23, YouTube-tier), CRF 40 = heavy (FF++ c40,
+    WhatsApp/Messenger-tier).
+
+    cv2's VideoWriter with avc1 (libx264) does not expose CRF directly; the
+    quality parameter is mapped linearly from the CRF range [18, 51].
+
+    Returns the same 4-tuple as apply_random_augmentations for drop-in use in
+    VideoPrefetchPipeline when robustness_pass=True.
+    """
+    import tempfile
+    import os
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    if video_array.dtype != np.uint8:
+        video_array = np.clip(video_array, 0, 255).astype(np.uint8)
+
+    T, H, W, C = video_array.shape
+
+    # Map CRF [18, 51] → cv2 quality [100, 0] linearly
+    cv2_quality = max(0, min(100, round((51 - crf) / 33.0 * 100)))
+
+    compressed = None
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            tmp_path = f.name
+
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+        writer = cv2.VideoWriter(tmp_path, fourcc, float(fps), (W, H))
+        if writer.isOpened():
+            writer.set(cv2.VIDEOWRITER_PROP_QUALITY, cv2_quality)
+            for t in range(T):
+                writer.write(cv2.cvtColor(video_array[t], cv2.COLOR_RGB2BGR))
+            writer.release()
+
+            cap = cv2.VideoCapture(tmp_path)
+            decoded = []
+            while len(decoded) < T:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                decoded.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            cap.release()
+
+            if decoded:
+                # Pad to T frames if decoder returned fewer
+                while len(decoded) < T:
+                    decoded.append(decoded[-1])
+                compressed = np.stack(decoded[:T], axis=0)
+        else:
+            writer.release()
+    except Exception:
+        pass
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+    # Fallback: per-frame JPEG at quality approximating the requested CRF severity
+    if compressed is None:
+        fallback_q = max(20, min(95, round(100 - (crf - 18) * 2.3)))
+        compressed = compress_video_frames_jpeg_torchvision(video_array, quality=fallback_q)
+
+    # Resize to target via base transforms (no random crop/flip)
+    aug_thwc, _, _, _ = apply_random_augmentations(
+        compressed, target_size, seed=seed, level=0, crop_prob=0.0
+    )
+
+    params = {"crf": crf, "fps": fps, "cv2_quality": cv2_quality}
+    return aug_thwc, None, "robustness_video", params
+
+
 def apply_random_augmentations(
     inputs,
     target_size,

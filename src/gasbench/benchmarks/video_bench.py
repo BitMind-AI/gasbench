@@ -13,6 +13,7 @@ from ..processing.archive import video_archive_manager
 from ..processing.media import process_video_bytes_sample, process_video_frames_sample
 from ..processing.transforms import (
     apply_random_augmentations,
+    apply_video_robustness_augmentations,
     extract_num_frames_from_input_specs,
 )
 from ..config import DEFAULT_VIDEO_BATCH_SIZE
@@ -49,6 +50,8 @@ class VideoPrefetchPipeline:
         max_queue_size=6,
         num_frames=16,
         frame_rate=None,
+        robustness_pass=False,
+        robustness_crf=23,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -60,6 +63,8 @@ class VideoPrefetchPipeline:
         self.max_queue_size = max_queue_size
         self.num_frames = num_frames
         self.frame_rate = frame_rate
+        self.robustness_pass = robustness_pass
+        self.robustness_crf = robustness_crf
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -92,13 +97,21 @@ class VideoPrefetchPipeline:
 
             sample_seed = None if self.seed is None else (self.seed + sample_index)
             try:
-                aug_thwc, _, _, _ = apply_random_augmentations(
-                    video_array,
-                    self.target_size,
-                    seed=sample_seed,
-                    level=self.augment_level,
-                    crop_prob=self.crop_prob,
-                )
+                if self.robustness_pass:
+                    aug_thwc, _, _, _ = apply_video_robustness_augmentations(
+                        video_array,
+                        self.target_size,
+                        seed=sample_seed,
+                        crf=self.robustness_crf,
+                    )
+                else:
+                    aug_thwc, _, _, _ = apply_random_augmentations(
+                        video_array,
+                        self.target_size,
+                        seed=sample_seed,
+                        level=self.augment_level,
+                        crop_prob=self.crop_prob,
+                    )
             except Exception as e:
                 logger.error(f"Video augmentation failed: {e}")
                 return None
@@ -207,6 +220,7 @@ def process_video_batch(
     batch_metadata,
     tracker: BenchmarkRunRecorder,
     batch_id: int,
+    aug_pass: bool = False,
 ):
     """push a batch of videos through the model and record rows in tracker."""
     if not batch_videos:
@@ -251,6 +265,7 @@ def process_video_batch(
             batch_id=batch_id,
             batch_size=len(batch_videos),
             sample_seed=sample_seed,
+            aug_pass=aug_pass,
         )
 
 
@@ -276,6 +291,9 @@ async def run_video_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: dict = None,
+    n_aug_per_dataset: int = 0,
+    aug_weight: float = 0.2,
+    robustness_crf: int = 23,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -327,6 +345,9 @@ async def run_video_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            n_aug_per_dataset=n_aug_per_dataset,
+            aug_weight=aug_weight,
+            robustness_crf=robustness_crf,
         )
         plan = build_plan(logger, run_config, input_specs)
         if not plan:
@@ -429,6 +450,80 @@ async def run_video_benchmark(
                     benchmark_results["errors"].append(
                         f"Dataset error for {dataset_config.name}: {str(e)[:100]}"
                     )
+
+            if n_aug_per_dataset > 0:
+                logger.info(
+                    f"Starting video augmentation robustness pass (CRF {robustness_crf}): "
+                    f"{n_aug_per_dataset} samples/dataset"
+                )
+                for dataset_idx, dataset_config in enumerate(plan.available_datasets):
+                    logger.info(
+                        f"Robustness pass {dataset_idx + 1}/{len(plan.available_datasets)}: "
+                        f"{dataset_config.name}"
+                    )
+                    try:
+                        is_gasstation = "gasstation" in dataset_config.name.lower()
+                        should_download = (
+                            download_latest_gasstation_data if is_gasstation else True
+                        ) if not skip_missing else False
+
+                        aug_iterator = DatasetIterator(
+                            dataset_config,
+                            max_samples=n_aug_per_dataset,
+                            cache_dir=cache_dir,
+                            download=should_download,
+                            hf_token=hf_token,
+                            seed=seed,
+                            lazy_read=True,
+                        )
+
+                        if skip_missing and aug_iterator.get_total_cached_count() == 0:
+                            continue
+
+                        aug_pipeline = VideoPrefetchPipeline(
+                            dataset_iterator=aug_iterator,
+                            target_size=plan.target_size,
+                            batch_size=batch_size,
+                            seed=seed,
+                            augment_level=augment_level,
+                            crop_prob=crop_prob,
+                            num_frames=num_frames,
+                            frame_rate=frame_rate,
+                            robustness_pass=True,
+                            robustness_crf=robustness_crf,
+                        )
+
+                        aug_batch_id = 0
+                        try:
+                            for batch_data in aug_pipeline:
+                                aug_batch_id += 1
+                                batch_videos = [item["video"] for item in batch_data]
+                                batch_metadata = [
+                                    (
+                                        item["label"],
+                                        item["sample"],
+                                        item["sample_index"],
+                                        item["dataset_name"],
+                                        item["sample_seed"],
+                                    )
+                                    for item in batch_data
+                                ]
+                                process_video_batch(
+                                    session,
+                                    input_specs,
+                                    batch_videos,
+                                    batch_metadata,
+                                    tracker,
+                                    aug_batch_id,
+                                    aug_pass=True,
+                                )
+                        finally:
+                            aug_pipeline.close()
+
+                    except Exception as e:
+                        logger.error(
+                            f"Video robustness pass failed for {dataset_config.name}: {e}"
+                        )
 
             cache_info = video_cache.get_cache_info()
             df = finalize_run(

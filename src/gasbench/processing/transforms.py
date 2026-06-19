@@ -82,13 +82,20 @@ def apply_robustness_augmentations(
     seed=None,
     jpeg_quality=55,
     scale_factor=0.5,
+    webp_quality=75,
 ):
     """Fixed augmentation suite for image augmentation robustness evaluation.
 
     Simulates the dominant real-world internet distribution pipeline:
       1. Downscale + upscale — thumbnail/CDN resize chain
       2. JPEG roundtrip at jpeg_quality — first platform upload (e.g. WhatsApp ~55)
-      3. Second JPEG roundtrip at 80 — re-share / re-host recompression
+      3. WebP roundtrip at webp_quality — CDN/platform re-host (Facebook, Google)
+      4. Second JPEG roundtrip at 80 — re-share / re-host recompression
+
+    Step 3 exercises the cross-codec re-hosting case: many platforms serve
+    WebP, whose VP8 intra coding leaves a different artifact family than JPEG
+    DCT, so a detector that survives repeated JPEG can still collapse on it.
+    Pass webp_quality=None to skip it and recover the JPEG-only chain.
 
     Returns the same 4-tuple as apply_random_augmentations for drop-in use
     in PrefetchPipeline when robustness_pass=True.  Deterministic given seed
@@ -113,6 +120,10 @@ def apply_robustness_augmentations(
     # First JPEG pass — heavy platform compression (WhatsApp/Telegram ~q55)
     img = compress_image_jpeg_pil(img, quality=jpeg_quality)
 
+    # Cross-codec re-host — CDN/platform WebP transcode (Facebook, Google)
+    if webp_quality is not None:
+        img = compress_image_webp_pil(img, quality=webp_quality)
+
     # Second JPEG pass — lighter re-share recompression (Twitter/Instagram ~q80)
     img = compress_image_jpeg_pil(img, quality=80)
 
@@ -120,8 +131,114 @@ def apply_robustness_augmentations(
     tforms = get_base_transforms(target_size, (1.0, 1.0))
     aug_hwc, _ = tforms(img, None, reuse_params=False)
 
-    params = {"jpeg_quality": jpeg_quality, "scale_factor": scale_factor, "jpeg_quality_2": 80}
+    params = {
+        "jpeg_quality": jpeg_quality,
+        "scale_factor": scale_factor,
+        "webp_quality": webp_quality,
+        "jpeg_quality_2": 80,
+    }
     return aug_hwc, None, "robustness", params
+
+
+def _decode_video_rgb(tmp_path, num_frames):
+    """Decode up to num_frames RGB frames from a video file, padding the last
+    frame if the decoder returns fewer. Returns a (T, H, W, 3) uint8 array or
+    None on failure."""
+    cap = cv2.VideoCapture(tmp_path)
+    decoded = []
+    while len(decoded) < num_frames:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        decoded.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    cap.release()
+    if not decoded:
+        return None
+    while len(decoded) < num_frames:
+        decoded.append(decoded[-1])
+    return np.stack(decoded[:num_frames], axis=0)
+
+
+def _h264_roundtrip_ffmpeg(video_array, crf, fps):
+    """Faithful H.264 roundtrip via the ffmpeg CLI using a real ``-crf`` value.
+
+    This is the only path that reproduces the FaceForensics++ CRF protocol
+    exactly; cv2's VideoWriter quality knob does not map to CRF and is ignored
+    on many OpenCV builds. Returns the decoded (T, H, W, 3) uint8 array, or
+    None if ffmpeg is unavailable or the roundtrip fails (caller falls back).
+    """
+    import shutil
+    import subprocess
+    import tempfile
+    import os
+
+    if shutil.which("ffmpeg") is None:
+        return None
+
+    T, H, W, C = video_array.shape
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            tmp_path = f.name
+        cmd = [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-f", "rawvideo", "-pix_fmt", "rgb24",
+            "-s", f"{W}x{H}", "-r", str(int(fps)), "-i", "-",
+            "-c:v", "libx264", "-crf", str(int(crf)),
+            "-pix_fmt", "yuv420p", tmp_path,
+        ]
+        proc = subprocess.run(
+            cmd, input=np.ascontiguousarray(video_array).tobytes(),
+            capture_output=True,
+        )
+        if proc.returncode != 0 or not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
+            return None
+        return _decode_video_rgb(tmp_path, T)
+    except Exception:
+        return None
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+
+def _h264_roundtrip_cv2(video_array, crf, fps):
+    """Best-effort H.264 roundtrip via cv2's avc1 writer. CRF cannot be set
+    directly, so it is approximated through VIDEOWRITER_PROP_QUALITY (a perceptual
+    0-100 knob that some builds ignore). Returns (T, H, W, 3) uint8 or None."""
+    import tempfile
+    import os
+
+    T, H, W, C = video_array.shape
+    # Map CRF [18, 51] → cv2 quality [100, 0] linearly (approximate only)
+    cv2_quality = max(0, min(100, round((51 - crf) / 33.0 * 100)))
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            tmp_path = f.name
+
+        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+        writer = cv2.VideoWriter(tmp_path, fourcc, float(fps), (W, H))
+        if not writer.isOpened():
+            writer.release()
+            return None
+
+        writer.set(cv2.VIDEOWRITER_PROP_QUALITY, cv2_quality)
+        for t in range(T):
+            writer.write(cv2.cvtColor(video_array[t], cv2.COLOR_RGB2BGR))
+        writer.release()
+        return _decode_video_rgb(tmp_path, T)
+    except Exception:
+        return None
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 def apply_video_robustness_augmentations(
@@ -130,6 +247,7 @@ def apply_video_robustness_augmentations(
     seed=None,
     crf=23,
     fps=25,
+    scale_factor=1.0,
 ):
     """H.264 compression roundtrip for video augmentation robustness evaluation.
 
@@ -138,67 +256,48 @@ def apply_video_robustness_augmentations(
     CRF 23 = light (FF++ c23, YouTube-tier), CRF 40 = heavy (FF++ c40,
     WhatsApp/Messenger-tier).
 
-    cv2's VideoWriter with avc1 (libx264) does not expose CRF directly; the
-    quality parameter is mapped linearly from the CRF range [18, 51].
+    Encoding tries, in order:
+      1. ffmpeg CLI with a real ``-crf`` value — faithful FF++ reproduction.
+      2. cv2 avc1 writer with an approximate quality mapping — used only if
+         ffmpeg is not on PATH.
+      3. per-frame JPEG at an equivalent severity — last-resort fallback that
+         still preserves chroma-subsampling artifacts.
+
+    scale_factor < 1.0 first downscales every frame (resolution ladder) before
+    encoding, mirroring platform transcodes that drop 1080p → 720p → 480p. Left
+    at 1.0 by default so the CRF-only pass stays faithful to the FF++ protocol;
+    set it (e.g. 0.5) to additionally exercise resolution degradation.
 
     Returns the same 4-tuple as apply_random_augmentations for drop-in use in
     VideoPrefetchPipeline when robustness_pass=True.
     """
-    import tempfile
-    import os
-
     if seed is not None:
         np.random.seed(seed)
 
     if video_array.dtype != np.uint8:
         video_array = np.clip(video_array, 0, 255).astype(np.uint8)
 
+    # Resolution ladder — downscale frames before encoding (platform transcode)
+    if scale_factor < 1.0:
+        T, H, W, C = video_array.shape
+        sh = max(2, int(round(H * scale_factor)))
+        sw = max(2, int(round(W * scale_factor)))
+        video_array = np.stack(
+            [cv2.resize(video_array[t], (sw, sh), interpolation=cv2.INTER_AREA)
+             for t in range(T)],
+            axis=0,
+        )
+
     T, H, W, C = video_array.shape
 
-    # Map CRF [18, 51] → cv2 quality [100, 0] linearly
-    cv2_quality = max(0, min(100, round((51 - crf) / 33.0 * 100)))
-
-    compressed = None
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
-            tmp_path = f.name
-
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
-        writer = cv2.VideoWriter(tmp_path, fourcc, float(fps), (W, H))
-        if writer.isOpened():
-            writer.set(cv2.VIDEOWRITER_PROP_QUALITY, cv2_quality)
-            for t in range(T):
-                writer.write(cv2.cvtColor(video_array[t], cv2.COLOR_RGB2BGR))
-            writer.release()
-
-            cap = cv2.VideoCapture(tmp_path)
-            decoded = []
-            while len(decoded) < T:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                decoded.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            cap.release()
-
-            if decoded:
-                # Pad to T frames if decoder returned fewer
-                while len(decoded) < T:
-                    decoded.append(decoded[-1])
-                compressed = np.stack(decoded[:T], axis=0)
-        else:
-            writer.release()
-    except Exception:
-        pass
-    finally:
-        if tmp_path:
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
-
-    # Fallback: per-frame JPEG at quality approximating the requested CRF severity
+    method = "ffmpeg_crf"
+    compressed = _h264_roundtrip_ffmpeg(video_array, crf, fps)
     if compressed is None:
+        method = "cv2_avc1"
+        compressed = _h264_roundtrip_cv2(video_array, crf, fps)
+    if compressed is None:
+        # Fallback: per-frame JPEG at quality approximating the requested CRF severity
+        method = "jpeg_fallback"
         fallback_q = max(20, min(95, round(100 - (crf - 18) * 2.3)))
         compressed = compress_video_frames_jpeg_torchvision(video_array, quality=fallback_q)
 
@@ -207,7 +306,7 @@ def apply_video_robustness_augmentations(
         compressed, target_size, seed=seed, level=0, crop_prob=0.0
     )
 
-    params = {"crf": crf, "fps": fps, "cv2_quality": cv2_quality}
+    params = {"crf": crf, "fps": fps, "scale_factor": scale_factor, "method": method}
     return aug_thwc, None, "robustness_video", params
 
 
@@ -844,10 +943,49 @@ def compress_image_jpeg_pil(image_hwc: np.ndarray, quality: int = 75) -> np.ndar
 
     pil_img = Image.fromarray(image_hwc, mode="RGB")
     buffer = BytesIO()
-    pil_img.save(buffer, format="JPEG", quality=int(quality))
+    # subsampling=2 forces 4:2:0 chroma subsampling regardless of quality/Pillow
+    # version. This is the operation the social-media compression literature
+    # identifies as destroying high-frequency DCT fingerprints, so we pin it
+    # rather than letting Pillow pick subsampling per quality level.
+    pil_img.save(buffer, format="JPEG", quality=int(quality), subsampling=2)
     buffer.seek(0)
     decoded_pil = Image.open(buffer).convert("RGB")
     return np.array(decoded_pil)
+
+
+def compress_image_webp_pil(image_hwc: np.ndarray, quality: int = 75) -> np.ndarray:
+    """
+    Compress a single image using a PIL WebP (lossy) round-trip at fixed quality.
+
+    Facebook, Google, and many CDNs re-host uploads as WebP, whose VP8 intra
+    coding leaves a different artifact family than JPEG's DCT blocks. Including
+    a WebP pass alongside the JPEG passes exercises detectors against the
+    cross-codec re-hosting that real distribution chains produce.
+
+    Args:
+        image_hwc: numpy array (H, W, C), dtype uint8, RGB
+        quality: WebP quality (default 75)
+
+    Returns:
+        numpy array (H, W, C), dtype uint8, RGB
+    """
+    if image_hwc is None:
+        return image_hwc
+    if image_hwc.dtype != np.uint8:
+        image_hwc = np.clip(image_hwc, 0, 255).astype(np.uint8)
+    if image_hwc.ndim != 3 or image_hwc.shape[2] != 3:
+        return image_hwc
+
+    try:
+        pil_img = Image.fromarray(image_hwc, mode="RGB")
+        buffer = BytesIO()
+        pil_img.save(buffer, format="WEBP", quality=int(quality), method=4)
+        buffer.seek(0)
+        decoded_pil = Image.open(buffer).convert("RGB")
+        return np.array(decoded_pil)
+    except Exception:
+        # WebP support is missing in some Pillow builds; fall back to original.
+        return image_hwc
 
 
 def compress_video_frames_jpeg_torchvision(video_thwc: np.ndarray, quality: int = 75) -> np.ndarray:

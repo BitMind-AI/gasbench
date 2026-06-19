@@ -290,6 +290,16 @@ def apply_video_robustness_augmentations(
 
     T, H, W, C = video_array.shape
 
+    # H.264 with yuv420p (both the ffmpeg -crf and cv2 avc1 encoders) requires
+    # even width and height; libx264 rejects odd dimensions outright. Trim a
+    # trailing row/column when needed so encoding succeeds instead of silently
+    # erroring into the fallback path (which would also mis-set method). At most
+    # one pixel per axis is dropped, and the frame is resized to target anyway.
+    even_h, even_w = H - (H % 2), W - (W % 2)
+    if (even_h, even_w) != (H, W) and even_h >= 2 and even_w >= 2:
+        video_array = video_array[:, :even_h, :even_w, :]
+        T, H, W, C = video_array.shape
+
     method = "ffmpeg_crf"
     compressed = _h264_roundtrip_ffmpeg(video_array, crf, fps)
     if compressed is None:

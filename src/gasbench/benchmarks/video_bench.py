@@ -51,7 +51,6 @@ class VideoPrefetchPipeline:
         num_frames=16,
         frame_rate=None,
         robustness_pass=False,
-        robustness_crf=23,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -64,7 +63,6 @@ class VideoPrefetchPipeline:
         self.num_frames = num_frames
         self.frame_rate = frame_rate
         self.robustness_pass = robustness_pass
-        self.robustness_crf = robustness_crf
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -102,7 +100,6 @@ class VideoPrefetchPipeline:
                         video_array,
                         self.target_size,
                         seed=sample_seed,
-                        crf=self.robustness_crf,
                     )
                 else:
                     aug_thwc, _, _, _ = apply_random_augmentations(
@@ -293,7 +290,6 @@ async def run_video_benchmark(
     score_composition: dict = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
-    robustness_crf: int = 23,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -347,7 +343,6 @@ async def run_video_benchmark(
             score_composition=score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
-            robustness_crf=robustness_crf,
         )
         plan = build_plan(logger, run_config, input_specs)
         if not plan:
@@ -453,7 +448,7 @@ async def run_video_benchmark(
 
             if n_aug_per_dataset > 0:
                 logger.info(
-                    f"Starting video augmentation robustness pass (CRF {robustness_crf}): "
+                    f"Starting video augmentation robustness pass: "
                     f"{n_aug_per_dataset} samples/dataset"
                 )
                 for dataset_idx, dataset_config in enumerate(plan.available_datasets):
@@ -490,7 +485,6 @@ async def run_video_benchmark(
                             num_frames=num_frames,
                             frame_rate=frame_rate,
                             robustness_pass=True,
-                            robustness_crf=robustness_crf,
                         )
 
                         aug_batch_id = 0

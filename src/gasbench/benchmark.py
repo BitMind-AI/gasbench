@@ -39,9 +39,6 @@ async def run_benchmark(
     score_composition: Optional[Dict[str, float]] = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
-    robustness_jpeg_quality: int = 55,
-    robustness_scale_factor: float = 0.5,
-    robustness_crf: int = 23,
 ) -> Dict:
     """
     Args:
@@ -129,9 +126,6 @@ async def run_benchmark(
             score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
-            robustness_jpeg_quality=robustness_jpeg_quality,
-            robustness_scale_factor=robustness_scale_factor,
-            robustness_crf=robustness_crf,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -230,9 +224,6 @@ async def execute_benchmark(
     score_composition: Optional[Dict[str, float]] = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
-    robustness_jpeg_quality: int = 55,
-    robustness_scale_factor: float = 0.5,
-    robustness_crf: int = 23,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -262,8 +253,6 @@ async def execute_benchmark(
             score_composition=score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
-            robustness_jpeg_quality=robustness_jpeg_quality,
-            robustness_scale_factor=robustness_scale_factor,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -289,7 +278,6 @@ async def execute_benchmark(
             score_composition=score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
-            robustness_crf=robustness_crf,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":

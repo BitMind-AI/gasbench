@@ -165,7 +165,6 @@ def command_run(args):
                 content_category=args.content_category,
                 n_aug_per_dataset=getattr(args, "n_aug_per_dataset", 0),
                 aug_weight=getattr(args, "aug_weight", 0.2),
-                robustness_crf=getattr(args, "robustness_crf", 23),
             )
         )
 
@@ -594,15 +593,6 @@ See docs/Safetensors.md for detailed requirements.
         metavar="W",
         help="Weight of aug_sn34_score in the blended augmentation score "
              "(only used when --n-aug-per-dataset > 0). Default: 0.2.",
-    )
-    run_parser.add_argument(
-        "--robustness-crf",
-        type=int,
-        default=23,
-        metavar="CRF",
-        help="H.264 CRF for video robustness augmentation pass. "
-             "23 = light (FaceForensics++ c23, YouTube-tier), "
-             "40 = heavy (FF++ c40, WhatsApp-tier). Default: 23.",
     )
 
     run_parser.set_defaults(func=command_run)

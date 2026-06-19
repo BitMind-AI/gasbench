@@ -48,8 +48,6 @@ class PrefetchPipeline:
         num_workers=8,
         max_queue_size=8,
         robustness_pass=False,
-        robustness_jpeg_quality=55,
-        robustness_scale_factor=0.5,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -60,8 +58,6 @@ class PrefetchPipeline:
         self.num_workers = num_workers
         self.max_queue_size = max_queue_size
         self.robustness_pass = robustness_pass
-        self.robustness_jpeg_quality = robustness_jpeg_quality
-        self.robustness_scale_factor = robustness_scale_factor
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -90,8 +86,6 @@ class PrefetchPipeline:
                     image_array,
                     self.target_size,
                     seed=sample_seed,
-                    jpeg_quality=self.robustness_jpeg_quality,
-                    scale_factor=self.robustness_scale_factor,
                 )
             else:
                 aug_hwc, _, _, _ = apply_random_augmentations(
@@ -264,8 +258,6 @@ async def run_image_benchmark(
     score_composition: dict = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
-    robustness_jpeg_quality: int = 55,
-    robustness_scale_factor: float = 0.5,
 ) -> pd.DataFrame:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -300,8 +292,6 @@ async def run_image_benchmark(
             score_composition=score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
-            robustness_jpeg_quality=robustness_jpeg_quality,
-            robustness_scale_factor=robustness_scale_factor,
         )
 
         plan = build_plan(logger, run_config, input_specs)
@@ -430,8 +420,6 @@ async def run_image_benchmark(
                         augment_level=augment_level,
                         crop_prob=crop_prob,
                         robustness_pass=True,
-                        robustness_jpeg_quality=robustness_jpeg_quality,
-                        robustness_scale_factor=robustness_scale_factor,
                     )
 
                     aug_batch_id = 0

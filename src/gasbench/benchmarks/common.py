@@ -43,9 +43,6 @@ class BenchmarkRunConfig:
     score_composition: Optional[Dict[str, float]] = None  # Target score weight share per provenance class, e.g. {"public": 0.5, "holdout": 0.3, "gasstation": 0.2}; weights all metrics incl. sn34_score
     n_aug_per_dataset: int = 0  # Number of samples per dataset to re-evaluate with robustness augmentations (0 = disabled)
     aug_weight: float = 0.2  # Weight of aug_sn34_score in blended final score (when n_aug_per_dataset > 0)
-    robustness_jpeg_quality: int = 55  # JPEG quality for image robustness augmentation pass
-    robustness_scale_factor: float = 0.5  # Downscale factor for image robustness augmentation pass
-    robustness_crf: int = 23  # H.264 CRF for video robustness augmentation pass (23=FF++ c23, 40=FF++ c40)
 
 
 @dataclass

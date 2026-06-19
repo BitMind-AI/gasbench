@@ -21,8 +21,28 @@ from ..constants import MAX_VIDEO_NUM_FRAMES
 from ..dataset.iterator import DatasetIterator
 
 from .utils.inference import process_model_output
-from .recording import BenchmarkRunRecorder, log_dataset_summary
+from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
 from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
+
+_VID_AUG_VERSION = "vid_v1"
+
+
+def _aug_cache_path(cache_dir: str, sample_id: str) -> str:
+    return os.path.join(cache_dir, sample_id[:2], f"{sample_id}_{_VID_AUG_VERSION}.npy")
+
+
+def _write_aug_cache(path: str, array) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        import numpy as _np
+        _np.save(tmp, array)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
 import pandas as pd
 
 logger = get_logger(__name__)
@@ -51,6 +71,7 @@ class VideoPrefetchPipeline:
         num_frames=16,
         frame_rate=None,
         robustness_pass=False,
+        aug_cache_dir=None,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -63,6 +84,7 @@ class VideoPrefetchPipeline:
         self.num_frames = num_frames
         self.frame_rate = frame_rate
         self.robustness_pass = robustness_pass
+        self.aug_cache_dir = aug_cache_dir
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -96,11 +118,22 @@ class VideoPrefetchPipeline:
             sample_seed = None if self.seed is None else (self.seed + sample_index)
             try:
                 if self.robustness_pass:
-                    aug_thwc, _, _, _ = apply_video_robustness_augmentations(
-                        video_array,
-                        self.target_size,
-                        seed=sample_seed,
-                    )
+                    if self.aug_cache_dir:
+                        sid = build_sample_id(sample)
+                        cache_path = _aug_cache_path(self.aug_cache_dir, sid)
+                        if os.path.exists(cache_path):
+                            aug_thwc = np.load(cache_path)
+                        else:
+                            aug_thwc, _, _, _ = apply_video_robustness_augmentations(
+                                video_array, self.target_size, seed=sample_seed
+                            )
+                            _write_aug_cache(cache_path, aug_thwc)
+                    else:
+                        aug_thwc, _, _, _ = apply_video_robustness_augmentations(
+                            video_array,
+                            self.target_size,
+                            seed=sample_seed,
+                        )
                 else:
                     aug_thwc, _, _, _ = apply_random_augmentations(
                         video_array,
@@ -290,6 +323,7 @@ async def run_video_benchmark(
     score_composition: dict = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
+    aug_cache_dir: Optional[str] = None,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -447,9 +481,11 @@ async def run_video_benchmark(
                     )
 
             if n_aug_per_dataset > 0:
+                aug_seed = seed if seed is not None else 42
                 logger.info(
                     f"Starting video augmentation robustness pass: "
                     f"{n_aug_per_dataset} samples/dataset"
+                    + (f" (aug_cache_dir={aug_cache_dir})" if aug_cache_dir else "")
                 )
                 for dataset_idx, dataset_config in enumerate(plan.available_datasets):
                     logger.info(
@@ -479,12 +515,13 @@ async def run_video_benchmark(
                             dataset_iterator=aug_iterator,
                             target_size=plan.target_size,
                             batch_size=batch_size,
-                            seed=seed,
+                            seed=aug_seed,
                             augment_level=augment_level,
                             crop_prob=crop_prob,
                             num_frames=num_frames,
                             frame_rate=frame_rate,
                             robustness_pass=True,
+                            aug_cache_dir=aug_cache_dir,
                         )
 
                         aug_batch_id = 0

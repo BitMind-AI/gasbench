@@ -39,6 +39,7 @@ async def run_benchmark(
     score_composition: Optional[Dict[str, float]] = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
+    aug_cache_dir: Optional[str] = None,
 ) -> Dict:
     """
     Args:
@@ -126,6 +127,7 @@ async def run_benchmark(
             score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
+            aug_cache_dir=aug_cache_dir,
         )
 
         benchmark_results["benchmark_score"] = benchmark_score
@@ -224,6 +226,7 @@ async def execute_benchmark(
     score_composition: Optional[Dict[str, float]] = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
+    aug_cache_dir: Optional[str] = None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -253,6 +256,7 @@ async def execute_benchmark(
             score_composition=score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
+            aug_cache_dir=aug_cache_dir,
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
@@ -278,6 +282,7 @@ async def execute_benchmark(
             score_composition=score_composition,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
+            aug_cache_dir=aug_cache_dir,
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":

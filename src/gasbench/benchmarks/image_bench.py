@@ -20,8 +20,28 @@ from ..config import (
 from ..dataset.iterator import DatasetIterator
 
 from .utils.inference import process_model_output
-from .recording import BenchmarkRunRecorder, log_dataset_summary
+from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
 from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
+
+_IMG_AUG_VERSION = "img_v1"
+
+
+def _aug_cache_path(cache_dir: str, sample_id: str) -> str:
+    return os.path.join(cache_dir, sample_id[:2], f"{sample_id}_{_IMG_AUG_VERSION}.npy")
+
+
+def _write_aug_cache(path: str, array) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        import numpy as _np
+        _np.save(tmp, array)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
 import pandas as pd
 
 logger = get_logger(__name__)
@@ -48,6 +68,7 @@ class PrefetchPipeline:
         num_workers=8,
         max_queue_size=8,
         robustness_pass=False,
+        aug_cache_dir=None,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -58,6 +79,7 @@ class PrefetchPipeline:
         self.num_workers = num_workers
         self.max_queue_size = max_queue_size
         self.robustness_pass = robustness_pass
+        self.aug_cache_dir = aug_cache_dir
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -82,11 +104,22 @@ class PrefetchPipeline:
 
             sample_seed = None if self.seed is None else (self.seed + sample_index)
             if self.robustness_pass:
-                aug_hwc, _, _, _ = apply_robustness_augmentations(
-                    image_array,
-                    self.target_size,
-                    seed=sample_seed,
-                )
+                if self.aug_cache_dir:
+                    sid = build_sample_id(sample)
+                    cache_path = _aug_cache_path(self.aug_cache_dir, sid)
+                    if os.path.exists(cache_path):
+                        aug_hwc = np.load(cache_path)
+                    else:
+                        aug_hwc, _, _, _ = apply_robustness_augmentations(
+                            image_array, self.target_size, seed=sample_seed
+                        )
+                        _write_aug_cache(cache_path, aug_hwc)
+                else:
+                    aug_hwc, _, _, _ = apply_robustness_augmentations(
+                        image_array,
+                        self.target_size,
+                        seed=sample_seed,
+                    )
             else:
                 aug_hwc, _, _, _ = apply_random_augmentations(
                     image_array,
@@ -258,6 +291,7 @@ async def run_image_benchmark(
     score_composition: dict = None,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
+    aug_cache_dir: Optional[str] = None,
 ) -> pd.DataFrame:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -385,8 +419,10 @@ async def run_image_benchmark(
                 )
 
         if n_aug_per_dataset > 0:
+            aug_seed = seed if seed is not None else 42
             logger.info(
                 f"Starting augmentation robustness pass: {n_aug_per_dataset} samples/dataset"
+                + (f" (aug_cache_dir={aug_cache_dir})" if aug_cache_dir else "")
             )
             for dataset_idx, dataset_config in enumerate(plan.available_datasets):
                 logger.info(
@@ -416,10 +452,11 @@ async def run_image_benchmark(
                         dataset_iterator=aug_iterator,
                         target_size=plan.target_size,
                         batch_size=batch_size,
-                        seed=seed,
+                        seed=aug_seed,
                         augment_level=augment_level,
                         crop_prob=crop_prob,
                         robustness_pass=True,
+                        aug_cache_dir=aug_cache_dir,
                     )
 
                     aug_batch_id = 0

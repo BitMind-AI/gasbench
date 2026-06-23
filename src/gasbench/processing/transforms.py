@@ -247,7 +247,7 @@ def apply_video_robustness_augmentations(
     seed=None,
     crf=23,
     fps=25,
-    scale_factor=1.0,
+    scale_factor=0.5,
 ):
     """H.264 compression roundtrip for video augmentation robustness evaluation.
 
@@ -264,9 +264,9 @@ def apply_video_robustness_augmentations(
          still preserves chroma-subsampling artifacts.
 
     scale_factor < 1.0 first downscales every frame (resolution ladder) before
-    encoding, mirroring platform transcodes that drop 1080p → 720p → 480p. Left
-    at 1.0 by default so the CRF-only pass stays faithful to the FF++ protocol;
-    set it (e.g. 0.5) to additionally exercise resolution degradation.
+    encoding, mirroring platform transcodes that drop 1080p → 720p → 480p.
+    Defaults to 0.5 to match the image robustness pipeline and reflect real
+    platform behaviour (WhatsApp, Instagram, Twitter all downscale on ingest).
 
     Returns the same 4-tuple as apply_random_augmentations for drop-in use in
     VideoPrefetchPipeline when robustness_pass=True.

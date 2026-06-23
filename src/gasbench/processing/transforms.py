@@ -110,12 +110,17 @@ def apply_robustness_augmentations(
 
     h, w = img.shape[:2]
 
-    # Downscale then upscale — simulates share/thumbnail pipeline artifacts
+    # Downscale then upscale — simulates share/thumbnail pipeline artifacts.
+    # Floor at 256px: platforms don't downscale content that's already small,
+    # and AI-generated content being distributed is at minimum 256px (DeeperForensics
+    # evaluation floor; below this the step is unrealistic, not representative).
+    _MIN_DOWNSCALE_PX = 256
     if scale_factor < 1.0:
-        small_h = max(1, int(round(h * scale_factor)))
-        small_w = max(1, int(round(w * scale_factor)))
-        img = cv2.resize(img, (small_w, small_h), interpolation=cv2.INTER_AREA)
-        img = cv2.resize(img, (w, h), interpolation=cv2.INTER_LINEAR)
+        small_h = max(_MIN_DOWNSCALE_PX, int(round(h * scale_factor)))
+        small_w = max(_MIN_DOWNSCALE_PX, int(round(w * scale_factor)))
+        if small_h < h and small_w < w:
+            img = cv2.resize(img, (small_w, small_h), interpolation=cv2.INTER_AREA)
+            img = cv2.resize(img, (w, h), interpolation=cv2.INTER_LINEAR)
 
     # First JPEG pass — heavy platform compression (WhatsApp/Telegram ~q55)
     img = compress_image_jpeg_pil(img, quality=jpeg_quality)
@@ -277,16 +282,20 @@ def apply_video_robustness_augmentations(
     if video_array.dtype != np.uint8:
         video_array = np.clip(video_array, 0, 255).astype(np.uint8)
 
-    # Resolution ladder — downscale frames before encoding (platform transcode)
+    # Resolution ladder — downscale frames before encoding (platform transcode).
+    # Floor at 256px: platforms don't downscale content that's already small,
+    # and AI-generated content being distributed is at minimum 256px.
+    _MIN_DOWNSCALE_PX = 256
     if scale_factor < 1.0:
         T, H, W, C = video_array.shape
-        sh = max(2, int(round(H * scale_factor)))
-        sw = max(2, int(round(W * scale_factor)))
-        video_array = np.stack(
-            [cv2.resize(video_array[t], (sw, sh), interpolation=cv2.INTER_AREA)
-             for t in range(T)],
-            axis=0,
-        )
+        sh = max(_MIN_DOWNSCALE_PX, int(round(H * scale_factor)))
+        sw = max(_MIN_DOWNSCALE_PX, int(round(W * scale_factor)))
+        if sh < H and sw < W:
+            video_array = np.stack(
+                [cv2.resize(video_array[t], (sw, sh), interpolation=cv2.INTER_AREA)
+                 for t in range(T)],
+                axis=0,
+            )
 
     T, H, W, C = video_array.shape
 

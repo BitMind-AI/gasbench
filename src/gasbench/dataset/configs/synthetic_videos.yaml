@@ -1146,6 +1146,17 @@ datasets:
     generator_variant: uniface
     content_category: faces
 
+  - name: v15-human-vid-dfdm_cfr23-fake
+    path: 34data/v15-human-vid-dfdm_cfr23-fake
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
   - name: v15-human-vid-dfdm_cfr23-dfaker
     path: 34data/v15-human-vid-dfdm_cfr23-dfaker
     modality: video

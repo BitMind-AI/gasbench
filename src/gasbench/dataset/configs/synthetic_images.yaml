@@ -766,3 +766,75 @@ datasets:
     notes: Released from v14 bmcore holdouts
     generator_family: vqgan
     content_category: faces
+
+  # ── Released v18 holdouts ─────────────────────────────────────────────────
+
+  - name: deepfake-insight
+    path: 34data/deepfake-insight
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: deepfakeface-inpainting
+    path: 34data/deepfakeface-inpainting
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: deepfakeface-text2img
+    path: 34data/deepfakeface-text2img
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: FairFaceGen-flux
+    path: 34data/FairFaceGen-flux
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: flux
+    content_category: faces
+
+  - name: FairFaceGen-sd35
+    path: 34data/FairFaceGen-sd35
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sd
+    content_category: faces
+
+  - name: FairFaceGen
+    path: 34data/FairFaceGen
+    modality: image
+    media_type: synthetic
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: human-digiface1m-synthetic
+    path: 34data/human-digiface1m-synthetic
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces

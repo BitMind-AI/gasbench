@@ -1399,3 +1399,45 @@ datasets:
     archives_per_dataset: -1
     generator_family: sora
     content_category: scenes
+
+  # ── Released v18 holdouts ─────────────────────────────────────────────────
+
+  - name: facedancer
+    path: 34data/facedancer
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: facedancer
+    content_category: faces
+
+  - name: facevid2vid
+    path: 34data/facevid2vid
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: facevid2vid
+    content_category: faces
+
+  - name: swimswap
+    path: 34data/swimswap
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: faceswap
+    content_category: faces
+
+  - name: tpsm
+    path: 34data/tpsm
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: tpsm
+    content_category: faces

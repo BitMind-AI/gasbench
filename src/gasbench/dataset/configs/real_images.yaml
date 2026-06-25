@@ -851,3 +851,25 @@ datasets:
     notes: BDD100K weather classification subset - requires 34data upload
     generator_family: real
     content_category: vehicles
+
+  # ── Released v18 holdouts ─────────────────────────────────────────────────
+
+  - name: celebs500k
+    path: 34data/celebs500k
+    modality: image
+    media_type: real
+    source_format: jpg
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+
+  - name: mfr2-face
+    path: 34data/mfr2-face
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces

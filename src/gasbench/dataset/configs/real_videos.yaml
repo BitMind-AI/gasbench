@@ -1023,3 +1023,75 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: scenes
+
+  # ── Released v18 holdouts ─────────────────────────────────────────────────
+
+  - name: unlv-olympic-scoring-dataset
+    path: 34data/unlv-olympic-scoring-dataset
+    modality: video
+    media_type: real
+    source_format: avi
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+
+  - name: MAVOS-DD-romanian_real
+    path: 34data/MAVOS-DD-romanian_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: MAVOS-DD-russian_real
+    path: 34data/MAVOS-DD-russian_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: MAVOS-DD-spanish_real
+    path: 34data/MAVOS-DD-spanish_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: VideoSham-dataset-Unedited-Part1
+    path: 34data/VideoSham-dataset-Unedited-Part1
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: VideoSham-dataset-Unedited-Part2
+    path: 34data/VideoSham-dataset-Unedited-Part2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: facebook-2M-Flores-ASL
+    path: 34data/facebook-2M-Flores-ASL
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action

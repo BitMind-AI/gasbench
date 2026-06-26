@@ -23,26 +23,7 @@ from ..dataset.iterator import DatasetIterator
 from .utils.inference import process_model_output
 from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
 from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
-
-_VID_AUG_VERSION = "vid_v1"
-
-
-def _aug_cache_path(cache_dir: str, sample_id: str) -> str:
-    return os.path.join(cache_dir, sample_id[:2], f"{sample_id}_{_VID_AUG_VERSION}.npy")
-
-
-def _write_aug_cache(path: str, array) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = f"{path}.tmp.{os.getpid()}"
-    try:
-        import numpy as _np
-        _np.save(tmp, array)
-        os.replace(tmp, path)
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
+from .aug_cache import vid_aug_cache_path, write_aug_cache
 import pandas as pd
 
 logger = get_logger(__name__)
@@ -72,6 +53,7 @@ class VideoPrefetchPipeline:
         frame_rate=None,
         robustness_pass=False,
         aug_cache_dir=None,
+        aug_cache_readonly=False,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -85,6 +67,7 @@ class VideoPrefetchPipeline:
         self.frame_rate = frame_rate
         self.robustness_pass = robustness_pass
         self.aug_cache_dir = aug_cache_dir
+        self.aug_cache_readonly = aug_cache_readonly
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -120,14 +103,15 @@ class VideoPrefetchPipeline:
                 if self.robustness_pass:
                     if self.aug_cache_dir:
                         sid = build_sample_id(sample)
-                        cache_path = _aug_cache_path(self.aug_cache_dir, sid)
+                        cache_path = vid_aug_cache_path(self.aug_cache_dir, sid, self.target_size)
                         if os.path.exists(cache_path):
                             aug_thwc = np.load(cache_path)
                         else:
                             aug_thwc, _, _, _ = apply_video_robustness_augmentations(
                                 video_array, self.target_size, seed=sample_seed
                             )
-                            _write_aug_cache(cache_path, aug_thwc)
+                            if not self.aug_cache_readonly:
+                                write_aug_cache(cache_path, aug_thwc)
                     else:
                         aug_thwc, _, _, _ = apply_video_robustness_augmentations(
                             video_array,
@@ -324,6 +308,7 @@ async def run_video_benchmark(
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
+    aug_cache_readonly: bool = False,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
 
@@ -522,6 +507,7 @@ async def run_video_benchmark(
                             frame_rate=frame_rate,
                             robustness_pass=True,
                             aug_cache_dir=aug_cache_dir,
+                            aug_cache_readonly=aug_cache_readonly,
                         )
 
                         aug_batch_id = 0

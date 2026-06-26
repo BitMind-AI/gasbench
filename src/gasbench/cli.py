@@ -166,6 +166,7 @@ def command_run(args):
                 n_aug_per_dataset=getattr(args, "n_aug_per_dataset", 0),
                 aug_weight=getattr(args, "aug_weight", 0.2),
                 aug_cache_dir=getattr(args, "aug_cache_dir", None),
+                aug_cache_readonly=getattr(args, "aug_cache_readonly", False),
             )
         )
 
@@ -604,6 +605,13 @@ See docs/Safetensors.md for detailed requirements.
              "On first run, augmented arrays are saved; subsequent runs load from cache "
              "instead of re-augmenting. Recommended for repeated bmcore runs. "
              "Cache is versioned — a suite change auto-invalidates.",
+    )
+    run_parser.add_argument(
+        "--aug-cache-readonly",
+        action="store_true",
+        help="Treat the aug cache as read-only: load cached arrays if present, "
+             "but never write new entries. Use in production benchmark runs after "
+             "the cache has been pre-populated with the preaugment function.",
     )
 
     run_parser.set_defaults(func=command_run)

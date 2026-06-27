@@ -22,7 +22,8 @@ def write_aug_cache(path: str, array: np.ndarray) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = f"{path}.tmp.{os.getpid()}"
     try:
-        np.save(tmp, array)
+        with open(tmp, "wb") as f:
+            np.save(f, array)
         os.replace(tmp, path)
     except Exception:
         try:

@@ -163,6 +163,10 @@ def command_run(args):
                 score_composition=score_composition,
                 dataset_filters=getattr(args, "datasets", None),
                 content_category=args.content_category,
+                n_aug_per_dataset=getattr(args, "n_aug_per_dataset", 0),
+                aug_weight=getattr(args, "aug_weight", 0.2),
+                aug_cache_dir=getattr(args, "aug_cache_dir", None),
+                aug_cache_readonly=getattr(args, "aug_cache_readonly", False),
             )
         )
 
@@ -573,6 +577,41 @@ See docs/Safetensors.md for detailed requirements.
         default=None,
         metavar="CATEGORY",
         help="Only run datasets matching a content_category (e.g. faces, documents)",
+    )
+    run_parser.add_argument(
+        "--n-aug-per-dataset",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Number of samples per dataset to re-evaluate with a fixed robustness "
+             "augmentation suite (JPEG compression + downscale + blur). When > 0, "
+             "adds aug_sn34_score, augmentation_robustness, and per-sample degradation "
+             "stats to the results. Default: 0 (disabled).",
+    )
+    run_parser.add_argument(
+        "--aug-weight",
+        type=float,
+        default=0.2,
+        metavar="W",
+        help="Weight of aug_sn34_score in the blended augmentation score "
+             "(only used when --n-aug-per-dataset > 0). Default: 0.2.",
+    )
+    run_parser.add_argument(
+        "--aug-cache-dir",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Directory to cache pre-augmented arrays for the robustness pass. "
+             "On first run, augmented arrays are saved; subsequent runs load from cache "
+             "instead of re-augmenting. Recommended for repeated bmcore runs. "
+             "Cache is versioned — a suite change auto-invalidates.",
+    )
+    run_parser.add_argument(
+        "--aug-cache-readonly",
+        action="store_true",
+        help="Treat the aug cache as read-only: load cached arrays if present, "
+             "but never write new entries. Use in production benchmark runs after "
+             "the cache has been pre-populated with the preaugment function.",
     )
 
     run_parser.set_defaults(func=command_run)

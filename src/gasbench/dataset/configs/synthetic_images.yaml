@@ -105,7 +105,7 @@ datasets:
     path: 34data/Synthetic-Images-Fire-Scenario
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -307,7 +307,7 @@ datasets:
     path: 34data/stable-imagenet1k-flat
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -422,7 +422,7 @@ datasets:
     path: 34data/140k-real-fake-faces-fake
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -445,7 +445,7 @@ datasets:
     path: 34data/FLUXSynID
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -456,7 +456,7 @@ datasets:
     path: 34data/FantasyID-fake
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -560,7 +560,7 @@ datasets:
     path: 34data/STYLEGAN
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -593,7 +593,7 @@ datasets:
     path: 34data/cg-fake-id
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -760,9 +760,81 @@ datasets:
     path: 34data/taming_transformer_VQGAN
     modality: image
     media_type: synthetic
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
     generator_family: vqgan
+    content_category: faces
+
+  # ── Released v18 holdouts ─────────────────────────────────────────────────
+
+  - name: deepfake-insight
+    path: 34data/deepfake-insight
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: deepfakeface-inpainting
+    path: 34data/deepfakeface-inpainting
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: deepfakeface-text2img
+    path: 34data/deepfakeface-text2img
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: FairFaceGen-flux
+    path: 34data/FairFaceGen-flux
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: flux
+    content_category: faces
+
+  - name: FairFaceGen-sd35
+    path: 34data/FairFaceGen-sd35
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sd
+    content_category: faces
+
+  - name: FairFaceGen
+    path: 34data/FairFaceGen
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: human-digiface1m-synthetic
+    path: 34data/human-digiface1m-synthetic
+    modality: image
+    media_type: synthetic
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
     content_category: faces

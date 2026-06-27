@@ -8,7 +8,7 @@ datasets:
     path: 34data/Shooter-real
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -33,7 +33,7 @@ datasets:
     path: 34data/v14-vil100-jpeg
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
@@ -159,7 +159,7 @@ datasets:
     path: 34data/nepali-currency-dataset
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
@@ -171,7 +171,7 @@ datasets:
     path: 34data/FDDB_Dataset
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -335,7 +335,7 @@ datasets:
     path: 34data/v14-Images-vivid
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -359,7 +359,7 @@ datasets:
     path: 34data/M6Doc_test
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -370,7 +370,7 @@ datasets:
     path: 34data/SmartDoc-QA
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -403,7 +403,7 @@ datasets:
     path: 34data/large-receipt-image-dataset-SRD
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -416,7 +416,7 @@ datasets:
     path: 34data/140k-real-fake-faces-real
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -427,7 +427,7 @@ datasets:
     path: 34data/AgeDB
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -438,7 +438,7 @@ datasets:
     path: 34data/CACD
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -449,7 +449,7 @@ datasets:
     path: 34data/FaceDisguiseDatabase
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -460,7 +460,7 @@ datasets:
     path: 34data/FaceDisguiseDatabase-image
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -471,7 +471,7 @@ datasets:
     path: 34data/FantasyID-real
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -493,7 +493,7 @@ datasets:
     path: 34data/Mandrillus-Face
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -504,7 +504,7 @@ datasets:
     path: 34data/SoloFace
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -515,7 +515,7 @@ datasets:
     path: 34data/UTKFace
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -526,7 +526,7 @@ datasets:
     path: 34data/WarpDoc_merged
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -537,7 +537,7 @@ datasets:
     path: 34data/affectnet
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -626,7 +626,7 @@ datasets:
     path: 34data/nepali-cultural-dress-dataset
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -637,7 +637,7 @@ datasets:
     path: 34data/nepali-ethnic-groups-Face-emotions
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -648,7 +648,7 @@ datasets:
     path: 34data/or-real-id
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -669,7 +669,7 @@ datasets:
     path: 34data/scface_dataset
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
@@ -824,7 +824,7 @@ datasets:
     path: 34data/60k-car
     modality: image
     media_type: real
-    source_format: jpg
+    source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
@@ -851,3 +851,25 @@ datasets:
     notes: BDD100K weather classification subset - requires 34data upload
     generator_family: real
     content_category: vehicles
+
+  # ── Released v18 holdouts ─────────────────────────────────────────────────
+
+  - name: celebs500k
+    path: 34data/celebs500k
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+
+  - name: mfr2-face
+    path: 34data/mfr2-face
+    modality: image
+    media_type: real
+    source_format: png
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces

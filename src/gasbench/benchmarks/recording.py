@@ -601,6 +601,9 @@ def _compute_aug_metrics(
         "aug_sn34_score": aug_sn34,
         "augmentation_robustness": robustness_ratio,
         "aug_total_samples": int(len(aug_df)),
+        "aug_binary_mcc": aug_metrics.calculate_binary_mcc(),
+        "aug_binary_ce": aug_metrics.calculate_binary_cross_entropy(),
+        "aug_binary_brier": aug_metrics.calculate_brier(),
     }
 
     # Per-sample degradation: join augmented rows to their base counterpart via sample_id

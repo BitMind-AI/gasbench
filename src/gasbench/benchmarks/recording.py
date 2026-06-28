@@ -343,9 +343,13 @@ def build_sample_id(row: Dict[str, Any]) -> str:
     source_kind = row.get("source_kind") or ""
     dataset_path = row.get("dataset_path") or ""
     archive_filename = row.get("archive_filename") or ""
-    path_in_archive = row.get("path_in_archive") or ""
+    # member_path is the per-file path within an archive. Cached samples carry
+    # member_path (not path_in_archive), so without this fallback every sample
+    # extracted from the same archive collapses to one id, making the aug cache
+    # store ~1 sample per archive and skip the rest. See bmcore preaugment.
+    path_in_archive = row.get("path_in_archive") or row.get("member_path") or ""
     source_file = row.get("source_file") or ""
-    
+
     id_string = f"{source_kind}::{dataset_path}::{archive_filename}::{path_in_archive}::{source_file}"
     return hashlib.sha256(id_string.encode()).hexdigest()[:16]
 

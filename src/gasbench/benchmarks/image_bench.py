@@ -11,6 +11,7 @@ from ..logger import get_logger
 from ..processing.media import process_image_sample
 from ..processing.transforms import (
     apply_random_augmentations,
+    apply_robustness_augmentations,
 )
 from ..config import (
     DEFAULT_IMAGE_BATCH_SIZE,
@@ -19,8 +20,9 @@ from ..config import (
 from ..dataset.iterator import DatasetIterator
 
 from .utils.inference import process_model_output
-from .recording import BenchmarkRunRecorder, log_dataset_summary
+from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
 from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
+from .aug_cache import img_aug_cache_path, write_aug_cache
 import pandas as pd
 
 logger = get_logger(__name__)
@@ -46,6 +48,9 @@ class PrefetchPipeline:
         crop_prob,
         num_workers=8,
         max_queue_size=8,
+        robustness_pass=False,
+        aug_cache_dir=None,
+        aug_cache_readonly=False,
     ):
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
@@ -55,6 +60,9 @@ class PrefetchPipeline:
         self.crop_prob = crop_prob
         self.num_workers = num_workers
         self.max_queue_size = max_queue_size
+        self.robustness_pass = robustness_pass
+        self.aug_cache_dir = aug_cache_dir
+        self.aug_cache_readonly = aug_cache_readonly
 
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
@@ -78,13 +86,32 @@ class PrefetchPipeline:
                 return None
 
             sample_seed = None if self.seed is None else (self.seed + sample_index)
-            aug_hwc, _, _, _ = apply_random_augmentations(
-                image_array,
-                self.target_size,
-                seed=sample_seed,
-                level=self.augment_level,
-                crop_prob=self.crop_prob,
-            )
+            if self.robustness_pass:
+                if self.aug_cache_dir:
+                    sid = build_sample_id(sample)
+                    cache_path = img_aug_cache_path(self.aug_cache_dir, sid, self.target_size)
+                    if os.path.exists(cache_path):
+                        aug_hwc = np.load(cache_path)
+                    else:
+                        aug_hwc, _, _, _ = apply_robustness_augmentations(
+                            image_array, self.target_size, seed=sample_seed
+                        )
+                        if not self.aug_cache_readonly:
+                            write_aug_cache(cache_path, aug_hwc)
+                else:
+                    aug_hwc, _, _, _ = apply_robustness_augmentations(
+                        image_array,
+                        self.target_size,
+                        seed=sample_seed,
+                    )
+            else:
+                aug_hwc, _, _, _ = apply_random_augmentations(
+                    image_array,
+                    self.target_size,
+                    seed=sample_seed,
+                    level=self.augment_level,
+                    crop_prob=self.crop_prob,
+                )
             aug_chw = np.transpose(aug_hwc, (2, 0, 1))
 
             sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_SAMPLE_KEYS}
@@ -187,6 +214,7 @@ def process_batch(
     batch_metadata,
     tracker: BenchmarkRunRecorder,
     batch_id: int,
+    aug_pass: bool = False,
 ):
     """push a batch of images through the model and record rows in tracker."""
     if not batch_images:
@@ -219,6 +247,7 @@ def process_batch(
             batch_id=batch_id,
             batch_size=len(batch_images),
             sample_seed=sample_seed,
+            aug_pass=aug_pass,
         )
 
 
@@ -244,6 +273,10 @@ async def run_image_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: dict = None,
+    n_aug_per_dataset: int = 0,
+    aug_weight: float = 0.2,
+    aug_cache_dir: Optional[str] = None,
+    aug_cache_readonly: bool = False,
 ) -> pd.DataFrame:
     """Test model on benchmark image datasets for AI-generated content detection."""
 
@@ -276,6 +309,8 @@ async def run_image_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            n_aug_per_dataset=n_aug_per_dataset,
+            aug_weight=aug_weight,
         )
 
         plan = build_plan(logger, run_config, input_specs)
@@ -367,6 +402,80 @@ async def run_image_benchmark(
                 benchmark_results["errors"].append(
                     f"Dataset error for {dataset_config.name}: {str(e)[:100]}"
                 )
+
+        if n_aug_per_dataset > 0:
+            aug_seed = seed if seed is not None else 42
+            logger.info(
+                f"Starting augmentation robustness pass: {n_aug_per_dataset} samples/dataset"
+                + (f" (aug_cache_dir={aug_cache_dir})" if aug_cache_dir else "")
+            )
+            for dataset_idx, dataset_config in enumerate(plan.available_datasets):
+                logger.info(
+                    f"Robustness pass {dataset_idx + 1}/{len(plan.available_datasets)}: "
+                    f"{dataset_config.name}"
+                )
+                try:
+                    is_gasstation = "gasstation" in dataset_config.name.lower()
+                    should_download = (
+                        download_latest_gasstation_data if is_gasstation else True
+                    ) if not skip_missing else False
+
+                    aug_iterator = DatasetIterator(
+                        dataset_config,
+                        max_samples=n_aug_per_dataset,
+                        cache_dir=cache_dir,
+                        download=should_download,
+                        hf_token=hf_token,
+                        seed=seed,
+                        lazy_read=True,
+                    )
+
+                    if skip_missing and aug_iterator.get_total_cached_count() == 0:
+                        continue
+
+                    aug_pipeline = PrefetchPipeline(
+                        dataset_iterator=aug_iterator,
+                        target_size=plan.target_size,
+                        batch_size=batch_size,
+                        seed=aug_seed,
+                        augment_level=augment_level,
+                        crop_prob=crop_prob,
+                        robustness_pass=True,
+                        aug_cache_dir=aug_cache_dir,
+                        aug_cache_readonly=aug_cache_readonly,
+                    )
+
+                    aug_batch_id = 0
+                    try:
+                        for batch_data in aug_pipeline:
+                            aug_batch_id += 1
+                            batch_images = [item["image"] for item in batch_data]
+                            batch_metadata = [
+                                (
+                                    item["label"],
+                                    item["sample"],
+                                    item["sample_index"],
+                                    item["dataset_name"],
+                                    item["sample_seed"],
+                                )
+                                for item in batch_data
+                            ]
+                            process_batch(
+                                session,
+                                input_specs,
+                                batch_images,
+                                batch_metadata,
+                                tracker,
+                                aug_batch_id,
+                                aug_pass=True,
+                            )
+                    finally:
+                        aug_pipeline.close()
+
+                except Exception as e:
+                    logger.error(
+                        f"Robustness pass failed for {dataset_config.name}: {e}"
+                    )
 
         df = finalize_run(
             config=run_config,

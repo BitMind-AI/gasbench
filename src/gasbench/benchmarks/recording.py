@@ -57,6 +57,7 @@ class BenchmarkRunRecorder:
         batch_id: int,
         batch_size: int,
         sample_seed: Optional[int],
+        aug_pass: bool = False,
     ):
         # Normalize probabilities to a list of floats for parquet friendliness
         try:
@@ -77,6 +78,7 @@ class BenchmarkRunRecorder:
             "target_width": self.target_width,
             "augment_level": self.augment_level,
             "crop_prob": self.crop_prob,
+            "aug_pass": bool(aug_pass),
             "dataset_name": dataset_name,
             "iteration_index": int(sample_index),
             "media_type": sample.get("media_type"),
@@ -119,10 +121,12 @@ class BenchmarkRunRecorder:
         self.rows.append(row)
 
         # Maintain incremental counters so per-dataset logging is O(1).
-        ds = self._dataset_counts.setdefault(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
-        ds["ok"] += 1
-        if bool(predicted == label):
-            ds["correct"] += 1
+        # Aug-pass rows are not counted here — they are reported separately.
+        if not aug_pass:
+            ds = self._dataset_counts.setdefault(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
+            ds["ok"] += 1
+            if bool(predicted == label):
+                ds["correct"] += 1
 
     def add_skip(
         self,
@@ -444,7 +448,26 @@ def compute_metrics_from_df(
             "sn34_score": 0.0,
         }
 
-    ok_df = df[df["status"] == "ok"].copy()
+    all_ok_df = df[df["status"] == "ok"].copy()
+    if all_ok_df.empty:
+        return {
+            "benchmark_score": 0.0,
+            "avg_inference_time_ms": 0.0,
+            "p95_inference_time_ms": 0.0,
+            "binary_mcc": 0.0,
+            "binary_cross_entropy": 0.0,
+            "binary_brier": 0.25,  # random baseline
+            "sn34_score": 0.0,
+        }
+
+    # Split base pass from augmentation robustness pass
+    if "aug_pass" in all_ok_df.columns:
+        ok_df = all_ok_df[~all_ok_df["aug_pass"].fillna(False)].copy()
+        aug_ok_df = all_ok_df[all_ok_df["aug_pass"].fillna(False)].copy()
+    else:
+        ok_df = all_ok_df
+        aug_ok_df = pd.DataFrame()
+
     if ok_df.empty:
         return {
             "benchmark_score": 0.0,
@@ -462,6 +485,7 @@ def compute_metrics_from_df(
     # ALL metrics. Legacy path: holdout_weight scales holdout samples in the
     # accuracy (benchmark_score) only, preserving historical behavior.
     composition_fields: Dict[str, Any] = {}
+    class_weights: Dict[str, float] = {}
     sample_weights = np.ones(len(ok_df), dtype=float)
     if score_composition and "dataset_name" in ok_df.columns:
         provenance = ok_df["dataset_name"].map(classify_sample_provenance)
@@ -522,6 +546,7 @@ def compute_metrics_from_df(
             weight=float(weight),
         )
 
+    base_sn34 = metrics.compute_sn34_score()
     result.update(
         {
             "benchmark_score": accuracy,
@@ -530,17 +555,98 @@ def compute_metrics_from_df(
             "binary_mcc": metrics.calculate_binary_mcc(),
             "binary_cross_entropy": metrics.calculate_binary_cross_entropy(),
             "binary_brier": metrics.calculate_brier(),
-            "sn34_score": metrics.compute_sn34_score(),
+            "sn34_score": base_sn34,
         }
     )
     result.update(composition_fields)
+
+    if not aug_ok_df.empty:
+        result.update(
+            _compute_aug_metrics(aug_ok_df, base_sn34, ok_df, class_weights if score_composition else {})
+        )
+
     return result
+
+
+def _compute_aug_metrics(
+    aug_df: "pd.DataFrame",
+    base_sn34: float,
+    base_df: "pd.DataFrame",
+    class_weights: Dict[str, float],
+) -> Dict[str, Any]:
+    """Compute augmentation robustness metrics from the aug-pass rows.
+
+    Returns a dict with aug_sn34_score, augmentation_robustness,
+    aug_weighted_sn34_score, and per-sample degradation stats.
+    All fields are only present when aug rows exist.
+    """
+    aug_metrics = Metrics()
+    aug_sample_weights = np.ones(len(aug_df), dtype=float)
+    if class_weights and "dataset_name" in aug_df.columns:
+        provenance = aug_df["dataset_name"].map(classify_sample_provenance)
+        aug_sample_weights = provenance.map(class_weights).fillna(1.0).astype(float).values
+
+    for (_, r), weight in zip(aug_df.iterrows(), aug_sample_weights):
+        try:
+            probs = [
+                float(x)
+                for x in (
+                    r["probs"].tolist() if hasattr(r["probs"], "tolist") else list(r["probs"])
+                )
+            ]
+        except Exception:
+            probs = []
+        aug_metrics.update(int(r["label"]), int(r["predicted"]), probs, weight=float(weight))
+
+    aug_sn34 = aug_metrics.compute_sn34_score()
+    robustness_ratio = (aug_sn34 / base_sn34) if base_sn34 > 0 else 0.0
+
+    out: Dict[str, Any] = {
+        "aug_sn34_score": aug_sn34,
+        "augmentation_robustness": robustness_ratio,
+        "aug_total_samples": int(len(aug_df)),
+        "aug_binary_mcc": aug_metrics.calculate_binary_mcc(),
+        "aug_binary_ce": aug_metrics.calculate_binary_cross_entropy(),
+        "aug_binary_brier": aug_metrics.calculate_brier(),
+    }
+
+    # Per-sample degradation: join augmented rows to their base counterpart via sample_id
+    if "sample_id" in base_df.columns and "sample_id" in aug_df.columns:
+        def _prob_correct(r):
+            try:
+                probs = list(r["probs"].tolist() if hasattr(r["probs"], "tolist") else r["probs"])
+                label = int(r["label"])
+                return float(probs[label]) if label < len(probs) else None
+            except Exception:
+                return None
+
+        base_pc = base_df[["sample_id", "label", "probs", "correct"]].copy()
+        base_pc["prob_correct"] = base_pc.apply(_prob_correct, axis=1)
+
+        aug_pc = aug_df[["sample_id", "label", "probs", "correct"]].copy()
+        aug_pc["prob_correct"] = aug_pc.apply(_prob_correct, axis=1)
+
+        paired = base_pc[["sample_id", "prob_correct", "correct"]].merge(
+            aug_pc[["sample_id", "prob_correct", "correct"]],
+            on="sample_id",
+            suffixes=("_base", "_aug"),
+        ).dropna(subset=["prob_correct_base", "prob_correct_aug"])
+
+        if not paired.empty:
+            paired["prob_degradation"] = paired["prob_correct_base"] - paired["prob_correct_aug"]
+            out["aug_paired_samples"] = int(len(paired))
+            out["aug_mean_prob_degradation"] = float(paired["prob_degradation"].mean())
+            out["aug_p95_prob_degradation"] = float(np.percentile(paired["prob_degradation"], 95))
+
+    return out
 
 
 def compute_per_dataset_from_df(df: pd.DataFrame) -> Dict[str, Any]:
     if df is None or df.empty:
         return {}
     ok_df = df[df["status"] == "ok"]
+    if "aug_pass" in ok_df.columns:
+        ok_df = ok_df[~ok_df["aug_pass"].fillna(False)]
     if ok_df.empty:
         return {}
 

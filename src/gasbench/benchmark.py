@@ -500,6 +500,13 @@ def save_results_to_json(
                 "binary_cross_entropy": results.get("binary_cross_entropy", 0.0),
                 "binary_brier": results.get("binary_brier", 0.25),
                 "sn34_score": results.get("sn34_score", 0.0),
+                "base_sn34_score": results.get("base_sn34_score"),
+                "aug_sn34_score": results.get("aug_sn34_score"),
+                "augmentation_robustness": results.get("augmentation_robustness"),
+                "aug_total_samples": results.get("aug_total_samples"),
+                "aug_binary_mcc": results.get("aug_binary_mcc"),
+                "aug_binary_ce": results.get("aug_binary_ce"),
+                "aug_binary_brier": results.get("aug_binary_brier"),
             }
 
             per_dataset = results.get("per_dataset_results", {})

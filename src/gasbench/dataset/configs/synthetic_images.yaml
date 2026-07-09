@@ -838,3 +838,128 @@ datasets:
     archives_per_dataset: -1
     generator_family: mixed-generation
     content_category: faces
+
+  # ── Released v19 holdouts ─────────────────────────────────────────────────
+
+  - name: communityforensics-fake
+    path: 34data/communityforensics-fake
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: imagepulsev2-addremove
+    path: 34data/imagepulsev2-addremove
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: imagepulsev2-change
+    path: 34data/imagepulsev2-change
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: imagepulsev2-angle
+    path: 34data/imagepulsev2-angle
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: imagepulsev2-crop
+    path: 34data/imagepulsev2-crop
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: imagepulsev2-inpaint
+    path: 34data/imagepulsev2-inpaint
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: imagepulsev2-humanface
+    path: 34data/imagepulsev2-humanface
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: imagepulsev2-style
+    path: 34data/imagepulsev2-style
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: justweirdimages
+    path: pipyp/justweirdimages
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: flux-sd15-ipadapter
+    path: 34data/flux-sd15-ipadapter
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: flux
+    generator_variant: ip-adapter
+    content_category: faces
+
+  - name: ip-adapter-faceid
+    path: 34data/ip-adapter-faceid
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: ip-adapter
+    generator_variant: faceid-plusv2
+    content_category: faces
+
+  - name: sd35-ip-adapter-faceid
+    path: 34data/sd35-ip-adapter-faceid
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sd
+    generator_variant: sd35-ip-adapter
+    content_category: faces

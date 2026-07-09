@@ -1441,3 +1441,122 @@ datasets:
     archives_per_dataset: -1
     generator_family: tpsm
     content_category: faces
+
+  # ── Released v19 holdouts ─────────────────────────────────────────────────
+
+  - name: gen-videos-fastwan2
+    path: 34data/gen-videos-fastwan2
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: wan
+    generator_variant: fastwan22
+    content_category: diverse
+
+  - name: gen-videos-hunyuanvideo
+    path: 34data/gen-videos-hunyuanvideo
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: hunyuanvideo
+    generator_variant: hunyuanvideo-15
+    content_category: diverse
+
+  - name: gen-videos-kling
+    path: 34data/gen-videos-kling
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: kling
+    generator_variant: kling-26
+    content_category: diverse
+
+  - name: gen-videos-veo3
+    path: 34data/gen-videos-veo3
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: veo3
+    content_category: diverse
+
+  - name: gen-videos-wan2
+    path: 34data/gen-videos-wan2
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: wan
+    generator_variant: wan26
+    content_category: diverse
+
+  - name: gen-videos-sora2
+    path: 34data/gen-videos-sora2
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sora
+    generator_variant: sora2
+    content_category: diverse
+
+  - name: cameraclone-dataset
+    path: 34data/cameraclone-dataset
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes
+
+  - name: scene-decoupled-video-dataset
+    path: 34data/scene-decoupled-video-dataset
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes
+
+  - name: synthetic-vstat-block-counting
+    path: nyu-visionx/VSTAT
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: [videos/synthetic/block_counting/]
+    generator_family: rendered
+    content_category: diverse
+
+  - name: synthetic-vstat-shuffle-puzzle
+    path: nyu-visionx/VSTAT
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: [videos/synthetic/shuffle_puzzle/]
+    generator_family: rendered
+    content_category: diverse
+
+  - name: tonystark03-deepfake-fake
+    path: 34data/tonystark03-deepfake-fake
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: faceswap
+    content_category: faces

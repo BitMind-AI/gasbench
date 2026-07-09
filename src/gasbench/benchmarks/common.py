@@ -198,6 +198,24 @@ def finalize_run(
         holdout_weight=config.holdout_weight,
         score_composition=config.score_composition,
     )
+
+    # Blend aug_sn34_score into sn34_score when an aug pass was run.
+    # base_sn34_score is preserved for transparency.
+    if (
+        config.n_aug_per_dataset > 0
+        and config.aug_weight > 0
+        and "aug_sn34_score" in metric_pack
+    ):
+        base_sn34 = metric_pack["sn34_score"]
+        aug_sn34 = metric_pack["aug_sn34_score"]
+        blended = (1.0 - config.aug_weight) * base_sn34 + config.aug_weight * aug_sn34
+        metric_pack["base_sn34_score"] = base_sn34
+        metric_pack["sn34_score"] = blended
+        logger.info(
+            f"sn34_score blended: base={base_sn34:.4f} aug={aug_sn34:.4f} "
+            f"weight={config.aug_weight} → {blended:.4f}"
+        )
+
     per_dataset_results = compute_per_dataset_from_df(df)
     per_source_accuracy = calculate_per_source_accuracy(
         plan.available_datasets, per_dataset_results

@@ -873,3 +873,35 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: faces
+
+  # ── Released v19 holdouts ─────────────────────────────────────────────────
+
+  - name: sa-1b-shards
+    path: 34data/sa-1b-shards
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: communityforensics-real
+    path: 34data/communityforensics-real
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: glint360k
+    path: 34data/glint360k
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces

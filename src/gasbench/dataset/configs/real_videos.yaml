@@ -1066,25 +1066,6 @@ datasets:
     generator_family: real
     content_category: diverse
 
-  - name: VideoSham-dataset-Unedited-Part1
-    path: 34data/VideoSham-dataset-Unedited-Part1
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
-  - name: VideoSham-dataset-Unedited-Part2
-    path: 34data/VideoSham-dataset-Unedited-Part2
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
 
   - name: facebook-2M-Flores-ASL
     path: 34data/facebook-2M-Flores-ASL
@@ -1095,3 +1076,106 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: action
+
+  # ── Released v19 holdouts ─────────────────────────────────────────────────
+
+  - name: llava-video-178k
+    path: 34data/llava-video-178k
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: omnivideo-100k
+    path: 34data/omnivideo-100k
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: omnivideo-test
+    path: 34data/omnivideo-test
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: ophora-160k
+    path: 34data/ophora-160k
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+
+  - name: qa-v1
+    path: 34data/qa-v1
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: qa-test-h264
+    path: 34data/qa-test-h264
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: deeptumorvqa
+    path: 34data/deeptumorvqa
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+
+  - name: tiktok-10m
+    path: 34data/tiktok-10m
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: heico-focus-vqa
+    path: orena-dkfz/heico-focus-vqa
+    modality: video
+    media_type: real
+    source_format: avi
+    media_per_archive: -1
+    archives_per_dataset: -1
+    include_paths: [videos/]
+    generator_family: real
+    content_category: medical
+
+  - name: tonystark03-deepfake-real
+    path: 34data/tonystark03-deepfake-real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces

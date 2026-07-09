@@ -1,7 +1,10 @@
+import logging
 import os
 from typing import Tuple
 
 import numpy as np
+
+_logger = logging.getLogger(__name__)
 
 _IMG_AUG_VERSION = "img_v1"
 _VID_AUG_VERSION = "vid_v1"
@@ -22,9 +25,11 @@ def write_aug_cache(path: str, array: np.ndarray) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = f"{path}.tmp.{os.getpid()}"
     try:
-        np.save(tmp, array)
+        with open(tmp, "wb") as f:
+            np.save(f, array)
         os.replace(tmp, path)
-    except Exception:
+    except Exception as e:
+        _logger.error("write_aug_cache failed for %s: %s", path, e)
         try:
             os.unlink(tmp)
         except OSError:

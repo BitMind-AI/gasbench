@@ -101,9 +101,6 @@ def apply_robustness_augmentations(
     in PrefetchPipeline when robustness_pass=True.  Deterministic given seed
     so paired base/augmented samples share sample_id for degradation join.
     """
-    if seed is not None:
-        np.random.seed(seed)
-
     img = image_array.copy()
     if img.dtype != np.uint8:
         img = np.clip(img, 0, 255).astype(np.uint8)
@@ -276,9 +273,6 @@ def apply_video_robustness_augmentations(
     Returns the same 4-tuple as apply_random_augmentations for drop-in use in
     VideoPrefetchPipeline when robustness_pass=True.
     """
-    if seed is not None:
-        np.random.seed(seed)
-
     if video_array.dtype != np.uint8:
         video_array = np.clip(video_array, 0, 255).astype(np.uint8)
 
@@ -367,9 +361,18 @@ def apply_random_augmentations(
     Raises:
         ValueError: If probabilities don't sum to 1.0 (within floating point precision)
     """
+    # Use local generators seeded per-call rather than seeding the global RNG.
+    # The pipeline runs these in parallel worker threads; seeding the process-wide
+    # np.random/random state would let concurrent threads clobber each other's
+    # seed, breaking the determinism the seed is supposed to guarantee.
+    # RandomState/random.Random reproduce the legacy global-seed algorithm exactly,
+    # so seeded outputs (and the aug cache) are unchanged.
     if seed is not None:
-        random.seed(seed)
-        np.random.seed(seed)
+        rng = np.random.RandomState(seed)
+        pyrng = random.Random(seed)
+    else:
+        rng = np.random
+        pyrng = random
     if level is None:
         if level_probs is None:
             level_probs = {
@@ -389,7 +392,7 @@ def apply_random_augmentations(
             cumsum += prob
             cumulative_probs[level] = cumsum
 
-        rand_val = np.random.random()
+        rand_val = rng.random_sample()
         for curr_level, cum_prob in cumulative_probs.items():
             if rand_val <= cum_prob:
                 level = curr_level
@@ -397,20 +400,20 @@ def apply_random_augmentations(
 
     # determine crop scale for h and w
     crop_scale = (1., 1.)
-    if np.random.rand() < crop_prob:
-        crop_scale = (np.random.uniform(0.35, 0.99), np.random.uniform(0.35, 0.99))
+    if rng.rand() < crop_prob:
+        crop_scale = (rng.uniform(0.35, 0.99), rng.uniform(0.35, 0.99))
         min_scale_h = max(0.35, 224 / target_size[0])
         min_scale_w = max(0.35, 224 / target_size[1])
         crop_scale = (max(crop_scale[0], min_scale_h), max(crop_scale[1], min_scale_w))
 
     if level == 0:
-        tforms = get_base_transforms(target_size, crop_scale)
+        tforms = get_base_transforms(target_size, crop_scale, rng, pyrng)
     elif level == 1:
-        tforms = get_random_augmentations(target_size, crop_scale)
+        tforms = get_random_augmentations(target_size, crop_scale, rng, pyrng)
     elif level == 2:
-        tforms = get_random_augmentations_medium(target_size, crop_scale)
+        tforms = get_random_augmentations_medium(target_size, crop_scale, rng, pyrng)
     else:  # level == 3
-        tforms = get_random_augmentations_hard(target_size, crop_scale)
+        tforms = get_random_augmentations_hard(target_size, crop_scale, rng, pyrng)
 
     if isinstance(inputs, tuple):
         transformed_A, _ = tforms(inputs[0], reuse_params=False)
@@ -423,13 +426,15 @@ def apply_random_augmentations(
         return transformed_inputs, transformed_masks, level, tforms.params
 
 
-def get_base_transforms(target_res, crop_scale):
+def get_base_transforms(target_res, crop_scale, rng=None, pyrng=None):
     """
     Get basic transforms (optional crop and resize).
 
     Args:
         target_res: int or tuple. Output size for resize.
         crop_scale: tuple. Crop scale (ignored if (1.0, 1.0)).
+        rng: np.random.RandomState (or None for the global module).
+        pyrng: random.Random (or None for the global module).
 
     Returns:
         ComposeWithParams: Composed transform pipeline
@@ -437,71 +442,77 @@ def get_base_transforms(target_res, crop_scale):
     transforms_list = []
 
     if crop_scale != (1.0, 1.0):
-        transforms_list.append(RandomCropWithParams(crop_scale))
+        transforms_list.append(RandomCropWithParams(crop_scale, rng=rng))
 
     transforms_list.append(ResizeShortestEdge(target_res))
     return ComposeWithParams(transforms_list)
 
 
-def get_random_augmentations(target_res, crop_scale):
+def get_random_augmentations(target_res, crop_scale, rng=None, pyrng=None):
     """
     Get basic augmentations with geometric transforms.
 
     Args:
         target_res: int or tuple. Output size for resize.
         crop_scale: tuple. Crop scale.
+        rng: np.random.RandomState (or None for the global module).
+        pyrng: random.Random (or None for the global module).
 
     Returns:
         ComposeWithParams: Composed transform pipeline with basic augmentations
     """
-    base = get_base_transforms(target_res, crop_scale)
+    base = get_base_transforms(target_res, crop_scale, rng, pyrng)
     transforms_list = base.transforms + [
-        RandomHorizontalFlipWithParams(),
-        RandomVerticalFlipWithParams(),
+        RandomHorizontalFlipWithParams(rng=rng),
+        RandomVerticalFlipWithParams(rng=rng),
     ]
     return ComposeWithParams(transforms_list)
 
 
-def get_random_augmentations_medium(target_res, crop_scale):
+def get_random_augmentations_medium(target_res, crop_scale, rng=None, pyrng=None):
     """
     Get medium difficulty transforms with mild distortions.
 
     Args:
         target_res: int or tuple. Output size for resize.
         crop_scale: tuple. Crop scale.
+        rng: np.random.RandomState (or None for the global module).
+        pyrng: random.Random (or None for the global module).
 
     Returns:
         ComposeWithParams: Composed transform pipeline with medium distortions
     """
-    base = get_base_transforms(target_res, crop_scale)
+    base = get_base_transforms(target_res, crop_scale, rng, pyrng)
     transforms_list = base.transforms + [
-        RandomHorizontalFlipWithParams(),
-        RandomVerticalFlipWithParams(),
-        ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=1),
-        ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=1),
+        RandomHorizontalFlipWithParams(rng=rng),
+        RandomVerticalFlipWithParams(rng=rng),
+        ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=1, rng=rng, pyrng=pyrng),
+        ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=1, rng=rng, pyrng=pyrng),
     ]
     return ComposeWithParams(transforms_list)
 
 
-def get_random_augmentations_hard(target_res, crop_scale):
+def get_random_augmentations_hard(target_res, crop_scale, rng=None, pyrng=None):
     """
     Get hard difficulty transforms with more severe distortions.
 
     Args:
         target_res: int or tuple. Output size for resize.
         crop_scale: tuple. Crop scale.
+        rng: np.random.RandomState (or None for the global module).
+        pyrng: random.Random (or None for the global module).
 
     Returns:
         ComposeWithParams: Composed transform pipeline with severe distortions
     """
-    base = get_base_transforms(target_res, crop_scale)
+    base = get_base_transforms(target_res, crop_scale, rng, pyrng)
     transforms_list = base.transforms + [
-        RandomHorizontalFlipWithParams(),
-        RandomVerticalFlipWithParams(),
-        ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=2),
-        ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=2),
-        ApplyDeeperForensicsDistortion("GNC", level_min=0, level_max=2),
-        ApplyDeeperForensicsDistortion("GB", level_min=0, level_max=2),
+        RandomHorizontalFlipWithParams(rng=rng),
+        RandomVerticalFlipWithParams(rng=rng),
+        ApplyDeeperForensicsDistortion("CS", level_min=0, level_max=2, rng=rng, pyrng=pyrng),
+        ApplyDeeperForensicsDistortion("CC", level_min=0, level_max=2, rng=rng, pyrng=pyrng),
+        ApplyDeeperForensicsDistortion("GNC", level_min=0, level_max=2, rng=rng, pyrng=pyrng),
+        ApplyDeeperForensicsDistortion("GB", level_min=0, level_max=2, rng=rng, pyrng=pyrng),
     ]
     return ComposeWithParams(transforms_list)
 
@@ -612,7 +623,7 @@ class ComposeWithParams:
 class ApplyDeeperForensicsDistortion:
     """Wrapper for applying DeeperForensics distortions."""
 
-    def __init__(self, distortion_type, level_min=0, level_max=3):
+    def __init__(self, distortion_type, level_min=0, level_max=3, rng=None, pyrng=None):
         """
         Initialize distortion transform.
 
@@ -620,12 +631,16 @@ class ApplyDeeperForensicsDistortion:
             distortion_type: str, type of distortion to apply
             level_min: int, minimum distortion level
             level_max: int, maximum distortion level
+            rng: np.random.RandomState (or None for the global module).
+            pyrng: random.Random (or None for the global module).
         """
         self.__name__ = distortion_type
         self.distortion_type = distortion_type
         self.level = None
         self.level_min = level_min
         self.level_max = level_max
+        self.rng = rng
+        self.pyrng = pyrng
         self.params = {}  # level
         self.distortion_params = {}  # distortion_type specific
 
@@ -642,7 +657,8 @@ class ApplyDeeperForensicsDistortion:
             np.ndarray: Distorted image
         """
         if level is None and self.level is None:
-            self.level = random.randint(self.level_min, self.level_max)
+            pyrng = self.pyrng if self.pyrng is not None else random
+            self.level = pyrng.randint(self.level_min, self.level_max)
             self.params = {"level": self.level}
         elif self.level is None:
             self.level = level
@@ -658,7 +674,11 @@ class ApplyDeeperForensicsDistortion:
         else:
             return img
 
-        output = self.distortion_func(img, **self.distortion_params)
+        # Only the noise distortions consume RNG; pass the local generator to them.
+        if self.distortion_type in ("GNC", "BW"):
+            output = self.distortion_func(img, rng=self.rng, **self.distortion_params)
+        else:
+            output = self.distortion_func(img, **self.distortion_params)
         if isinstance(output, tuple):
             self.distortion_params.update(output[1])
             return output[0]
@@ -815,7 +835,7 @@ def color_contrast(img, param):
     return img.astype(np.uint8)
 
 
-def block_wise(img, param):
+def block_wise(img, param, rng=None):
     """Apply block-wise distortion by adding random gray blocks.
 
     NOTE: CURRENTLY NOT USED
@@ -823,35 +843,39 @@ def block_wise(img, param):
     Args:
         img (np.ndarray): Input RGB image array of shape (H, W, 3)
         param (int): Number of blocks to add, scaled by image dimensions
+        rng: np.random.RandomState (or None for the global module).
 
     Returns:
         np.ndarray: Distorted RGB image array with added gray blocks
     """
+    draw = rng if rng is not None else np.random
     width = 8
     block = np.ones((width, width, 3)).astype(int) * 128
     param = min(img.shape[0], img.shape[1]) // 256 * param
     for _ in range(param):
-        r_w = random.randint(0, img.shape[1] - 1 - width)
-        r_h = random.randint(0, img.shape[0] - 1 - width)
+        r_w = draw.randint(0, img.shape[1] - width)
+        r_h = draw.randint(0, img.shape[0] - width)
         img[r_h : r_h + width, r_w : r_w + width, :] = block
     return img
 
 
-def gaussian_noise_color(img, param):
+def gaussian_noise_color(img, param, rng=None):
     """Apply colored Gaussian noise in YCbCr color space.
 
     Args:
         img (np.ndarray): Input RGB image array of shape (H, W, 3)
         param (float): Variance of the Gaussian noise
+        rng: np.random.RandomState (or None for the global module).
 
     Returns:
         tuple: (distorted_image, params)
             distorted_image: np.ndarray, image with added color noise
     """
+    draw = rng if rng is not None else np.random
     ycbcr = rgb2ycbcr(img) / 255
     size_a = ycbcr.shape
     b = (
-        ycbcr + math.sqrt(param) * np.random.randn(size_a[0], size_a[1], size_a[2])
+        ycbcr + math.sqrt(param) * draw.randn(size_a[0], size_a[1], size_a[2])
     ) * 255
     b = ycbcr2rgb(b)
     return np.clip(b, 0, 255).astype(np.uint8)
@@ -1077,15 +1101,17 @@ class CenterCrop:
 class RandomCropWithParams:
     """Randomly crop an image with optional mask-aware cropping."""
 
-    def __init__(self, crop_scale):
+    def __init__(self, crop_scale, rng=None):
         """
         Initialize random crop transform.
 
         Args:
             crop_scale (tuple): (height_scale, width_scale) for crop size as fraction of original
+            rng: np.random.RandomState (or None for the global module).
         """
         self.params = None
         self.crop_scale = crop_scale
+        self.rng = rng
 
     def __call__(self, img, mask=None, crop_params=None):
         """
@@ -1100,6 +1126,7 @@ class RandomCropWithParams:
             np.ndarray or tuple: Cropped image, or tuple of (image, mask) if mask provided
         """
         if crop_params is None:
+            draw = self.rng if self.rng is not None else np.random
             height, width = img.shape[:2]
             h = max(1, int(height * self.crop_scale[0]))
             w = max(1, int(width * self.crop_scale[1]))
@@ -1113,8 +1140,8 @@ class RandomCropWithParams:
 
                 if len(xs) == 0 or len(ys) == 0:
                     # No foreground, fall back to random crop
-                    i = np.random.randint(0, height - h + 1) if height > h else 0
-                    j = np.random.randint(0, width - w + 1) if width > w else 0
+                    i = draw.randint(0, height - h + 1) if height > h else 0
+                    j = draw.randint(0, width - w + 1) if width > w else 0
                 else:
                     x0, x1 = xs.min(), xs.max()
                     y0, y1 = ys.min(), ys.max()
@@ -1126,11 +1153,11 @@ class RandomCropWithParams:
                         i = max(0, y0 - (h // 2))
                         j = max(0, x0 - (w // 2))
                     else:
-                        i = np.random.randint(min_i, max_i + 1) if max_i >= min_i else 0
-                        j = np.random.randint(min_j, max_j + 1) if max_j >= min_j else 0
+                        i = draw.randint(min_i, max_i + 1) if max_i >= min_i else 0
+                        j = draw.randint(min_j, max_j + 1) if max_j >= min_j else 0
             else:
-                i = np.random.randint(0, height - h + 1) if height > h else 0
-                j = np.random.randint(0, width - w + 1) if width > w else 0
+                i = draw.randint(0, height - h + 1) if height > h else 0
+                j = draw.randint(0, width - w + 1) if width > w else 0
         else:
             i, j, h, w = crop_params
 
@@ -1216,12 +1243,14 @@ class ResizeShortestEdge:
 
 class RandomHorizontalFlipWithParams:
 
-    def __init__(self, p=0.5):
+    def __init__(self, p=0.5, rng=None):
         """
         Args:
             p (float): Probability of flipping the image
+            rng: np.random.RandomState (or None for the global module).
         """
         self.p = p
+        self.rng = rng
         self.params = {}
 
     def __call__(self, img, mask=None, flip=None):
@@ -1237,7 +1266,8 @@ class RandomHorizontalFlipWithParams:
         if flip is not None:
             self.params = {"flip": flip}
         elif not hasattr(self, "params") or len(self.params) == 0:
-            flip = np.random.random() < self.p
+            draw = self.rng if self.rng is not None else np.random
+            flip = draw.random_sample() < self.p
             self.params = {"flip": flip}
 
         if self.params.get("flip", False):
@@ -1251,12 +1281,14 @@ class RandomHorizontalFlipWithParams:
 
 class RandomVerticalFlipWithParams:
 
-    def __init__(self, p=0.5):
+    def __init__(self, p=0.5, rng=None):
         """
         Args:
             p (float): Probability of flipping the image
+            rng: np.random.RandomState (or None for the global module).
         """
         self.p = p
+        self.rng = rng
         self.params = {}
 
     def __call__(self, img, mask=None, flip=None):
@@ -1274,7 +1306,8 @@ class RandomVerticalFlipWithParams:
         if flip is not None:
             self.params = {"flip": flip}
         elif not hasattr(self, "params") or len(self.params) == 0:
-            flip = np.random.random() < self.p
+            draw = self.rng if self.rng is not None else np.random
+            flip = draw.random_sample() < self.p
             self.params = {"flip": flip}
 
         if self.params.get("flip", False):
@@ -1289,7 +1322,7 @@ class RandomVerticalFlipWithParams:
 class RandomRotationWithParams:
     """Randomly rotate an image."""
 
-    def __init__(self, degrees, p=0.5, reshape=False, mode="reflect", order=2):
+    def __init__(self, degrees, p=0.5, reshape=False, mode="reflect", order=2, rng=None, pyrng=None):
         """
         Initialize random rotation transform.
 
@@ -1299,6 +1332,8 @@ class RandomRotationWithParams:
             reshape (bool): If True, expands output image to fit rotated image
             mode (str): How to fill the border ('reflect', 'constant', etc)
             order (int): Interpolation order (0-5)
+            rng: np.random.RandomState (or None for the global module).
+            pyrng: random.Random (or None for the global module).
         """
         if isinstance(degrees, (tuple, list)):
             self.degrees = degrees
@@ -1309,6 +1344,8 @@ class RandomRotationWithParams:
         self.reshape = reshape
         self.mode = mode
         self.order = order
+        self.rng = rng
+        self.pyrng = pyrng
 
     def __call__(self, img, mask, rotate=None, angle=None, order=None, **kwargs):
         """
@@ -1325,8 +1362,10 @@ class RandomRotationWithParams:
         Returns:
             np.ndarray or tuple: Rotated image, or tuple of (image, mask) if mask provided
         """
+        draw = self.rng if self.rng is not None else np.random
+        pydraw = self.pyrng if self.pyrng is not None else random
         if rotate is None:
-            rotate = np.random.random() < self.p
+            rotate = draw.random_sample() < self.p
             self.params = {"rotate": rotate}
 
         if not rotate:
@@ -1336,10 +1375,10 @@ class RandomRotationWithParams:
 
         order = self.order if order is None else order
         if isinstance(order, (tuple, list)):
-            order = random.randint(order[0], order[1])
+            order = pydraw.randint(order[0], order[1])
 
         if angle is None:
-            angle = random.uniform(self.degrees[0], self.degrees[1])
+            angle = pydraw.uniform(self.degrees[0], self.degrees[1])
 
         self.params.update({"order": order, "angle": angle})
         img = ndimage.rotate(

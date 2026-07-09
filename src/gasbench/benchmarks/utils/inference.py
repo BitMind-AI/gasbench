@@ -96,15 +96,22 @@ def process_model_output(logits: np.ndarray) -> Tuple[int, np.ndarray]:
         - probabilities: softmax probabilities as 1D array (length 1,2, or 3)
     """
     logits = np.atleast_1d(logits).flatten()
+
+    if len(logits) == 1:
+        p = 1.0 / (1.0 + np.exp(-logits[0]))
+        pred_probs = np.array([p], dtype=np.float64)
+        predicted_binary = int(p > 0.5)
+        return predicted_binary, pred_probs
+
     exp_x = np.exp(logits - np.max(logits))
     pred_probs = exp_x / np.sum(exp_x)
-    
+
     if len(pred_probs) == 3:
         predicted_binary = 0 if np.argmax(pred_probs) == 0 else 1
     elif len(pred_probs) == 2:
         predicted_binary = int(np.argmax(pred_probs))
     else:
         predicted_binary = int(pred_probs[0] > 0.5)
-    
+
     return predicted_binary, pred_probs
 

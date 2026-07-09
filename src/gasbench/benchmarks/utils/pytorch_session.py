@@ -156,13 +156,37 @@ class PyTorchInferenceSession:
         with torch.no_grad():
             output = self.model(tensor)
 
-        # Handle various output formats
         if hasattr(output, "logits"):
-            output = output.logits  # HuggingFace models
-        elif isinstance(output, tuple):
-            output = output[0]  # Some models return tuples
+            output = output.logits
         elif isinstance(output, dict):
-            # Some models return dicts with 'logits' key
-            output = output.get("logits", output.get("output", list(output.values())[0]))
+            if "logits" in output:
+                output = output["logits"]
+            elif "output" in output:
+                output = output["output"]
+            elif len(output) == 1:
+                output = next(iter(output.values()))
+            else:
+                raise ValueError(
+                    f"Model returned a dict without a 'logits' or 'output' key; "
+                    f"cannot determine which of {sorted(output.keys())} is the logits tensor. "
+                    f"Return a logits tensor or key it as 'logits'."
+                )
+        elif isinstance(output, (tuple, list)):
+            if len(output) == 1:
+                output = output[0]
+            else:
+                raise ValueError(
+                    f"Model returned a {type(output).__name__} of length {len(output)}; "
+                    f"cannot determine which element is the logits tensor. "
+                    f"Return a logits tensor rather than a {type(output).__name__}."
+                )
+
+        last_dim = output.shape[-1]
+        if last_dim not in (1, 2, 3) and last_dim != self._num_classes:
+            raise ValueError(
+                f"Model output last dimension is {last_dim}, expected 1, 2, 3, "
+                f"or num_classes ({self._num_classes}). Check that model.py returns "
+                f"logits and that model_config.yaml declares the correct num_classes."
+            )
 
         return [output.cpu().to(torch.float32).numpy()]

@@ -1,5 +1,4 @@
 import os
-import time
 import asyncio
 import numpy as np
 import traceback
@@ -20,9 +19,15 @@ from ..config import DEFAULT_VIDEO_BATCH_SIZE
 from ..constants import MAX_VIDEO_NUM_FRAMES
 from ..dataset.iterator import DatasetIterator
 
-from .utils.inference import process_model_output
 from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
-from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
+from .common import (
+    BenchmarkRunConfig,
+    build_plan,
+    create_tracker,
+    finalize_run,
+    stack_uniform_batch,
+    run_batch_and_record,
+)
 from .aug_cache import vid_aug_cache_path, write_aug_cache
 import pandas as pd
 
@@ -239,48 +244,10 @@ def process_video_batch(
     """push a batch of videos through the model and record rows in tracker."""
     if not batch_videos:
         return
-
-    first = batch_videos[0]
-    batch_array = np.empty((len(batch_videos),) + first.shape, dtype=first.dtype)
-    for i, vid in enumerate(batch_videos):
-        batch_array[i] = vid
-
-    start = time.time()
-    outputs = None
-    try:
-        outputs = session.run(None, {input_specs[0].name: batch_array})
-    except Exception as e:
-        for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
-            batch_metadata
-        ):
-            tracker.add_error(
-                dataset_name=dataset_name,
-                sample_index=sample_index,
-                sample=sample,
-                error_message=f"inference-failed: {str(e)[:160]}",
-            )
-        return
-    batch_inference_time = (time.time() - start) * 1000
-    per_sample_time = batch_inference_time / len(batch_videos)
-
-    for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
-        batch_metadata
-    ):
-        predicted, pred_probs = process_model_output(outputs[0][i])
-        tracker.add_ok(
-            dataset_name=dataset_name,
-            sample_index=sample_index,
-            sample=sample,
-            label=label,
-            predicted=predicted,
-            probs=pred_probs,
-            inference_time_ms=per_sample_time,
-            batch_inference_time_ms=batch_inference_time,
-            batch_id=batch_id,
-            batch_size=len(batch_videos),
-            sample_seed=sample_seed,
-            aug_pass=aug_pass,
-        )
+    batch_array = stack_uniform_batch(batch_videos)
+    run_batch_and_record(
+        session, input_specs, batch_array, batch_metadata, tracker, batch_id, aug_pass
+    )
 
 
 async def run_video_benchmark(

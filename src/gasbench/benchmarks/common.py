@@ -1,6 +1,9 @@
 import json
+import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
+
+import numpy as np
 
 from ..config import DEFAULT_TARGET_SIZE
 from ..dataset.config import (
@@ -19,7 +22,73 @@ from .recording import (
     compute_generator_stats_from_df,
 )
 from .utils import calculate_per_source_accuracy
+from .utils.inference import process_model_output
 from ..logger import get_logger
+
+
+def stack_uniform_batch(items: List[np.ndarray]) -> np.ndarray:
+    """Stack a list of same-shaped arrays into a single batched array."""
+    first = items[0]
+    batch_array = np.empty((len(items),) + first.shape, dtype=first.dtype)
+    for i, item in enumerate(items):
+        batch_array[i] = item
+    return batch_array
+
+
+def run_batch_and_record(
+    session,
+    input_specs,
+    batch_array: np.ndarray,
+    batch_metadata,
+    tracker: BenchmarkRunRecorder,
+    batch_id: int,
+    aug_pass: bool = False,
+):
+    """Run one batch through the model and record rows in the tracker.
+
+    On inference failure every sample in the batch is recorded as an error
+    (rather than propagating and aborting the whole dataset), so a model that
+    crashes on hard samples cannot silently drop them from its score.
+    """
+    logger = get_logger(__name__)
+    if not batch_metadata:
+        return
+
+    start = time.time()
+    try:
+        outputs = session.run(None, {input_specs[0].name: batch_array})
+    except Exception as e:
+        logger.error(f"Inference failed: {e} (batch shape: {batch_array.shape})")
+        for label, sample, sample_index, dataset_name, sample_seed in batch_metadata:
+            tracker.add_error(
+                dataset_name=dataset_name,
+                sample_index=sample_index,
+                sample=sample,
+                error_message=f"inference-failed: {str(e)[:160]}",
+            )
+        return
+
+    batch_inference_time = (time.time() - start) * 1000
+    per_sample_time = batch_inference_time / len(batch_metadata)
+
+    for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
+        batch_metadata
+    ):
+        predicted, pred_probs = process_model_output(outputs[0][i])
+        tracker.add_ok(
+            dataset_name=dataset_name,
+            sample_index=sample_index,
+            sample=sample,
+            label=label,
+            predicted=predicted,
+            probs=pred_probs,
+            inference_time_ms=per_sample_time,
+            batch_inference_time_ms=batch_inference_time,
+            batch_id=batch_id,
+            batch_size=len(batch_metadata),
+            sample_seed=sample_seed,
+            aug_pass=aug_pass,
+        )
 
 
 @dataclass

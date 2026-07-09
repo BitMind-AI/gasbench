@@ -1,6 +1,4 @@
 import os
-import time
-import traceback
 import numpy as np
 from typing import Dict, Optional
 
@@ -8,9 +6,14 @@ from ..logger import get_logger
 from ..processing.media import process_audio_sample
 from ..dataset.iterator import DatasetIterator
 
-from .utils.inference import process_model_output
 from .recording import BenchmarkRunRecorder, log_dataset_summary
-from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
+from .common import (
+    BenchmarkRunConfig,
+    build_plan,
+    create_tracker,
+    finalize_run,
+    run_batch_and_record,
+)
 import pandas as pd
 
 logger = get_logger(__name__)
@@ -40,49 +43,22 @@ def process_batch(
 
         # Squeeze any extra dimensions (e.g., (1, 96000) -> (96000,))
         batch_audio_np = [b.squeeze() if b.ndim > 1 else b for b in batch_audio_np]
-        
+
         batch_array = np.stack(batch_audio_np)
     except Exception as e:
         logger.error(f"Failed to stack audio batch: {e}")
-        return
-
-    start = time.time()
-    outputs = None
-    try:
-        outputs = session.run(None, {input_specs[0].name: batch_array})
-    except Exception as e:
-        logger.error(f"Inference failed: {e} (batch shape: {batch_array.shape})")
-        for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
-            batch_metadata
-        ):
+        for label, sample, sample_index, dataset_name, sample_seed in batch_metadata:
             tracker.add_error(
                 dataset_name=dataset_name,
                 sample_index=sample_index,
                 sample=sample,
-                error_message=f"inference-failed: {str(e)[:160]}",
+                error_message=f"stack-failed: {str(e)[:160]}",
             )
         return
-    batch_inference_time = (time.time() - start) * 1000
-    per_sample_time = batch_inference_time / len(batch_audio)
 
-    for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
-        batch_metadata
-    ):
-        predicted, pred_probs = process_model_output(outputs[0][i])
-
-        tracker.add_ok(
-            dataset_name=dataset_name,
-            sample_index=sample_index,
-            sample=sample,
-            label=label,
-            predicted=predicted,
-            probs=pred_probs,
-            inference_time_ms=per_sample_time,
-            batch_inference_time_ms=batch_inference_time,
-            batch_id=batch_id,
-            batch_size=len(batch_audio),
-            sample_seed=sample_seed,
-        )
+    run_batch_and_record(
+        session, input_specs, batch_array, batch_metadata, tracker, batch_id
+    )
 
 
 async def run_audio_benchmark(

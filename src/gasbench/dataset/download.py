@@ -1154,7 +1154,10 @@ def _download_filtered_sequential(
     so all media decoding follows the exact same path as regular parquet downloads.
     """
     remote_paths = _get_download_urls(dataset.path, filenames, source)
-    random.shuffle(remote_paths)
+    if seed is not None:
+        random.Random(seed).shuffle(remote_paths)
+    else:
+        random.shuffle(remote_paths)
 
     collected = 0
     for url in remote_paths:

@@ -208,11 +208,11 @@ def process_video_bytes_sample(
         finally:
             try:
                 os.unlink(temp_video_path)
-            except:
+            except Exception:
                 pass
             try:
                 vr.close()
-            except:
+            except Exception:
                 pass
 
     except Exception as e:
@@ -262,7 +262,7 @@ def process_video_frames_sample(
                     nparr = np.frombuffer(frame_data, np.uint8)
                     frame_array = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                     if frame_array is None:
-                        logger.warning(f"Failed to decode frame bytes")
+                        logger.warning("Failed to decode frame bytes")
                         continue
                     frame_array = cv2.cvtColor(frame_array, cv2.COLOR_BGR2RGB)
                 else:

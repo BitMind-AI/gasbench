@@ -65,7 +65,7 @@ class VideoArchiveCache:
                             contents = os.listdir(cache_dir)
                             logger.debug(f"📁 Completed archive contents: {contents}")
                             self._logged_structure_for.add(cache_dir)
-                        except:
+                        except Exception:
                             pass
 
                     return None
@@ -157,7 +157,7 @@ class VideoArchiveCache:
                 with open(completion_marker, "w") as f:
                     f.write(f"Extracted at {time.time()}")
 
-                logger.info(f"✅ Archive extracted successfully")
+                logger.info("✅ Archive extracted successfully")
 
             except Exception as extract_error:
                 logger.error(f"❌ Failed to extract archive: {extract_error}")
@@ -205,12 +205,12 @@ class VideoArchiveCache:
                                     )
                                 else:
                                     items.append(f"{prefix}{item}")
-                        except:
+                        except Exception:
                             pass
                         return items
 
                     tree = list_directory_tree(cache_dir)
-                    logger.debug(f"📁 Archive directory structure:")
+                    logger.debug("📁 Archive directory structure:")
                     for item in tree[:20]:  # Limit to first 20 items
                         logger.debug(f"  {item}")
                     if len(tree) > 20:

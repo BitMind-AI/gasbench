@@ -7,7 +7,6 @@ These tests ensure YAML configs are valid and properly structured.
 import pytest
 from src.gasbench.dataset.config import (
     load_benchmark_datasets_from_yaml,
-    BenchmarkDatasetConfig,
 )
 
 

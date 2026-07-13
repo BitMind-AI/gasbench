@@ -5,8 +5,6 @@ These tests verify the multi-column support for PICA-100K and backward compatibi
 """
 
 import pytest
-from unittest.mock import Mock, patch
-import pandas as pd
 from src.gasbench.dataset.config import BenchmarkDatasetConfig
 
 

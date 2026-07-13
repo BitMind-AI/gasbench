@@ -24,7 +24,6 @@ Usage as module:
 import os
 import argparse
 import torch
-from pathlib import Path
 from tqdm import tqdm
 
 from ..logger import get_logger
@@ -66,7 +65,7 @@ def preprocess_dataset(
     samples_dir = os.path.join(dataset_dir, "samples")
     
     if not os.path.exists(samples_dir):
-        logger.error(f"Dataset not cached. Please run 'gasbench download --modality audio' first")
+        logger.error("Dataset not cached. Please run 'gasbench download --modality audio' first")
         return False
     
     # Check if already preprocessed
@@ -145,7 +144,7 @@ def preprocess_dataset(
             logger.warning(f"Failed to preprocess sample {sample_idx}: {e}")
             error_count += 1
     
-    logger.info(f"Preprocessing complete!")
+    logger.info("Preprocessing complete!")
     logger.info(f"  Processed: {processed_count}")
     logger.info(f"  Errors: {error_count}")
     logger.info(f"  Location: {samples_dir}")

@@ -149,7 +149,7 @@ class DownloadManager:
             await asyncio.sleep(0.3)
             progress.remove_task(task_id)
             
-        except Exception as e:
+        except Exception:
             progress.update(task_id, description=f"[red]❌ {task.dataset.name[:45]}")
             await asyncio.sleep(0.3)
             progress.remove_task(task_id)

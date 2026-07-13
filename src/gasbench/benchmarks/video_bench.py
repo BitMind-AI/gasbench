@@ -1,5 +1,4 @@
 import os
-import asyncio
 import numpy as np
 import traceback
 from typing import Dict, Optional
@@ -351,8 +350,6 @@ async def run_video_benchmark(
                     f"Processing dataset {dataset_idx + 1}/{len(plan.available_datasets)}: "
                     f"{dataset_config.name} ({dataset_cap} samples)"
                 )
-
-                dataset_skipped = 0
 
                 try:
                     is_gasstation = "gasstation" in dataset_config.name.lower()

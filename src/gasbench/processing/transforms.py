@@ -1,13 +1,9 @@
 import math
 import random
 from scipy import ndimage
-import torchvision.transforms as transforms
-import torchvision.transforms.functional as F
 import numpy as np
 import cv2
 import os
-from pathlib import Path
-import time
 from io import BytesIO
 from PIL import Image
 import torch
@@ -172,7 +168,6 @@ def _h264_roundtrip_ffmpeg(video_array, crf, fps):
     import shutil
     import subprocess
     import tempfile
-    import os
 
     if shutil.which("ffmpeg") is None:
         return None
@@ -211,7 +206,6 @@ def _h264_roundtrip_cv2(video_array, crf, fps):
     directly, so it is approximated through VIDEOWRITER_PROP_QUALITY (a perceptual
     0-100 knob that some builds ignore). Returns (T, H, W, 3) uint8 or None."""
     import tempfile
-    import os
 
     T, H, W, C = video_array.shape
     # Map CRF [18, 51] → cv2 quality [100, 0] linearly (approximate only)

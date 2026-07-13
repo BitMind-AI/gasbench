@@ -4,9 +4,9 @@ import time
 import torch
 import numpy as np
 from pathlib import Path
-from typing import List, Any, Optional
+from typing import List, Any
 
-from .custom_model_loader import load_custom_model, load_model_config
+from .custom_model_loader import load_custom_model
 from ...logger import get_logger
 
 logger = get_logger(__name__)

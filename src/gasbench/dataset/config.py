@@ -2,10 +2,8 @@ from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import os
-import json
 import yaml
 from importlib.resources import files
-from collections import defaultdict
 import hashlib
 
 from ..logger import get_logger
@@ -404,7 +402,7 @@ def load_datasets_from_yaml(yaml_path: str) -> Dict[str, List[BenchmarkDatasetCo
         raise yaml.YAMLError(f"Failed to parse YAML file {yaml_path}: {e}")
 
     if not isinstance(data, dict):
-        raise ValueError(f"YAML file must contain a dictionary at root level")
+        raise ValueError("YAML file must contain a dictionary at root level")
 
     all_errors = []
     result = {"image": [], "video": [], "audio": []}

@@ -32,7 +32,7 @@ def check_dataset_cache(
         ):
             try:
                 with open(dataset_info_file, "r") as f:
-                    dataset_info = json.load(f)
+                    json.load(f)  # validate JSON is readable
 
                 sample_count = len(
                     [

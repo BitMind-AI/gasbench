@@ -21,6 +21,7 @@ from datetime import datetime
 import soundfile as sf
 
 import pandas as pd
+import pyarrow
 import pyarrow.parquet as pq
 import requests
 import huggingface_hub as hf_hub
@@ -223,7 +224,6 @@ def download_and_extract(
                     f"No files found for {dataset.path} with format {dataset.source_format}"
                 )
 
-                src_fmt = str(getattr(dataset, "source_format", "")).lower().lstrip(".")
                 fallback_formats = [".parquet", ".zip", ".tar", ".tar.gz"]
                 for fallback_format in fallback_formats:
                     if fallback_format != dataset.source_format:
@@ -619,7 +619,6 @@ def _process_gasstation(
 
     # Track parquet files we've already processed
     if downloaded_archives is not None:
-        parquet_basenames = {os.path.basename(url) for url in parquet_urls}
         parquets_to_download = [
             url
             for url in parquet_urls
@@ -971,14 +970,18 @@ def _process_zip_or_tar(
 
             if is_zip:
                 list_entries = archive.namelist()
-                get_name = lambda e: e
+
+                def get_name(e):
+                    return e
 
                 def open_entry(e):
                     return archive.open(e)
 
             else:
                 list_entries = [m for m in archive.getmembers() if m.isreg()]
-                get_name = lambda m: m.name
+
+                def get_name(m):
+                    return m.name
 
                 def open_entry(m):
                     return archive.extractfile(m)
@@ -1507,7 +1510,7 @@ def list_modelscope_files(repo_id, extension=None):
             f"Failed to list files of type {extension} in ModelScope repo {repo_id}: {e}"
         )
         logger.error(
-            f"Make sure 'modelscope' package is installed: pip install modelscope"
+            "Make sure 'modelscope' package is installed: pip install modelscope"
         )
 
     return files

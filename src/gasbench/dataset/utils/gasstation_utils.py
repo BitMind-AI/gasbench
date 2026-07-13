@@ -9,7 +9,7 @@ This module handles the special caching logic for gasstation datasets:
 
 import os
 import json
-from typing import List, Set, Optional, Dict, Tuple
+from typing import List, Set, Optional, Tuple
 from pathlib import Path
 from datetime import datetime, timedelta
 

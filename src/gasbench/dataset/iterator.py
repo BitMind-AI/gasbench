@@ -8,7 +8,6 @@ import time
 from pathlib import Path
 from typing import Optional, Dict
 
-from PIL import Image
 
 from ..logger import get_logger
 from .config import BenchmarkDatasetConfig

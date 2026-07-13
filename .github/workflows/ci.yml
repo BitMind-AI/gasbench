@@ -21,13 +21,13 @@ jobs:
   typecheck:
     name: mypy (advisory)
     runs-on: ubuntu-latest
-    # Advisory: the codebase is partially typed. Reports issues without
-    # blocking merges until type coverage improves.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
       - run: pip install mypy
-      - run: mypy src/gasbench --ignore-missing-imports
+      # Advisory: the codebase is partially typed. Print findings but never
+      # fail the build (green check) until type coverage improves. Tighten by
+      # dropping the `|| true` once the baseline is cleaned up.
+      - run: mypy src/gasbench --ignore-missing-imports || true

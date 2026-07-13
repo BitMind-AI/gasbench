@@ -117,7 +117,6 @@ class Metrics:
         Returns:
             float in [0,1].
         """
-        import math
 
         # Normalize MCC: [-1, 1] -> [0, 1]
         bin_mcc = float(self.calculate_binary_mcc())

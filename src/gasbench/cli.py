@@ -101,15 +101,15 @@ def command_run(args):
         print(f"📦 Using custom PyTorch model from: {model_path}")
     elif model_path.suffix.lower() == ".onnx":
         # ONNX format no longer supported for competition
-        print(f"Error: ONNX format is no longer supported for competition.")
-        print(f"Please use a safetensors model directory containing:")
-        print(f"  - model_config.yaml")
-        print(f"  - model.py")
-        print(f"  - *.safetensors weights")
-        print(f"See docs/Safetensors.md for requirements.")
+        print("Error: ONNX format is no longer supported for competition.")
+        print("Please use a safetensors model directory containing:")
+        print("  - model_config.yaml")
+        print("  - model.py")
+        print("  - *.safetensors weights")
+        print("See docs/Safetensors.md for requirements.")
         return 1
     else:
-        print(f"Error: Model must be a directory with model_config.yaml, model.py, and *.safetensors")
+        print("Error: Model must be a directory with model_config.yaml, model.py, and *.safetensors")
         print(f"Got: {model_path}")
         return 1
 
@@ -182,9 +182,9 @@ def command_run(args):
             f.write(format_benchmark_summary(results))
         
         print(f"\n📊 Results saved to: {results_path}")
-        print(f"  - JSON:    results.json")
-        print(f"  - Parquet: records.parquet")
-        print(f"  - Summary: summary.txt")
+        print("  - JSON:    results.json")
+        print("  - Parquet: records.parquet")
+        print("  - Summary: summary.txt")
 
         if results.get("benchmark_completed"):
             print("\n✅ Benchmark completed successfully")
@@ -207,7 +207,6 @@ def command_verify_cache(args):
     from .dataset.cache import (
         scan_cache_directory,
         compute_cache_statistics,
-        verify_cache_against_configs,
         format_size_bytes,
     )
 
@@ -230,19 +229,19 @@ def command_verify_cache(args):
 
     by_modality, by_media_type = compute_cache_statistics(datasets)
 
-    print(f"\n📊 CACHE SUMMARY")
+    print("\n📊 CACHE SUMMARY")
     print(f"Total Datasets: {len(datasets)}")
     print(f"Total Samples:  {total_samples:,}")
     print(f"Total Size:     {format_size_bytes(total_size_bytes)}")
 
-    print(f"\n📈 BY MODALITY")
+    print("\n📈 BY MODALITY")
     for modality in sorted(by_modality.keys()):
         stats = by_modality[modality]
         print(
             f"  {modality.upper():12} {stats['count']:3} datasets, {stats['samples']:7,} samples, {format_size_bytes(stats['size']):>10}"
         )
 
-    print(f"\n🎭 BY MEDIA TYPE")
+    print("\n🎭 BY MEDIA TYPE")
     for mtype in sorted(by_media_type.keys()):
         stats = by_media_type[mtype]
         print(
@@ -250,7 +249,7 @@ def command_verify_cache(args):
         )
 
     if args.verbose:
-        print(f"\n📋 DETAILED LISTING")
+        print("\n📋 DETAILED LISTING")
 
         datasets_by_mod = defaultdict(list)
         for ds in datasets:
@@ -304,7 +303,7 @@ def _verify_against_config(cached_names, cached_datasets, args, cache_dir):
 
     if missing:
         has_issues = True
-        print(f"\n❌ MISSING DATASETS (in config but not in cache):")
+        print("\n❌ MISSING DATASETS (in config but not in cache):")
         by_modality = defaultdict(list)
         for ds in expected_datasets:
             if ds.name in missing:
@@ -318,7 +317,7 @@ def _verify_against_config(cached_names, cached_datasets, args, cache_dir):
 
     if extra:
         has_issues = True
-        print(f"\n⚠️  EXTRA DATASETS (in cache but not in config):")
+        print("\n⚠️  EXTRA DATASETS (in cache but not in config):")
         by_modality = defaultdict(list)
         for ds in cached_datasets:
             if ds["name"] in extra:

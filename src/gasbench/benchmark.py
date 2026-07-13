@@ -3,7 +3,6 @@ import os
 import json
 import time
 import uuid
-import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
@@ -181,7 +180,7 @@ async def load_model_for_benchmark(
         benchmark_results["validation"]["input_type"] = str(input_specs[0].type)
         benchmark_results["validation"]["output_shape"] = str(output_specs[0].shape)
 
-        logger.info(f"Model loaded successfully")
+        logger.info("Model loaded successfully")
         
         # Get execution providers
         providers = session.get_providers()
@@ -237,7 +236,7 @@ async def execute_benchmark(
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
-        df = await run_image_benchmark(
+        await run_image_benchmark(
             session,
             input_specs,
             benchmark_results,
@@ -264,7 +263,7 @@ async def execute_benchmark(
         )
         benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
     elif modality == "video":
-        df = await run_video_benchmark(
+        await run_video_benchmark(
             session,
             input_specs,
             benchmark_results,
@@ -291,7 +290,7 @@ async def execute_benchmark(
         )
         benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
     elif modality == "audio":
-        df = await run_audio_benchmark(
+        await run_audio_benchmark(
             session,
             input_specs,
             benchmark_results,
@@ -375,7 +374,7 @@ def format_benchmark_summary(benchmark_results: Dict) -> str:
 
             per_dataset = results.get("per_dataset_results", {})
             if per_dataset:
-                lines.append(f"\n📋 PER-DATASET RESULTS:")
+                lines.append("\n📋 PER-DATASET RESULTS:")
                 for dataset_name, dataset_results in per_dataset.items():
                     accuracy = dataset_results.get("accuracy", 0.0)
                     total = dataset_results.get("total", 0)
@@ -394,7 +393,7 @@ def format_benchmark_summary(benchmark_results: Dict) -> str:
                     entry["samples"] += int(ds_stats.get("total", 0))
                     entry["correct"] += int(ds_stats.get("correct", 0))
                 if by_type:
-                    lines.append(f"\n🎭 ACCURACY BY MEDIA TYPE:")
+                    lines.append("\n🎭 ACCURACY BY MEDIA TYPE:")
                     for mtype, v in by_type.items():
                         samples = v["samples"]
                         correct = v["correct"]
@@ -403,7 +402,7 @@ def format_benchmark_summary(benchmark_results: Dict) -> str:
 
     validation = benchmark_results.get("validation", {})
     if validation:
-        lines.append(f"\n🔍 MODEL VALIDATION:")
+        lines.append("\n🔍 MODEL VALIDATION:")
         lines.append(f"  Input Shape: {validation.get('input_shape', 'N/A')}")
         lines.append(f"  Input Type: {validation.get('input_type', 'N/A')}")
         lines.append(f"  Output Shape: {validation.get('output_shape', 'N/A')}")

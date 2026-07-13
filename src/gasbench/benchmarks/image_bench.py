@@ -1,5 +1,4 @@
 import os
-import time
 import traceback
 import numpy as np
 from typing import Dict, Optional
@@ -19,9 +18,15 @@ from ..config import (
 
 from ..dataset.iterator import DatasetIterator
 
-from .utils.inference import process_model_output
 from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
-from .common import BenchmarkRunConfig, build_plan, create_tracker, finalize_run
+from .common import (
+    BenchmarkRunConfig,
+    build_plan,
+    create_tracker,
+    finalize_run,
+    stack_uniform_batch,
+    run_batch_and_record,
+)
 from .aug_cache import img_aug_cache_path, write_aug_cache
 import pandas as pd
 
@@ -219,36 +224,10 @@ def process_batch(
     """push a batch of images through the model and record rows in tracker."""
     if not batch_images:
         return
-
-    first = batch_images[0]
-    batch_array = np.empty((len(batch_images),) + first.shape, dtype=first.dtype)
-    for i, img in enumerate(batch_images):
-        batch_array[i] = img
-
-    start = time.time()
-    outputs = session.run(None, {input_specs[0].name: batch_array})
-    batch_inference_time = (time.time() - start) * 1000
-    per_sample_time = batch_inference_time / len(batch_images)
-
-    for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
-        batch_metadata
-    ):
-        predicted, pred_probs = process_model_output(outputs[0][i])
-
-        tracker.add_ok(
-            dataset_name=dataset_name,
-            sample_index=sample_index,
-            sample=sample,
-            label=label,
-            predicted=predicted,
-            probs=pred_probs,
-            inference_time_ms=per_sample_time,
-            batch_inference_time_ms=batch_inference_time,
-            batch_id=batch_id,
-            batch_size=len(batch_images),
-            sample_seed=sample_seed,
-            aug_pass=aug_pass,
-        )
+    batch_array = stack_uniform_batch(batch_images)
+    run_batch_and_record(
+        session, input_specs, batch_array, batch_metadata, tracker, batch_id, aug_pass
+    )
 
 
 async def run_image_benchmark(

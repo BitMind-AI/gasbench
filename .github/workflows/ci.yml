@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  lint:
+    name: ruff (lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install ruff==0.15.21
+      - run: ruff check src tests
+
+  typecheck:
+    name: mypy (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install mypy
+      # Advisory: the codebase is partially typed. Print findings but never
+      # fail the build (green check) until type coverage improves. Tighten by
+      # dropping the `|| true` once the baseline is cleaned up.
+      - run: mypy src/gasbench --ignore-missing-imports || true

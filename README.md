@@ -29,17 +29,21 @@ To learn how to submit your model to **Bittensor Subnet 34** — including the e
 
 ## Installation
 
-GPU support is installed by default:
+To run benchmarks, install the `gpu` extra (on macOS/Windows this
+automatically substitutes CPU onnxruntime via platform markers):
 
 ```bash
 cd gasbench
-pip install -e .
+pip install -e '.[gpu]'
 ```
 
-For CPU-only (no CUDA):
+The base install is intentionally minimal — just the dataset registry
+(`gasbench.dataset.config` and the bundled YAML configs) with no
+torch/onnxruntime. Use it when you only need dataset definitions
+(e.g. bitmind-subnet's validator cache):
 
 ```bash
-pip install -e .[cpu]
+pip install -e .
 ```
 
 ---

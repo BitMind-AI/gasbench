@@ -8,7 +8,16 @@ import time
 from pathlib import Path
 
 from . import __version__
-from .benchmark import run_benchmark, print_benchmark_summary, save_results_to_json
+
+try:
+    from .benchmark import run_benchmark, print_benchmark_summary, save_results_to_json
+except ImportError:
+    print(
+        "The gasbench CLI requires the benchmark dependencies, which are not "
+        "part of the base install. Install them with: pip install 'gasbench[gpu]'",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def add_common_args(parser):

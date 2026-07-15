@@ -18,6 +18,41 @@ jobs:
       - run: pip install ruff==0.15.21
       - run: ruff check src tests
 
+  base-install:
+    name: base install (dataset registry only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      # The base install must stay lightweight (pyyaml only) and the dataset
+      # registry importable without the benchmark stack — bitmind-subnet
+      # depends on this contract. This job fails if anyone adds an eager
+      # heavy import to the registry path or a heavy dep to base deps.
+      - run: pip install .
+      - run: |
+          python - <<'EOF'
+          from gasbench.dataset.config import load_benchmark_datasets_from_yaml
+          data = load_benchmark_datasets_from_yaml()
+          assert data.get("image") and data.get("video"), "registry came back empty"
+          print({k: len(v) for k, v in data.items()})
+
+          import gasbench
+          try:
+              gasbench.run_benchmark
+              raise SystemExit("benchmark stack importable in base install — heavy dep leaked into base")
+          except ImportError as e:
+              assert "gasbench[gpu]" in str(e)
+
+          import importlib.metadata as im
+          dists = sorted(d.metadata["Name"].lower() for d in im.distributions())
+          heavy = {"torch", "onnxruntime", "onnxruntime-gpu", "transformers", "timm", "modelscope"}
+          leaked = heavy & set(dists)
+          assert not leaked, f"heavy deps in base install: {leaked}"
+          print("base install contract holds:", dists)
+          EOF
+
   typecheck:
     name: mypy (advisory)
     runs-on: ubuntu-latest

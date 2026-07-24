@@ -475,6 +475,13 @@ def _process_parquet(
                 return
             logger.info(f"  {source_path.name}: {len(df)} rows after filter ({filter_column}=={filter_value})")
 
+        # Frames-parquet: video dataset stored as one row per frame, grouped by video_id
+        if dataset.modality == "video" and "video_id" in df.columns:
+            yield from _process_frames_parquet(
+                df, dataset, source_path, num_items, iso_week, seed
+            )
+            return
+
         if num_items == -1:
             sample_df = df
         else:
@@ -602,6 +609,66 @@ def _process_parquet(
         logger.warning(f"Error processing parquet file {source_path}: {e}")
         return
 
+
+
+def _process_frames_parquet(
+    df, dataset, source_path: Path, num_items: int,
+    iso_week: Optional[str] = None, seed: Optional[int] = None
+):
+    """Process a frames-parquet shard: one row per frame, one video per video_id group.
+
+    Expected columns: video_id (str), image (frame bytes), optional frame_idx for
+    ordering. Yields the same sample shape as _process_frame_directory, with
+    'video_frames' holding a list of frame bytes (num_items counts videos).
+    """
+    media_col = (
+        next((c for c in df.columns if c.lower() == "image"), None)
+        or next(
+            (c for c in df.columns
+             if ("image" in c.lower() or "frame" in c.lower())
+             and "_id" not in c.lower() and "idx" not in c.lower()),
+            None,
+        )
+    )
+    if not media_col:
+        logger.warning(f"No frame media column found in {source_path}")
+        return
+
+    groups = list(df.groupby("video_id", sort=False))
+    if num_items != -1 and len(groups) > num_items:
+        rng = random.Random(seed)
+        groups = rng.sample(groups, num_items)
+
+    for video_id, group in groups:
+        try:
+            if "frame_idx" in group.columns:
+                group = group.sort_values("frame_idx")
+            frames = []
+            for val in group[media_col]:
+                if isinstance(val, dict):
+                    val = next(
+                        (v for v in val.values() if isinstance(v, (bytes, bytearray))),
+                        None,
+                    )
+                if isinstance(val, (bytes, bytearray)):
+                    frames.append(bytes(val))
+            if not frames:
+                logger.warning(f"No frame bytes for video {video_id} in {source_path.name}")
+                continue
+
+            sample = {
+                "video_frames": frames,
+                "media_type": dataset.media_type,
+                "dataset_name": dataset.name,
+                "dataset_path": dataset.path,
+                "source_file": str(video_id),
+            }
+            if iso_week:
+                sample["iso_week"] = iso_week
+            yield sample
+        except Exception as e:
+            logger.warning(f"Failed to build video {video_id} from {source_path.name}: {e}")
+            continue
 
 
 def _process_frame_directory(

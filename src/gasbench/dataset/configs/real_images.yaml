@@ -498,7 +498,7 @@ datasets:
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
     generator_family: real
-    content_category: faces
+    content_category: animals
 
   - name: SoloFace
     path: 34data/SoloFace
@@ -531,7 +531,7 @@ datasets:
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
     generator_family: real
-    content_category: faces
+    content_category: documents
 
   - name: affectnet
     path: 34data/affectnet
@@ -631,7 +631,7 @@ datasets:
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
     generator_family: real
-    content_category: faces
+    content_category: humans
 
   - name: nepali-ethnic-groups-Face-emotions
     path: 34data/nepali-ethnic-groups-Face-emotions
@@ -684,7 +684,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: real
-    content_category: faces
+    content_category: humans
 
   - name: spoof_png
     path: 34data/spoof_png

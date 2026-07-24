@@ -732,7 +732,7 @@ datasets:
     notes: 500K+ synthetic human images with 3D pose labels
     generator_family: sd
     generator_variant: posedreamer
-    content_category: faces
+    content_category: humans
 
   - name: stylegan3_T_FFHQU_processed
     path: 34data/stylegan3_T_FFHQU_processed

@@ -905,3 +905,55 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: faces
+
+  # ── Released v20 holdouts ─────────────────────────────────────────────────
+
+  - name: cc3m
+    path: 34data/cc3m
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: wider-face
+    path: 34data/wider-face
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+
+  - name: stanford-dogs
+    path: 34data/stanford-dogs
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: animals
+
+  - name: flickr-sd3-real
+    path: 34data/flickr-sd3-real
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: hagrid-gestures
+    path: 34data/hagrid-gestures
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: humans

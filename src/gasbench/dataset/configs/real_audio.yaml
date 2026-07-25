@@ -596,3 +596,141 @@ datasets:
     notes: EU Parliament speeches - 18 languages, professional quality
     generator_family: real
     content_category: speech
+
+  # ── Released v20 holdouts ─────────────────────────────────────────────────
+
+  - name: 4tts-recordings
+    path: 34data/4tts-recordings
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: brspeech-bonafide
+    path: 34data/brspeech-bonafide
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: pyara-bonafide
+    path: 34data/pyara-bonafide
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: xmad-bonafide
+    path: 34data/xmad-bonafide
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: asvspoof5-bonafide
+    path: 34data/asvspoof5-bonafide
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: phonemedf-real
+    path: 34data/phonemedf-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: latin-america-real
+    path: 34data/latin-america-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: eurospeech-bosnia-herzegovina
+    path: 34data/eurospeech-bosnia-herzegovina
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: eurospeech-bulgaria
+    path: 34data/eurospeech-bulgaria
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: eurospeech-croatia
+    path: 34data/eurospeech-croatia
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: liepa3-read
+    path: 34data/liepa3-read
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: liepa3-spon
+    path: 34data/liepa3-spon
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: indic-voice-hindi
+    path: 34data/indic-voice-hindi
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: indic-voice-tamil
+    path: 34data/indic-voice-tamil
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+  - name: seirdb
+    path: 34data/seirdb
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech

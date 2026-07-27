@@ -121,10 +121,17 @@ def save_sample_to_cache(
                 # Copy/link frames to cache directory
                 import shutil
 
-                for i, frame_path in enumerate(video_frames):
-                    ext = Path(frame_path).suffix
-                    dest_path = os.path.join(dir_path, f"{i:06d}{ext}")
-                    shutil.copy2(frame_path, dest_path)
+                for i, frame in enumerate(video_frames):
+                    if isinstance(frame, (bytes, bytearray)):
+                        # Frames-parquet samples carry raw bytes, not paths
+                        data = bytes(frame)
+                        ext = ".png" if data[:8] == b"\x89PNG\r\n\x1a\n" else ".jpg"
+                        with open(os.path.join(dir_path, f"{i:06d}{ext}"), "wb") as fh:
+                            fh.write(data)
+                    else:
+                        ext = Path(frame).suffix
+                        dest_path = os.path.join(dir_path, f"{i:06d}{ext}")
+                        shutil.copy2(frame, dest_path)
 
                 return dirname
 

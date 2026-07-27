@@ -578,3 +578,155 @@ datasets:
     notes: Released from v14 bmcore holdouts
     generator_family: mixed-generation
     content_category: speech
+
+  # ── Released v20 holdouts ─────────────────────────────────────────────────
+
+  - name: 4tts-cosy-voice
+    path: 34data/4tts-cosy-voice
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: 4tts-f5tts
+    path: 34data/4tts-f5tts
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: 4tts-fish-speech
+    path: 34data/4tts-fish-speech
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: 4tts-mask-gct
+    path: 34data/4tts-mask-gct
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: brspeech-spoof
+    path: 34data/brspeech-spoof
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: pyara-spoof
+    path: 34data/pyara-spoof
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: xmad-spoof
+    path: 34data/xmad-spoof
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: asvspoof5-spoof
+    path: 34data/asvspoof5-spoof
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: phonemedf-chatterboxtts
+    path: 34data/phonemedf-chatterboxtts
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: phonemedf-xttsv2
+    path: 34data/phonemedf-xttsv2
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: phonemedf-melotts
+    path: 34data/phonemedf-melotts
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: phonemedf-freevc
+    path: 34data/phonemedf-freevc
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: latin-american-tts
+    path: 34data/latin-american-tts
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: latin-american-diff
+    path: 34data/latin-american-diff
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: dfadd
+    path: 34data/dfadd
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech

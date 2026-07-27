@@ -107,7 +107,7 @@ def download_single_file(
     try:
         # Handle S3 URLs (format: s3:bucket-name/key/path or s3:bucket-name/frame/directory/)
         if url.startswith("s3:"):
-            from .utils.s3_utils import download_s3_frame_directory
+            from ..utils.s3_utils import download_s3_frame_directory
 
             s3_path = url[3:]  # Remove "s3:" prefix
             parts = s3_path.split("/", 1)

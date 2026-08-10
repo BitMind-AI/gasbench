@@ -1241,3 +1241,115 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: faces
+
+  # ── Released v21 holdouts ─────────────────────────────────────────────────
+
+  - name: golf-pose
+    path: 34data/golf-pose
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+
+  - name: latest-mask
+    path: 34data/latest-mask
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: msl-medical
+    path: 34data/msl-medical
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+
+  - name: mtikguard-dataset
+    path: 34data/mtikguard-dataset
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: noctact-har
+    path: 34data/noctact-har
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+
+  - name: shoplifting-videos
+    path: 34data/shoplifting-videos
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+
+  - name: grounded-videollm-activitynet
+    path: 34data/grounded-videollm-activitynet
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+
+  - name: grounded-videollm-coin
+    path: 34data/grounded-videollm-coin
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+
+  - name: vitra-ego4d-video
+    path: 34data/vitra-ego4d-video
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: egolife-mila-kitchen
+    path: 34data/egolife-mila-kitchen
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+
+  - name: lanyuer
+    path: 34data/lanyuer
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse

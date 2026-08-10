@@ -730,3 +730,95 @@ datasets:
     archives_per_dataset: 2
     generator_family: mixed-generation
     content_category: speech
+
+  # ── Released v21 holdouts ─────────────────────────────────────────────────
+
+  - name: ai4bharat-speecharenabench-bn
+    path: 34data/ai4bharat-speecharenabench-bn
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ai4bharat-speecharenabench-hi
+    path: 34data/ai4bharat-speecharenabench-hi
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ai4bharat-speecharenabench-ta
+    path: 34data/ai4bharat-speecharenabench-ta
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ai4bharat-speecharenabench-te
+    path: 34data/ai4bharat-speecharenabench-te
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: indic-tts-bengali
+    path: 34data/indic-tts-bengali
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: indic-tts-english
+    path: 34data/indic-tts-english
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: indic-tts-marathi
+    path: 34data/indic-tts-marathi
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: indic-tts-telugu
+    path: 34data/indic-tts-telugu
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: src4vc-fake
+    path: 34data/src4vc-fake
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech

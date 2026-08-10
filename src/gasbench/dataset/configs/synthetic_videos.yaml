@@ -1632,3 +1632,85 @@ datasets:
     archives_per_dataset: -1
     generator_family: mixed-generation
     content_category: humans
+
+  # ── Released v21 holdouts ─────────────────────────────────────────────────
+
+  - name: physicalai-part1
+    path: 34data/physicalai-part1
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes
+
+  - name: pika
+    path: 34data/pika
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: pika
+    content_category: diverse
+
+  - name: videogen-rewardbench-cogvideox
+    path: 34data/videogen-rewardbench-cogvideox
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: cogvideox
+    content_category: diverse
+
+  - name: videogen-rewardbench-kling
+    path: 34data/videogen-rewardbench-kling
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: kling
+    content_category: diverse
+
+  - name: videogen-rewardbench-minimax
+    path: 34data/videogen-rewardbench-minimax
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: minimax
+    content_category: diverse
+
+  - name: bedlam
+    path: 34data/bedlam
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+
+  - name: nvidia-sdg-synhuman
+    path: 34data/nvidia-sdg-synhuman
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+
+  - name: gtasa
+    path: 34data/gtasa
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes

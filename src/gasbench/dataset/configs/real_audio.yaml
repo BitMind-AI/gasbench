@@ -748,3 +748,65 @@ datasets:
     archives_per_dataset: 2
     generator_family: real
     content_category: speech
+
+  # ── Released v21 holdouts ─────────────────────────────────────────────────
+
+  - name: issai-cv330
+    path: 34data/issai-cv330
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+
+  - name: issai-openstt-cs334
+    path: 34data/issai-openstt-cs334
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+
+  - name: audiomnist
+    path: 34data/audiomnist
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+
+  - name: emotion-speech-data
+    path: 34data/emotion-speech-data
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+
+  - name: nepali-speech-to-text
+    path: 34data/nepali-speech-to-text
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+
+  - name: src4v-real
+    path: 34data/src4v-real
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech

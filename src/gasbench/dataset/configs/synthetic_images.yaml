@@ -1006,3 +1006,87 @@ datasets:
     archives_per_dataset: -1
     generator_family: rendered
     content_category: humans
+
+  # ── Released v21 holdouts ─────────────────────────────────────────────────
+
+  - name: deepfakes-qa-15k
+    path: 34data/deepfakes-qa-15k
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: faceswap
+    content_category: faces
+
+  - name: sdfd
+    path: 34data/sdfd
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sd
+    content_category: faces
+
+  - name: synmulti-pie-images
+    path: 34data/synmulti-pie-images
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: faces
+
+  - name: 17-ai-model-images
+    path: 34data/17-ai-model-images
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: cddb-fake
+    path: 34data/cddb-fake
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: dflip3k-fake-pixelwave-11
+    path: 34data/dflip3k-fake-pixelwave-11
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sd
+    generator_variant: sdxl
+    content_category: faces
+
+  - name: dflip3k-fake-dreamshaper-xl
+    path: 34data/dflip3k-fake-dreamshaper-xl
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sd
+    generator_variant: sdxl
+    content_category: faces
+
+  - name: onemillionfaces
+    path: 34data/onemillionfaces
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: faces

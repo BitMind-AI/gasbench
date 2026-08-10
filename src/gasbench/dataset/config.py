@@ -24,7 +24,7 @@ UNIFORM_SAMPLING_MULTIPLIER = 3  # Allow up to 3x the base allocation per datase
 BENCHMARK_TOTAL_OVERRIDES = {
     "debug": {"image": 100, "video": 50, "audio": 50},
     "small": {"image": 5000, "video": 5000, "audio": 5000},
-    "full":  {"image": 55000, "video": 26000, "audio": 37000},
+    "full":  {"image": 69000, "video": 33000, "audio": 47000},
 }
 
 # Per-dataset download limits (only applied in debug/small modes for faster testing)

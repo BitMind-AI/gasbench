@@ -711,3 +711,39 @@ datasets:
     archives_per_dataset: 2
     generator_family: real
     content_category: speech
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: cml-tts-french
+    path: 34data/cml-tts-french
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+    notes: Released from v22 bmcore holdouts
+
+  - name: cml-tts-german
+    path: 34data/cml-tts-german
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+    notes: Released from v22 bmcore holdouts
+
+  - name: cml-tts-spanish
+    path: 34data/cml-tts-spanish
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: real
+    content_category: speech
+    notes: Released from v22 bmcore holdouts
+

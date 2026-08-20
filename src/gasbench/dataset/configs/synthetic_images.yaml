@@ -1059,3 +1059,127 @@ datasets:
     generator_variant: sdxl
     content_category: faces
 
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: onemillionfaces-256-200k
+    path: 34data/onemillionfaces-256-200k
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: onemillionfaces-1024-350k
+    path: 34data/onemillionfaces-1024-350k
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: ntire-robustaigendetection-fake
+    path: 34data/ntire-robustaigendetection-fake
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: gemini31-flash-lite-train
+    path: 34data/gemini31-flash-lite-train
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: gemini
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: gemini31-flash-lite-val
+    path: 34data/gemini31-flash-lite-val
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: gemini
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: ai-generated-ecommerce-damaged-electronics
+    path: 34data/ai-generated-ecommerce-damaged-electronics
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: ai-generated-ecommerce-damaged-phone-screen
+    path: 34data/ai-generated-ecommerce-damaged-phone-screen
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: ai-generated-ecommerce-fragile-broken
+    path: 34data/ai-generated-ecommerce-fragile-broken
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: gpt-image-edit-1-5m-hqedit
+    path: 34data/gpt-image-edit-1-5m-hqedit
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: gpt
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: deepfake-identity-isolated-fake
+    path: 34data/deepfake-identity-isolated-fake
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: faceswap
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: saberzl-sid-synthetic
+    path: 34data/saberzl-sid-synthetic
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: documents
+    notes: Released from v22 bmcore holdouts
+

@@ -1076,3 +1076,204 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: diverse
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: grounded-videollm-moment-10m
+    path: 34data/grounded-videollm-moment-10m
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: grounded-videollm-vtimellm-stage2
+    path: 34data/grounded-videollm-vtimellm-stage2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: vitra-ego4d-video-part2
+    path: 34data/vitra-ego4d-video-part2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: egolife-mila-another-kitchen
+    path: 34data/egolife-mila-another-kitchen
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: egolife-mila-camera1
+    path: 34data/egolife-mila-camera1
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: lanyuer-bili
+    path: 34data/lanyuer-bili
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: vigilvid-research-real
+    path: 34data/vigilvid-research-real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: social-media-deepfakes-real
+    path: 34data/social-media-deepfakes-real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: sekai-real-walking
+    path: 34data/sekai-real-walking
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: human-motion-tracking-deeplabcut
+    path: 34data/human-motion-tracking-deeplabcut
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: physicalai-part1-split4
+    path: 34data/physicalai-part1-split4
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: scenes
+    notes: Released from v22 bmcore holdouts
+
+  - name: physicalai-part1-split5
+    path: 34data/physicalai-part1-split5
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: scenes
+    notes: Released from v22 bmcore holdouts
+
+  - name: bedlam-closeup-suburb-a
+    path: 34data/bedlam-closeup-suburb-a
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: bedlam-closeup-suburb-b
+    path: 34data/bedlam-closeup-suburb-b
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: nvidia-sdg-synhuman-shard-7
+    path: 34data/nvidia-sdg-synhuman-shard-7
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: nvidia-sdg-synhuman-shard-8
+    path: 34data/nvidia-sdg-synhuman-shard-8
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: acvlab-abot-world-explorer-500h
+    path: 34data/acvlab-abot-world-explorer-500h
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: scenes
+    notes: Released from v22 bmcore holdouts
+
+  - name: cs2-10k-data-ancient-part-01
+    path: 34data/cs2-10k-data-ancient-part-01
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+

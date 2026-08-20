@@ -1594,3 +1594,105 @@ datasets:
     generator_family: minimax
     content_category: diverse
 
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: videogen-rewardbench-gen3
+    path: 34data/videogen-rewardbench-gen3
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: gen3
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: videogen-rewardbench-luma
+    path: 34data/videogen-rewardbench-luma
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: luma
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: pika-videos-3
+    path: 34data/pika-videos-3
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: pika
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: tip-i2v-cogvideo
+    path: 34data/tip-i2v-cogvideo
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: cogvideox
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: tip-i2v-opensora
+    path: 34data/tip-i2v-opensora
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: opensora
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: tip-i2v-svd
+    path: 34data/tip-i2v-svd
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: svd
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: vigilvid-research-fake
+    path: 34data/vigilvid-research-fake
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: social-media-deepfakes-fake
+    path: 34data/social-media-deepfakes-fake
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: faceswap
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: vidpair-halluc
+    path: 34data/vidpair-halluc
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+

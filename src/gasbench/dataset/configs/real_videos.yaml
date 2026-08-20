@@ -1,8 +1,8 @@
-# Image Dataset Configurations -- Real Videos
-#
-datasets:
+# Video Dataset Configurations -- Real Videos
+# 4-class video taxonomy: real | synthetic | rendered | semisynthetic.
+# This file: camera-captured video only. CGI/game-engine lives in synthetic_videos as rendered.
 
-  # -- action --
+datasets:
 
   - name: FreeTacMan
     path: OpenDriveLab/FreeTacMan
@@ -789,7 +789,6 @@ datasets:
     generator_family: real
     content_category: diverse
 
-
   - name: facebook-2M-Flores-ASL
     path: 34data/facebook-2M-Flores-ASL
     modality: video
@@ -1156,72 +1155,6 @@ datasets:
     content_category: action
     notes: Released from v22 bmcore holdouts
 
-  - name: physicalai-part1-split4
-    path: 34data/physicalai-part1-split4
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: scenes
-    notes: Released from v22 bmcore holdouts
-
-  - name: physicalai-part1-split5
-    path: 34data/physicalai-part1-split5
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: scenes
-    notes: Released from v22 bmcore holdouts
-
-  - name: bedlam-closeup-suburb-a
-    path: 34data/bedlam-closeup-suburb-a
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
-  - name: bedlam-closeup-suburb-b
-    path: 34data/bedlam-closeup-suburb-b
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
-  - name: nvidia-sdg-synhuman-shard-7
-    path: 34data/nvidia-sdg-synhuman-shard-7
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
-  - name: nvidia-sdg-synhuman-shard-8
-    path: 34data/nvidia-sdg-synhuman-shard-8
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
   - name: abot-world-explorer
     path: 34data/abot-world-explorer
     modality: video
@@ -1232,15 +1165,3 @@ datasets:
     generator_family: real
     content_category: scenes
     notes: Released from v22 bmcore holdouts
-
-  - name: cs2-10k-data-ancient-part-01
-    path: 34data/cs2-10k-data-ancient-part-01
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: action
-    notes: Released from v22 bmcore holdouts
-

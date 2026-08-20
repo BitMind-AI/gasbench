@@ -1,8 +1,92 @@
-# Image Dataset Configurations -- Synthetic Videos
+# Video Dataset Configurations -- Synthetic, Rendered, Semisynthetic Videos
+# 4-class video taxonomy: real | synthetic | rendered | semisynthetic.
+# media_type: synthetic = fully neural-generated (t2v/i2v).
+# media_type: rendered = classical CGI / game engine / sim (not neural gen).
+# media_type: semisynthetic = neural edit of real video (face-swap, reenact, lip-sync).
 #
+# Excluded (cannot assign a correct 4-class label; no reliable split):
+#   artifact-bench — 34data dump is 1,350 rows = full Artifact-Bench mix
+#     (Task_1 250 real + 250 fake, Task_2 500 fake, Task_3 350 fake). HF copy
+#     is parquet-converted; include_paths cannot isolate real_*.mp4 vs fake.
+
 datasets:
 
-  # -- action --
+  - name: physicalai-part1-split4
+    path: 34data/physicalai-part1-split4
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes
+    notes: Released from v22 bmcore holdouts
+
+  - name: physicalai-part1-split5
+    path: 34data/physicalai-part1-split5
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes
+    notes: Released from v22 bmcore holdouts
+
+  - name: bedlam-closeup-suburb-a
+    path: 34data/bedlam-closeup-suburb-a
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: bedlam-closeup-suburb-b
+    path: 34data/bedlam-closeup-suburb-b
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: nvidia-sdg-synhuman-shard-7
+    path: 34data/nvidia-sdg-synhuman-shard-7
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: nvidia-sdg-synhuman-shard-8
+    path: 34data/nvidia-sdg-synhuman-shard-8
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: cs2-10k-data-ancient-part-01
+    path: 34data/cs2-10k-data-ancient-part-01
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: action
+    notes: Released from v22 bmcore holdouts
 
   - name: deepaction-bdanimate
     path: faridlab/deepaction_v1
@@ -133,7 +217,7 @@ datasets:
   - name: ByteDance_Synthetic_Videos
     path: kevinzzz8866/ByteDance_Synthetic_Videos
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: 1000
     archives_per_dataset: 1
@@ -235,7 +319,7 @@ datasets:
   - name: senorita-controllable-videos
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -246,7 +330,7 @@ datasets:
   - name: senorita-inpainting
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -257,7 +341,7 @@ datasets:
   - name: senorita-local-style-transfer
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -268,7 +352,7 @@ datasets:
   - name: senorita-obj-removal-videos
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -279,7 +363,7 @@ datasets:
   - name: senorita-obj-swap
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -290,7 +374,7 @@ datasets:
   - name: senorita-style-transfer
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -321,7 +405,7 @@ datasets:
   - name: v13-e4s
     path: 34data/v13-e4s
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -531,19 +615,18 @@ datasets:
   - name: MAVOS-DD-english_sonic
     path: 34data/MAVOS-DD-english_sonic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v15 bmcore holdouts
     generator_family: mixed-generation
     content_category: faces
-
 
   - name: MAVOS-DD-german_echomimic
     path: 34data/MAVOS-DD-german_echomimic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -551,11 +634,10 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-
   - name: MAVOS-DD-german_hififace
     path: 34data/MAVOS-DD-german_hififace
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -566,7 +648,7 @@ datasets:
   - name: MAVOS-DD-german_inswapper
     path: 34data/MAVOS-DD-german_inswapper
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -574,11 +656,10 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-
   - name: MAVOS-DD-german_liveportrait
     path: 34data/MAVOS-DD-german_liveportrait
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -589,7 +670,7 @@ datasets:
   - name: MAVOS-DD-german_memo
     path: 34data/MAVOS-DD-german_memo
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -600,7 +681,7 @@ datasets:
   - name: MAVOS-DD-german_roop
     path: 34data/MAVOS-DD-german_roop
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -611,7 +692,7 @@ datasets:
   - name: MAVOS-DD-german_sonic
     path: 34data/MAVOS-DD-german_sonic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -622,7 +703,7 @@ datasets:
   - name: MAVOS-DD-hindi_echomimic
     path: 34data/MAVOS-DD-hindi_echomimic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -633,7 +714,7 @@ datasets:
   - name: MAVOS-DD-hindi_hififace
     path: 34data/MAVOS-DD-hindi_hififace
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -644,7 +725,7 @@ datasets:
   - name: MAVOS-DD-hindi_inswapper
     path: 34data/MAVOS-DD-hindi_inswapper
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -652,11 +733,10 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-
   - name: MAVOS-DD-hindi_liveportrait
     path: 34data/MAVOS-DD-hindi_liveportrait
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -667,7 +747,7 @@ datasets:
   - name: MAVOS-DD-hindi_memo
     path: 34data/MAVOS-DD-hindi_memo
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -678,7 +758,7 @@ datasets:
   - name: MAVOS-DD-hindi_roop
     path: 34data/MAVOS-DD-hindi_roop
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -689,19 +769,18 @@ datasets:
   - name: MAVOS-DD-hindi_sonic
     path: 34data/MAVOS-DD-hindi_sonic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v15 bmcore holdouts
     generator_family: mixed-generation
     content_category: faces
-
 
   - name: MAVOS-DD-mandarin_echomimic
     path: 34data/MAVOS-DD-mandarin_echomimic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -709,11 +788,10 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-
   - name: MAVOS-DD-mandarin_hififace
     path: 34data/MAVOS-DD-mandarin_hififace
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -724,7 +802,7 @@ datasets:
   - name: MAVOS-DD-mandarin_inswapper
     path: 34data/MAVOS-DD-mandarin_inswapper
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -732,11 +810,10 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-
   - name: MAVOS-DD-mandarin_liveportrait
     path: 34data/MAVOS-DD-mandarin_liveportrait
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -747,7 +824,7 @@ datasets:
   - name: MAVOS-DD-mandarin_memo
     path: 34data/MAVOS-DD-mandarin_memo
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -758,7 +835,7 @@ datasets:
   - name: MAVOS-DD-mandarin_roop
     path: 34data/MAVOS-DD-mandarin_roop
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -769,7 +846,7 @@ datasets:
   - name: MAVOS-DD-mandarin_sonic
     path: 34data/MAVOS-DD-mandarin_sonic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -780,7 +857,7 @@ datasets:
   - name: MAVOS-DD-romanian_echomimic
     path: 34data/MAVOS-DD-romanian_echomimic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -788,11 +865,10 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-
   - name: MAVOS-DD-romanian_hififace
     path: 34data/MAVOS-DD-romanian_hififace
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -803,7 +879,7 @@ datasets:
   - name: MAVOS-DD-romanian_inswapper
     path: 34data/MAVOS-DD-romanian_inswapper
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -811,11 +887,10 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-
   - name: MAVOS-DD-romanian_liveportrait
     path: 34data/MAVOS-DD-romanian_liveportrait
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -826,7 +901,7 @@ datasets:
   - name: MAVOS-DD-romanian_memo
     path: 34data/MAVOS-DD-romanian_memo
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -837,7 +912,7 @@ datasets:
   - name: MAVOS-DD-romanian_roop
     path: 34data/MAVOS-DD-romanian_roop
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -848,7 +923,7 @@ datasets:
   - name: MAVOS-DD-romanian_sonic
     path: 34data/MAVOS-DD-romanian_sonic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -859,7 +934,7 @@ datasets:
   - name: MAVOS-DD-russian_echomimic
     path: 34data/MAVOS-DD-russian_echomimic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -867,11 +942,10 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-
   - name: MAVOS-DD-russian_hififace
     path: 34data/MAVOS-DD-russian_hififace
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -938,7 +1012,7 @@ datasets:
   - name: fomm
     path: 34data/fomm
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -948,7 +1022,7 @@ datasets:
   - name: fsgan
     path: 34data/fsgan
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -958,7 +1032,7 @@ datasets:
   - name: hyperreenact
     path: 34data/hyperreenact
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -968,7 +1042,7 @@ datasets:
   - name: inswap
     path: 34data/inswap
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -980,7 +1054,7 @@ datasets:
   - name: lia
     path: 34data/lia
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -990,7 +1064,7 @@ datasets:
   - name: mcnet
     path: 34data/mcnet
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1001,7 +1075,7 @@ datasets:
   - name: mobileswap
     path: 34data/mobileswap
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1011,7 +1085,7 @@ datasets:
   - name: mraa
     path: 34data/mraa
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1021,7 +1095,7 @@ datasets:
   - name: oneshot
     path: 34data/oneshot
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1031,7 +1105,7 @@ datasets:
   - name: pirender
     path: 34data/pirender
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1078,7 +1152,7 @@ datasets:
   - name: v15-human-vid-dfdm_cfr23-fake
     path: 34data/v15-human-vid-dfdm_cfr23-fake
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1089,7 +1163,7 @@ datasets:
   - name: v15-human-vid-dfdm_cfr23-dfaker
     path: 34data/v15-human-vid-dfdm_cfr23-dfaker
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1100,7 +1174,7 @@ datasets:
   - name: v15-human-vid-dfdm_cfr23-dfl-h128
     path: 34data/v15-human-vid-dfdm_cfr23-dfl-h128
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1111,7 +1185,7 @@ datasets:
   - name: v15-human-vid-dfdm_cfr23-iae
     path: 34data/v15-human-vid-dfdm_cfr23-iae
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1122,7 +1196,7 @@ datasets:
   - name: v15-human-vid-dfdm_cfr23-lightweight
     path: 34data/v15-human-vid-dfdm_cfr23-lightweight
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1133,7 +1207,7 @@ datasets:
   - name: v15-human-vid-digifakeav_echomimic_21501_22000
     path: 34data/v15-human-vid-digifakeav_echomimic_21501_22000
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1155,7 +1229,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-arabic-echomimic
     path: 34data/v15-human-vid-mavos-dd-arabic-echomimic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1166,7 +1240,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-arabic-hififace
     path: 34data/v15-human-vid-mavos-dd-arabic-hififace
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1177,7 +1251,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-arabic-inswapper
     path: 34data/v15-human-vid-mavos-dd-arabic-inswapper
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1188,7 +1262,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-arabic-liveportrait
     path: 34data/v15-human-vid-mavos-dd-arabic-liveportrait
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1199,7 +1273,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-arabic-roop
     path: 34data/v15-human-vid-mavos-dd-arabic-roop
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1210,7 +1284,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-arabic-sonic
     path: 34data/v15-human-vid-mavos-dd-arabic-sonic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1221,7 +1295,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-english_echomimic
     path: 34data/v15-human-vid-mavos-dd-english_echomimic
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1229,11 +1303,10 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-
   - name: v15-human-vid-mavos-dd-english_hififace
     path: 34data/v15-human-vid-mavos-dd-english_hififace
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1244,7 +1317,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-english_inswapper
     path: 34data/v15-human-vid-mavos-dd-english_inswapper
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1252,11 +1325,10 @@ datasets:
     generator_family: faceswap
     content_category: faces
 
-
   - name: v15-human-vid-mavos-dd-english_liveportrait
     path: 34data/v15-human-vid-mavos-dd-english_liveportrait
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1267,7 +1339,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-english_memo
     path: 34data/v15-human-vid-mavos-dd-english_memo
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1278,7 +1350,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-english_roop
     path: 34data/v15-human-vid-mavos-dd-english_roop
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1334,7 +1406,7 @@ datasets:
   - name: facedancer
     path: 34data/facedancer
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1344,7 +1416,7 @@ datasets:
   - name: facevid2vid
     path: 34data/facevid2vid
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1354,7 +1426,7 @@ datasets:
   - name: swimswap
     path: 34data/swimswap
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1364,7 +1436,7 @@ datasets:
   - name: tpsm
     path: 34data/tpsm
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1441,7 +1513,7 @@ datasets:
   - name: scene-decoupled-video-dataset
     path: 34data/scene-decoupled-video-dataset
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1451,7 +1523,7 @@ datasets:
   - name: synthetic-vstat-block-counting
     path: nyu-visionx/VSTAT
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1462,7 +1534,7 @@ datasets:
   - name: synthetic-vstat-shuffle-puzzle
     path: nyu-visionx/VSTAT
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1473,7 +1545,7 @@ datasets:
   - name: tonystark03-deepfake-fake
     path: 34data/tonystark03-deepfake-fake
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1505,7 +1577,7 @@ datasets:
   - name: lav-df
     path: 34data/lav-df
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1532,20 +1604,10 @@ datasets:
     generator_family: seedance
     content_category: diverse
 
-  - name: artifact-bench
-    path: 34data/artifact-bench
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: humans
-
   - name: synwts
     path: 34data/synwts
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1666,7 +1728,7 @@ datasets:
   - name: social-media-deepfakes-fake
     path: 34data/social-media-deepfakes-fake
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1684,4 +1746,3 @@ datasets:
     generator_family: mixed-generation
     content_category: diverse
     notes: Released from v22 bmcore holdouts
-

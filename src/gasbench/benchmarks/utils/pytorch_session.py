@@ -182,9 +182,9 @@ class PyTorchInferenceSession:
                 )
 
         last_dim = output.shape[-1]
-        if last_dim not in (1, 2, 3) and last_dim != self._num_classes:
+        if last_dim not in (1, 2, 3, 4) and last_dim != self._num_classes:
             raise ValueError(
-                f"Model output last dimension is {last_dim}, expected 1, 2, 3, "
+                f"Model output last dimension is {last_dim}, expected 1, 2, 3, 4, "
                 f"or num_classes ({self._num_classes}). Check that model.py returns "
                 f"logits and that model_config.yaml declares the correct num_classes."
             )

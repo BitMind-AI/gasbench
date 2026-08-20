@@ -12,7 +12,7 @@ from PIL import Image
 import torch
 
 from ..logger import get_logger
-from ..constants import MEDIA_TYPE_TO_LABEL
+from ..constants import media_type_to_label
 
 # decord is the primary video decoder (fast, frame-accurate random access).
 # It has no macOS ARM wheel, so on Darwin we fall back to OpenCV —
@@ -158,7 +158,7 @@ def process_video_bytes_sample(
             return None, None
 
         media_type = sample.get("media_type", "synthetic")
-        label = MEDIA_TYPE_TO_LABEL[media_type]
+        label = media_type_to_label(media_type, "video")
 
         src_name = str(sample.get("source_file", ""))
         ext = Path(src_name).suffix.lower() if src_name else ".mp4"
@@ -234,7 +234,7 @@ def process_video_frames_sample(
     Args:
         sample: Dict containing either:
             - 'video_frames': List of frame file paths or frame bytes
-            - 'media_type': 'real', 'synthetic', or 'semisynthetic'
+            - 'media_type': 'real', 'synthetic', 'semisynthetic', or 'rendered'
         num_frames: Number of frames to use (default 16).
 
     Returns:
@@ -246,7 +246,7 @@ def process_video_frames_sample(
             return None, None
 
         media_type = sample.get("media_type", "synthetic")
-        label = MEDIA_TYPE_TO_LABEL[media_type]
+        label = media_type_to_label(media_type, "video")
 
         frames = []
 
@@ -302,7 +302,7 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
             return None, None
 
         media_type = sample.get("media_type", "synthetic")
-        label = MEDIA_TYPE_TO_LABEL[media_type]
+        label = media_type_to_label(media_type, "image")
 
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
         image_array = np.array(image, dtype=np.uint8)
@@ -456,7 +456,7 @@ def process_audio_sample(
             return None, None
 
         media_type = sample.get("media_type", "synthetic")
-        label = MEDIA_TYPE_TO_LABEL.get(media_type, 1)
+        label = media_type_to_label(media_type, "audio")
 
         # Decode with timeout (TorchCodec or ffmpeg CLI)
         waveform = _decode_audio_with_timeout(audio_bytes, target_sr)

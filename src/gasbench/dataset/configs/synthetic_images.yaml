@@ -11,6 +11,8 @@
 #   deepfake-insight — parquet filenames are IMDB-WIKI celebrity IDs with no
 #     real/fake marker. Cannot verify every row is manipulated vs real photo.
 
+# Some previously-active entries were moved to legacy_images.yaml (not loaded by default).
+
 datasets:
 
   - name: cosyn-400k
@@ -60,31 +62,6 @@ datasets:
     generator_family: sd
     generator_variant: sd15
     content_category: art
-
-  - name: SDv15R-dpmsolver-25-15K-part1
-    path: 34data/SDv15R-dpmsolver-25-15K-part1
-    modality: image
-    media_type: synthetic
-    source_format: png
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: sd
-    generator_variant: sd15
-    content_category: art
-
-  - name: SDv15R-dpmsolver-25-15K-part3
-    path: 34data/SDv15R-dpmsolver-25-15K-part3
-    modality: image
-    media_type: synthetic
-    source_format: png
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: sd
-    generator_variant: sd15
-    content_category: art
-
-  # -- diverse --
 
   - name: fake_sdxl_12k
     path: Kyleyee/fake_sdxl_12k
@@ -141,17 +118,6 @@ datasets:
     generator_variant: aura
     content_category: diverse
 
-  - name: fakeclue-fake-chameleon
-    path: bitmind/FakeClue
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/fake/chameleon/]
-    generator_family: mixed-generation
-    content_category: diverse
-
   - name: fakeclue-fake-ffpp
     path: bitmind/FakeClue
     modality: image
@@ -171,17 +137,6 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     include_paths: [data/fake/genimage/]
-    generator_family: mixed-generation
-    content_category: diverse
-
-  - name: fakeclue-fake-satellite
-    path: bitmind/FakeClue
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/fake/satellite/]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -380,17 +335,6 @@ datasets:
     generator_family: mixed-generation
     content_category: documents
 
-  - name: fakeclue-fake-doc
-    path: bitmind/FakeClue
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/fake/doc/]
-    generator_family: mixed-generation
-    content_category: documents
-
   - name: idnet-2025
     path: cactuslab/IDNet-2025
     modality: image
@@ -504,42 +448,6 @@ datasets:
     generator_variant: stylegan2
     content_category: faces
 
-  - name: SFHQ-part2
-    path: bitmind/SyntheticFacesHQ
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    include_paths: [SFHQ-part2.zip]
-    generator_family: stylegan
-    generator_variant: stylegan2
-    content_category: faces
-
-  - name: SFHQ-part3
-    path: bitmind/SyntheticFacesHQ
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    include_paths: [SFHQ-part3.zip]
-    generator_family: stylegan
-    generator_variant: stylegan2
-    content_category: faces
-
-  - name: SFHQ-part4
-    path: bitmind/SyntheticFacesHQ
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    include_paths: [SFHQ-part4.zip]
-    generator_family: stylegan
-    generator_variant: stylegan2
-    content_category: faces
-
   - name: STARGAN
     path: 34data/STARGAN
     modality: image
@@ -620,94 +528,6 @@ datasets:
 
   - name: human-faces-dataset-r1
     path: 34data/human-faces-dataset-r1
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r2
-    path: 34data/human-faces-dataset-r2
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r3
-    path: 34data/human-faces-dataset-r3
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r4
-    path: 34data/human-faces-dataset-r4
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r5
-    path: 34data/human-faces-dataset-r5
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r6
-    path: 34data/human-faces-dataset-r6
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r7
-    path: 34data/human-faces-dataset-r7
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r8
-    path: 34data/human-faces-dataset-r8
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r9
-    path: 34data/human-faces-dataset-r9
     modality: image
     media_type: synthetic
     source_format: jpeg
@@ -1073,28 +893,6 @@ datasets:
 
   - name: ai-generated-ecommerce-damaged-electronics
     path: 34data/ai-generated-ecommerce-damaged-electronics
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: diverse
-    notes: Released from v22 bmcore holdouts
-
-  - name: ai-generated-ecommerce-damaged-phone-screen
-    path: 34data/ai-generated-ecommerce-damaged-phone-screen
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: diverse
-    notes: Released from v22 bmcore holdouts
-
-  - name: ai-generated-ecommerce-fragile-broken
-    path: 34data/ai-generated-ecommerce-fragile-broken
     modality: image
     media_type: synthetic
     source_format: parquet

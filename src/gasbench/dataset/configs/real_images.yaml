@@ -6,6 +6,8 @@
 #   pica-100k src_img — PICABench paper: purely synthetic, derived from
 #   synthetic videos. src is not camera-real; kept as one synthetic dataset.
 
+# Some previously-active entries were moved to legacy_images.yaml (not loaded by default).
+
 datasets:
 
   - name: Shooter-real
@@ -32,16 +34,6 @@ datasets:
     content_category: action
 
   # -- aerial --
-
-  - name: v14-vil100-jpeg
-    path: 34data/v14-vil100-jpeg
-    modality: image
-    media_type: real
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: aerial
 
   - name: v14-vil100-png
     path: 34data/v14-vil100-png
@@ -222,17 +214,6 @@ datasets:
     generator_family: real
     content_category: diverse
 
-  - name: fakeclue-real-satellite
-    path: bitmind/FakeClue
-    modality: image
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/real/satellite/]
-    generator_family: real
-    content_category: diverse
-
   - name: flickr30k
     path: nlphuji/flickr30k
     modality: image
@@ -368,17 +349,6 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
-    generator_family: real
-    content_category: documents
-
-  - name: fakeclue-real-doc
-    path: bitmind/FakeClue
-    modality: image
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/real/doc/]
     generator_family: real
     content_category: documents
 

@@ -613,7 +613,8 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> l
             data = yaml.safe_load(f)
         return data.get("datasets", [])
     
-    # Load from split real + synthetic configs and merge
+    # Load from split real + synthetic configs and merge.
+    # legacy_images.yaml / legacy_videos.yaml are bundled but not loaded here.
     SPLIT_CONFIGS = {
         "image": ("real_images.yaml", "synthetic_images.yaml"),
         "video": ("real_videos.yaml", "synthetic_videos.yaml"),

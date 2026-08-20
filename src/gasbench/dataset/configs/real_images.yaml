@@ -1164,8 +1164,8 @@ datasets:
     content_category: documents
     notes: Released from v22 bmcore holdouts
 
-  - name: saberzl-sid-real
-    path: 34data/saberzl-sid-real
+  - name: sid-set-real
+    path: 34data/sid-set-real
     modality: image
     media_type: real
     source_format: parquet

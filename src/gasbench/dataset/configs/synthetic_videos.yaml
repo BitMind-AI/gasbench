@@ -1604,7 +1604,7 @@ datasets:
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
-    generator_family: gen3
+    generator_family: runway
     content_category: diverse
     notes: Released from v22 bmcore holdouts
 
@@ -1616,17 +1616,6 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     generator_family: luma
-    content_category: diverse
-    notes: Released from v22 bmcore holdouts
-
-  - name: pika-videos-3
-    path: 34data/pika-videos-3
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: pika
     content_category: diverse
     notes: Released from v22 bmcore holdouts
 

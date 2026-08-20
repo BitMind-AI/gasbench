@@ -719,8 +719,8 @@ datasets:
     modality: audio
     media_type: real
     source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
+    media_per_archive: -1
+    archives_per_dataset: -1
     generator_family: real
     content_category: speech
     notes: Released from v22 bmcore holdouts
@@ -730,8 +730,8 @@ datasets:
     modality: audio
     media_type: real
     source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
+    media_per_archive: -1
+    archives_per_dataset: -1
     generator_family: real
     content_category: speech
     notes: Released from v22 bmcore holdouts
@@ -741,8 +741,8 @@ datasets:
     modality: audio
     media_type: real
     source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
+    media_per_archive: -1
+    archives_per_dataset: -1
     generator_family: real
     content_category: speech
     notes: Released from v22 bmcore holdouts

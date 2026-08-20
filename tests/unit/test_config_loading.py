@@ -4,7 +4,10 @@ Unit tests for dataset configuration loading.
 These tests ensure YAML configs are valid and properly structured.
 """
 
+from pathlib import Path
+
 import pytest
+import yaml
 from src.gasbench.constants import VALID_MEDIA_TYPES
 from src.gasbench.dataset.config import (
     load_benchmark_datasets_from_yaml,
@@ -31,8 +34,8 @@ class TestConfigLoading:
         configs = load_benchmark_datasets_from_yaml()
         
         # Update these counts when adding or removing datasets
-        assert len(configs["image"]) == 211, f"Expected 211 image datasets, got {len(configs['image'])}"
-        assert len(configs["video"]) == 272, f"Expected 272 video datasets, got {len(configs['video'])}"
+        assert len(configs["image"]) == 190, f"Expected 190 image datasets, got {len(configs['image'])}"
+        assert len(configs["video"]) == 219, f"Expected 219 video datasets, got {len(configs['video'])}"
         assert len(configs["audio"]) == 141, f"Expected 141 audio datasets, got {len(configs['audio'])}"
 
     def test_all_datasets_have_required_fields(self):
@@ -207,6 +210,49 @@ class TestMediaTypeDistribution:
         
         assert real_count > 0, "No real audio datasets"
         assert synthetic_count > 0, "No synthetic audio datasets"
+
+
+class TestPublicLegacyCull:
+    """Culled duplicate/combinatorial public entries live in legacy_*.yaml."""
+
+    _CONFIGS = Path(__file__).resolve().parents[2] / "src/gasbench/dataset/configs"
+
+    def test_legacy_files_parse(self):
+        for name in ("legacy_images.yaml", "legacy_videos.yaml"):
+            data = yaml.safe_load((self._CONFIGS / name).read_text())
+            assert "datasets" in data and data["datasets"]
+            assert len(data["datasets"]) > 0
+
+    def test_legacy_counts(self):
+        img = yaml.safe_load((self._CONFIGS / "legacy_images.yaml").read_text())
+        vid = yaml.safe_load((self._CONFIGS / "legacy_videos.yaml").read_text())
+        assert len(img["datasets"]) == 21
+        assert len(vid["datasets"]) == 53
+
+    def test_culled_names_not_in_default_registry(self):
+        configs = load_benchmark_datasets_from_yaml()
+        active = {d.name for ds in configs.values() for d in ds}
+        img = yaml.safe_load((self._CONFIGS / "legacy_images.yaml").read_text())
+        vid = yaml.safe_load((self._CONFIGS / "legacy_videos.yaml").read_text())
+        culled = {d["name"] for d in img["datasets"] + vid["datasets"]}
+        overlap = active & culled
+        assert not overlap, f"culled names still active: {overlap}"
+
+    def test_mavos_keepers_and_families_kept(self):
+        configs = load_benchmark_datasets_from_yaml()
+        names = {d.name for d in configs["video"]}
+        keepers = {
+            "mavos-dd-english_real",
+            "v15-human-vid-mavos-dd-english_inswapper",
+            "v15-human-vid-mavos-dd-english_liveportrait",
+            "v15-human-vid-mavos-dd-english_echomimic",
+            "v15-human-vid-mavos-dd-english_roop",
+        }
+        assert keepers <= names
+        assert sum(1 for n in names if "mavos" in n.lower()) == 5
+        assert sum(1 for n in names if "deepaction" in n.lower()) == 8
+        assert sum(1 for n in names if n.startswith("senorita")) == 6
+        assert sum(1 for n in names if n.startswith("fakeparts")) == 5
 
 
 if __name__ == "__main__":

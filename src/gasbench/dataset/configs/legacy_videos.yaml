@@ -1,0 +1,579 @@
+# Legacy video datasets (inactive public registry)
+# Not loaded by default. gasbench only reads real_*.yaml + synthetic_*.yaml.
+# Pass this file to load_benchmark_datasets_from_yaml(yaml_path=...) to include them.
+# Culled 2026-08-20: duplicate shards / combinatorial MAVOS grid / saturated copies.
+
+datasets:
+  - name: mavos-dd-arabic-real
+    path: 34data/mavos-dd-arabic-real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: mavos-dd-german_real
+    path: 34data/mavos-dd-german_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: mavos-dd-hindi_real
+    path: 34data/mavos-dd-hindi_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: mavos-dd-mandarin_real
+    path: 34data/mavos-dd-mandarin_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: MAVOS-DD-romanian_real
+    path: 34data/MAVOS-DD-romanian_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: MAVOS-DD-russian_real
+    path: 34data/MAVOS-DD-russian_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: MAVOS-DD-spanish_real
+    path: 34data/MAVOS-DD-spanish_real
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+
+  - name: v14-fake-animatediffturbo
+    path: 34data/v14-fake-animatediffturbo
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: MAVOS-DD-english_sonic
+    path: 34data/MAVOS-DD-english_sonic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-german_echomimic
+    path: 34data/MAVOS-DD-german_echomimic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-german_hififace
+    path: 34data/MAVOS-DD-german_hififace
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-german_inswapper
+    path: 34data/MAVOS-DD-german_inswapper
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: faceswap
+    content_category: faces
+
+  - name: MAVOS-DD-german_liveportrait
+    path: 34data/MAVOS-DD-german_liveportrait
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-german_memo
+    path: 34data/MAVOS-DD-german_memo
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-german_roop
+    path: 34data/MAVOS-DD-german_roop
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-german_sonic
+    path: 34data/MAVOS-DD-german_sonic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-hindi_echomimic
+    path: 34data/MAVOS-DD-hindi_echomimic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-hindi_hififace
+    path: 34data/MAVOS-DD-hindi_hififace
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-hindi_inswapper
+    path: 34data/MAVOS-DD-hindi_inswapper
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: faceswap
+    content_category: faces
+
+  - name: MAVOS-DD-hindi_liveportrait
+    path: 34data/MAVOS-DD-hindi_liveportrait
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-hindi_memo
+    path: 34data/MAVOS-DD-hindi_memo
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-hindi_roop
+    path: 34data/MAVOS-DD-hindi_roop
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-hindi_sonic
+    path: 34data/MAVOS-DD-hindi_sonic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-mandarin_echomimic
+    path: 34data/MAVOS-DD-mandarin_echomimic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-mandarin_hififace
+    path: 34data/MAVOS-DD-mandarin_hififace
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-mandarin_inswapper
+    path: 34data/MAVOS-DD-mandarin_inswapper
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: faceswap
+    content_category: faces
+
+  - name: MAVOS-DD-mandarin_liveportrait
+    path: 34data/MAVOS-DD-mandarin_liveportrait
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-mandarin_memo
+    path: 34data/MAVOS-DD-mandarin_memo
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-mandarin_roop
+    path: 34data/MAVOS-DD-mandarin_roop
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-mandarin_sonic
+    path: 34data/MAVOS-DD-mandarin_sonic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-romanian_echomimic
+    path: 34data/MAVOS-DD-romanian_echomimic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-romanian_hififace
+    path: 34data/MAVOS-DD-romanian_hififace
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-romanian_inswapper
+    path: 34data/MAVOS-DD-romanian_inswapper
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: faceswap
+    content_category: faces
+
+  - name: MAVOS-DD-romanian_liveportrait
+    path: 34data/MAVOS-DD-romanian_liveportrait
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-romanian_memo
+    path: 34data/MAVOS-DD-romanian_memo
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-romanian_roop
+    path: 34data/MAVOS-DD-romanian_roop
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-romanian_sonic
+    path: 34data/MAVOS-DD-romanian_sonic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-russian_echomimic
+    path: 34data/MAVOS-DD-russian_echomimic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: MAVOS-DD-russian_hififace
+    path: 34data/MAVOS-DD-russian_hififace
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-dfdm_cfr23-fake
+    path: 34data/v15-human-vid-dfdm_cfr23-fake
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-dfdm_cfr23-dfaker
+    path: 34data/v15-human-vid-dfdm_cfr23-dfaker
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-dfdm_cfr23-iae
+    path: 34data/v15-human-vid-dfdm_cfr23-iae
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-dfdm_cfr23-lightweight
+    path: 34data/v15-human-vid-dfdm_cfr23-lightweight
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-digifakeav_echomimic_21501_22000
+    path: 34data/v15-human-vid-digifakeav_echomimic_21501_22000
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-arabic-echomimic
+    path: 34data/v15-human-vid-mavos-dd-arabic-echomimic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-arabic-hififace
+    path: 34data/v15-human-vid-mavos-dd-arabic-hififace
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-arabic-inswapper
+    path: 34data/v15-human-vid-mavos-dd-arabic-inswapper
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: faceswap
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-arabic-liveportrait
+    path: 34data/v15-human-vid-mavos-dd-arabic-liveportrait
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-arabic-roop
+    path: 34data/v15-human-vid-mavos-dd-arabic-roop
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-arabic-sonic
+    path: 34data/v15-human-vid-mavos-dd-arabic-sonic
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-english_hififace
+    path: 34data/v15-human-vid-mavos-dd-english_hififace
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v15-human-vid-mavos-dd-english_memo
+    path: 34data/v15-human-vid-mavos-dd-english_memo
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v15 bmcore holdouts
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: v14-fake-opensora
+    path: 34data/v14-fake-opensora
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: sora
+    content_category: scenes

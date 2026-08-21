@@ -15,7 +15,6 @@ EXCLUDED = {
     "cg-fake-id",
     "deepfake-insight",
     "artifact-bench",
-    "abot-world-explorer",
     "pica-100k-src",
     "pica-100k-tgt",
 }
@@ -138,6 +137,7 @@ class TestYamlTaxonomy:
         configs = load_benchmark_datasets_from_yaml()
         names = {d.name: d for d in configs["video"]}
         for name in (
+            "abot-world-explorer",
             "physicalai-part1-split4",
             "physicalai-part1-split5",
             "bedlam-closeup-suburb-a",

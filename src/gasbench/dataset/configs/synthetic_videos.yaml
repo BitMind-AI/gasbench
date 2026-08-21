@@ -10,13 +10,21 @@
 #   artifact-bench — 34data dump is 1,350 rows = full Artifact-Bench mix
 #     (Task_1 250 real + 250 fake, Task_2 500 fake, Task_3 350 fake). HF copy
 #     is parquet-converted; include_paths cannot isolate real_*.mp4 vs fake.
-#   abot-world-explorer — combines game, simulation/rendering, and internet-video
-#     sources; the 34data shard has no reliable source split, so no single label
-#     can be assigned without contaminating real or rendered.
 
 # Some previously-active entries were moved to legacy_videos.yaml (not loaded by default).
 
 datasets:
+
+  - name: abot-world-explorer
+    path: 34data/abot-world-explorer
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes
+    notes: Released from v22 bmcore holdouts; game/simulation world-exploration footage
 
   - name: physicalai-part1-split4
     path: 34data/physicalai-part1-split4

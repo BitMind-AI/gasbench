@@ -30,23 +30,25 @@ class Metrics:
         of the same sample would. Default weight=1.0 reproduces unweighted
         behavior.
         """
-        if label == 1 and pred == 1:
+        # SN34 stays real vs not-real. Multiclass labels/preds (semi=2, rendered=3)
+        # collapse onto the same binary confusion matrix.
+        binary_label = 0 if label == 0 else 1
+        binary_pred = 0 if pred == 0 else 1
+
+        if binary_label == 1 and binary_pred == 1:
             self.true_positives += weight
-        elif label == 0 and pred == 0:
+        elif binary_label == 0 and binary_pred == 0:
             self.true_negatives += weight
-        elif label == 0 and pred == 1:
+        elif binary_label == 0 and binary_pred == 1:
             self.false_positives += weight
-        elif label == 1 and pred == 0:
+        elif binary_label == 1 and binary_pred == 0:
             self.false_negatives += weight
 
         if pred_probs is not None:
-            self.binary_y_true.append(label)
+            self.binary_y_true.append(binary_label)
             self.binary_weights.append(weight)
-            if len(pred_probs) == 3:
-                binary_prob = 1.0 - pred_probs[0]
-                self.binary_probs.append(binary_prob)
-            elif len(pred_probs) == 2:
-                self.binary_probs.append(pred_probs[1])
+            if len(pred_probs) >= 2:
+                self.binary_probs.append(float(1.0 - pred_probs[0]))
             else:
                 self.binary_probs.append(pred_probs[0])
 

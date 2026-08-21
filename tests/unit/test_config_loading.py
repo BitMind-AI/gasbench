@@ -4,7 +4,11 @@ Unit tests for dataset configuration loading.
 These tests ensure YAML configs are valid and properly structured.
 """
 
+from pathlib import Path
+
 import pytest
+import yaml
+from src.gasbench.constants import VALID_MEDIA_TYPES
 from src.gasbench.dataset.config import (
     load_benchmark_datasets_from_yaml,
 )
@@ -29,10 +33,10 @@ class TestConfigLoading:
         """Verify expected number of datasets per modality."""
         configs = load_benchmark_datasets_from_yaml()
         
-        # Update these counts when adding new datasets
-        assert len(configs["image"]) == 42, f"Expected 42 image datasets, got {len(configs['image'])}"
-        assert len(configs["video"]) == 32, f"Expected 32 video datasets, got {len(configs['video'])}"
-        assert len(configs["audio"]) == 14, f"Expected 14 audio datasets, got {len(configs['audio'])}"
+        # Update these counts when adding or removing datasets
+        assert len(configs["image"]) == 190, f"Expected 190 image datasets, got {len(configs['image'])}"
+        assert len(configs["video"]) == 218, f"Expected 218 video datasets, got {len(configs['video'])}"
+        assert len(configs["audio"]) == 141, f"Expected 141 audio datasets, got {len(configs['audio'])}"
 
     def test_all_datasets_have_required_fields(self):
         """Ensure all datasets have required fields."""
@@ -43,7 +47,8 @@ class TestConfigLoading:
                 assert dataset.name, f"{modality} dataset missing name"
                 assert dataset.path, f"{modality}/{dataset.name} missing path"
                 assert dataset.modality, f"{modality}/{dataset.name} missing modality"
-                assert dataset.media_type in ["real", "synthetic", "semisynthetic"], \
+                allowed = VALID_MEDIA_TYPES.get(dataset.modality, VALID_MEDIA_TYPES[modality])
+                assert dataset.media_type in allowed, \
                     f"{modality}/{dataset.name} has invalid media_type: {dataset.media_type}"
 
     def test_no_duplicate_dataset_names(self):
@@ -104,7 +109,6 @@ class TestImageDatasets:
             "pica-100k",
             "text-to-image-2m",
             "nano-banana-150k",
-            "artifact",
             "cosyn-400k",
         ]
         
@@ -120,7 +124,7 @@ class TestImageDatasets:
             if getattr(d, "data_columns", None) is not None
         ]
         
-        expected = ["pica-100k", "MMMG", "bananamark-dataset"]
+        expected = ["pica-100k", "MMMG", "bananamark-dataset", "posedreamer"]
         assert sorted(datasets_with_data_cols) == sorted(expected), \
             f"Datasets with data_columns: {datasets_with_data_cols}"
 
@@ -146,7 +150,7 @@ class TestVideoDatasets:
     def test_video_source_formats_are_valid(self):
         """Verify video datasets have valid source formats."""
         configs = load_benchmark_datasets_from_yaml()
-        valid_formats = ["mp4", "avi", "tar", "zip", "tar.gz", "parquet", ""]
+        valid_formats = ["mp4", "avi", "mov", "tar", "zip", "tar.gz", "parquet", ""]
         
         for dataset in configs["video"]:
             assert dataset.source_format in valid_formats, \
@@ -165,7 +169,7 @@ class TestAudioDatasets:
     def test_audio_source_formats_are_valid(self):
         """Verify audio datasets have valid source formats."""
         configs = load_benchmark_datasets_from_yaml()
-        valid_formats = ["wav", "mp3", "tar", "tar.gz", "zip", "parquet", ""]
+        valid_formats = ["wav", "mp3", "m4a", "tar", "tar.gz", "zip", "parquet", ""]
         
         for dataset in configs["audio"]:
             assert dataset.source_format in valid_formats, \
@@ -208,6 +212,48 @@ class TestMediaTypeDistribution:
         assert synthetic_count > 0, "No synthetic audio datasets"
 
 
+class TestPublicLegacyCull:
+    """Culled duplicate/combinatorial public entries live in legacy_*.yaml."""
+
+    _CONFIGS = Path(__file__).resolve().parents[2] / "src/gasbench/dataset/configs"
+
+    def test_legacy_files_parse(self):
+        for name in ("legacy_images.yaml", "legacy_videos.yaml"):
+            data = yaml.safe_load((self._CONFIGS / name).read_text())
+            assert "datasets" in data and data["datasets"]
+            assert len(data["datasets"]) > 0
+
+    def test_legacy_counts(self):
+        img = yaml.safe_load((self._CONFIGS / "legacy_images.yaml").read_text())
+        vid = yaml.safe_load((self._CONFIGS / "legacy_videos.yaml").read_text())
+        assert len(img["datasets"]) == 21
+        assert len(vid["datasets"]) == 53
+
+    def test_culled_names_not_in_default_registry(self):
+        configs = load_benchmark_datasets_from_yaml()
+        active = {d.name for ds in configs.values() for d in ds}
+        img = yaml.safe_load((self._CONFIGS / "legacy_images.yaml").read_text())
+        vid = yaml.safe_load((self._CONFIGS / "legacy_videos.yaml").read_text())
+        culled = {d["name"] for d in img["datasets"] + vid["datasets"]}
+        overlap = active & culled
+        assert not overlap, f"culled names still active: {overlap}"
+
+    def test_mavos_keepers_and_families_kept(self):
+        configs = load_benchmark_datasets_from_yaml()
+        names = {d.name for d in configs["video"]}
+        keepers = {
+            "mavos-dd-english_real",
+            "v15-human-vid-mavos-dd-english_inswapper",
+            "v15-human-vid-mavos-dd-english_liveportrait",
+            "v15-human-vid-mavos-dd-english_echomimic",
+            "v15-human-vid-mavos-dd-english_roop",
+        }
+        assert keepers <= names
+        assert sum(1 for n in names if "mavos" in n.lower()) == 5
+        assert sum(1 for n in names if "deepaction" in n.lower()) == 8
+        assert sum(1 for n in names if n.startswith("senorita")) == 6
+        assert sum(1 for n in names if n.startswith("fakeparts")) == 5
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

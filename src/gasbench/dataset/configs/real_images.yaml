@@ -1,8 +1,14 @@
 # Image Dataset Configurations -- Real Images
+# 3-class image taxonomy: real | synthetic | semisynthetic. No rendered class.
+# This file: camera/scan capture only.
 #
-datasets:
+# Not split into real here:
+#   pica-100k src_img — PICABench paper: purely synthetic, derived from
+#   synthetic videos. src is not camera-real; kept as one synthetic dataset.
 
-  # -- action --
+# Some previously-active entries were moved to legacy_images.yaml (not loaded by default).
+
+datasets:
 
   - name: Shooter-real
     path: 34data/Shooter-real
@@ -28,16 +34,6 @@ datasets:
     content_category: action
 
   # -- aerial --
-
-  - name: v14-vil100-jpeg
-    path: 34data/v14-vil100-jpeg
-    modality: image
-    media_type: real
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: aerial
 
   - name: v14-vil100-png
     path: 34data/v14-vil100-png
@@ -196,16 +192,6 @@ datasets:
     generator_family: real
     content_category: diverse
 
-  - name: cosyn-400k
-    path: allenai/CoSyn-400K
-    modality: image
-    media_type: real
-    source_format: parquet
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    generator_family: real
-    content_category: diverse
-
   - name: fakeclue-real-ffpp
     path: bitmind/FakeClue
     modality: image
@@ -225,17 +211,6 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     include_paths: [data/real/genimage/]
-    generator_family: real
-    content_category: diverse
-
-  - name: fakeclue-real-satellite
-    path: bitmind/FakeClue
-    modality: image
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/real/satellite/]
     generator_family: real
     content_category: diverse
 
@@ -374,17 +349,6 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v14 bmcore holdouts
-    generator_family: real
-    content_category: documents
-
-  - name: fakeclue-real-doc
-    path: bitmind/FakeClue
-    modality: image
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/real/doc/]
     generator_family: real
     content_category: documents
 
@@ -1029,3 +993,148 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: humans
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: yfcc100m
+    path: 34data/yfcc100m
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: ntire-robustaigendetection-real
+    path: 34data/ntire-robustaigendetection-real
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: deepfake-identity-isolated-real
+    path: 34data/deepfake-identity-isolated-real
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: nih-chest-xrays
+    path: 34data/nih-chest-xrays
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+    notes: Released from v22 bmcore holdouts
+
+  - name: multi-cancer
+    path: 34data/multi-cancer
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+    notes: Released from v22 bmcore holdouts
+
+  - name: massive-skin-disease-acne-rosacea
+    path: 34data/massive-skin-disease-acne-rosacea
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+    notes: Released from v22 bmcore holdouts
+
+  - name: medical-scan-covid
+    path: 34data/medical-scan-covid
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+    notes: Released from v22 bmcore holdouts
+
+  - name: breast-ultrasound
+    path: 34data/breast-ultrasound
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+    notes: Released from v22 bmcore holdouts
+
+  - name: isic-2019
+    path: 34data/isic-2019
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: medical
+    notes: Released from v22 bmcore holdouts
+
+  - name: cedar-signatures-genuine
+    path: 34data/cedar-signatures-genuine
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: documents
+    notes: Released from v22 bmcore holdouts
+
+  - name: kaggle-signature-genuine
+    path: 34data/kaggle-signature-genuine
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: documents
+    notes: Released from v22 bmcore holdouts
+
+  - name: signature-original-genuine
+    path: 34data/signature-original-genuine
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: documents
+    notes: Released from v22 bmcore holdouts
+
+  - name: sid-set-real
+    path: 34data/sid-set-real
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: documents
+    notes: Released from v22 bmcore holdouts

@@ -7,6 +7,7 @@ from importlib.resources import files
 import hashlib
 
 from ..logger import get_logger
+from ..constants import VALID_MEDIA_TYPES
 
 logger = get_logger(__name__)
 
@@ -46,7 +47,7 @@ class BenchmarkDatasetConfig:
     name: str
     path: str
     modality: str  # "image", "video", or "audio"
-    media_type: str  # "real", "synthetic", or "semisynthetic"
+    media_type: str  # image: real/synthetic/semisynthetic; video also allows rendered
 
     # Download parameters
     media_per_archive: int = 100
@@ -324,11 +325,14 @@ def validate_dataset_config(
             )
 
     if "media_type" in config_dict:
-        valid_media_types = ["real", "synthetic", "semisynthetic"]
+        modality = config_dict.get("modality", "image")
+        valid_media_types = VALID_MEDIA_TYPES.get(
+            modality, VALID_MEDIA_TYPES["image"]
+        )
         if config_dict["media_type"] not in valid_media_types:
             errors.append(
-                f"Dataset '{dataset_name}': Invalid media_type '{config_dict['media_type']}'. "
-                f"Must be one of {valid_media_types}"
+                f"Dataset '{dataset_name}': Invalid media_type '{config_dict['media_type']}' "
+                f"for modality '{modality}'. Must be one of {sorted(valid_media_types)}"
             )
 
     if "source" in config_dict:
@@ -609,7 +613,8 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> l
             data = yaml.safe_load(f)
         return data.get("datasets", [])
     
-    # Load from split real + synthetic configs and merge
+    # Load from split real + synthetic configs and merge.
+    # legacy_images.yaml / legacy_videos.yaml are bundled but not loaded here.
     SPLIT_CONFIGS = {
         "image": ("real_images.yaml", "synthetic_images.yaml"),
         "video": ("real_videos.yaml", "synthetic_videos.yaml"),
@@ -742,11 +747,12 @@ def get_benchmark_dataset_summary() -> Dict:
     summary = {
         "image": {
             "total": len(image_datasets),
-            "active": len(
-                [d for d in image_datasets if d.media_type in ["real", "synthetic"]]
-            ),
+            "active": len(image_datasets),
             "synthetic": len(
                 [d for d in image_datasets if d.media_type == "synthetic"]
+            ),
+            "semisynthetic": len(
+                [d for d in image_datasets if d.media_type == "semisynthetic"]
             ),
             "real": len([d for d in image_datasets if d.media_type == "real"]),
             "datasets": [
@@ -756,11 +762,15 @@ def get_benchmark_dataset_summary() -> Dict:
         },
         "video": {
             "total": len(video_datasets),
-            "active": len(
-                [d for d in video_datasets if d.media_type in ["real", "synthetic"]]
-            ),
+            "active": len(video_datasets),
             "synthetic": len(
                 [d for d in video_datasets if d.media_type == "synthetic"]
+            ),
+            "semisynthetic": len(
+                [d for d in video_datasets if d.media_type == "semisynthetic"]
+            ),
+            "rendered": len(
+                [d for d in video_datasets if d.media_type == "rendered"]
             ),
             "real": len([d for d in video_datasets if d.media_type == "real"]),
             "datasets": [

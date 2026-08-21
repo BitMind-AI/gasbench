@@ -35,7 +35,7 @@ class TestConfigLoading:
         
         # Update these counts when adding or removing datasets
         assert len(configs["image"]) == 190, f"Expected 190 image datasets, got {len(configs['image'])}"
-        assert len(configs["video"]) == 218, f"Expected 218 video datasets, got {len(configs['video'])}"
+        assert len(configs["video"]) == 219, f"Expected 219 video datasets, got {len(configs['video'])}"
         assert len(configs["audio"]) == 141, f"Expected 141 audio datasets, got {len(configs['audio'])}"
 
     def test_all_datasets_have_required_fields(self):

@@ -1,7 +1,9 @@
 # Image Dataset Configurations -- Synthetic + Semisynthetic Images
 # 3-class image taxonomy: real | synthetic | semisynthetic. No rendered class.
 # media_type: synthetic = fully neural-generated (t2i/GAN).
-# media_type: semisynthetic = neural edit of real media (face-swap, i2i, inpaint).
+# media_type: semisynthetic = neural edit derived materially from captured media.
+#   Edits of exclusively synthetic/rendered inputs remain synthetic; do not infer
+#   provenance from an operation name such as i2i or inpaint alone.
 #
 # Excluded (cannot assign a correct 3-class label; no reliable split):
 #   justweirdimages — mixed real photos, 2D animation, photoshops; no sidecar

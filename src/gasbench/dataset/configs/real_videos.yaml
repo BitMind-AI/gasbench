@@ -1086,14 +1086,3 @@ datasets:
     generator_family: real
     content_category: action
     notes: Released from v22 bmcore holdouts
-
-  - name: abot-world-explorer
-    path: 34data/abot-world-explorer
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: scenes
-    notes: Released from v22 bmcore holdouts

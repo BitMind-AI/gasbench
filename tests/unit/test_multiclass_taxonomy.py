@@ -15,6 +15,7 @@ EXCLUDED = {
     "cg-fake-id",
     "deepfake-insight",
     "artifact-bench",
+    "abot-world-explorer",
     "pica-100k-src",
     "pica-100k-tgt",
 }

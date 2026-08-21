@@ -6,6 +6,11 @@
 # Video is 4-class:                0=real, 1=synthetic, 2=semisynthetic, 3=rendered.
 # Audio stays binary:              0=real, 1=synthetic (semisynthetic collapsed).
 #
+# Semisynthetic media must derive materially from captured source media. An edit
+# of exclusively synthetic or rendered inputs retains that fully synthetic
+# provenance; the operation name alone (i2i, inpaint, etc.) does not determine
+# the class. The captured contribution may be spatial, temporal, or global.
+#
 # Image has no rendered class: CGI/game-engine stills are excluded from image configs.
 IMAGE_MEDIA_TYPE_TO_LABEL = {
     "real": 0,
@@ -61,4 +66,3 @@ def media_type_to_label(media_type: str, modality: str) -> int:
 # Video evaluation limits
 # Caps num_frames to prevent submitted models from overwhelming the eval system.
 MAX_VIDEO_NUM_FRAMES = 64
-

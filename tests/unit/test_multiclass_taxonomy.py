@@ -133,6 +133,42 @@ class TestYamlTaxonomy:
         for name in ("gemini31-flash-lite-train", "gemini31-flash-lite-val"):
             assert names[name].media_type == "synthetic"
 
+    def test_full_frame_neural_edits_are_synthetic(self):
+        configs = load_benchmark_datasets_from_yaml()
+        names = {d.name: d for d in configs["image"] + configs["video"]}
+        for name in (
+            "receipts-i2i",
+            "AttGAN",
+            "STARGAN",
+            "STGAN_CelebA",
+            "gpt-image-edit-1-5m-hqedit",
+            "dagan",
+            "fomm",
+            "lia",
+            "mcnet",
+            "mraa",
+            "oneshot",
+            "pirender",
+            "facevid2vid",
+            "tpsm",
+            "v15-human-vid-mavos-dd-english_echomimic",
+            "v15-human-vid-mavos-dd-english_liveportrait",
+            "hyperreenact",
+            "fakeparts-stylechange",
+            "senorita-controllable-videos",
+            "senorita-style-transfer",
+            "semisynthetic-video",
+        ):
+            assert names[name].media_type == "synthetic", name
+
+    def test_localized_digifakeav_is_semisynthetic(self):
+        configs = load_benchmark_datasets_from_yaml()
+        names = {d.name: d for d in configs["video"]}
+        assert (
+            names["v15-human-vid-digifakeavfvfa_with_audio"].media_type
+            == "semisynthetic"
+        )
+
     def test_cgi_videos_are_rendered(self):
         configs = load_benchmark_datasets_from_yaml()
         names = {d.name: d for d in configs["video"]}

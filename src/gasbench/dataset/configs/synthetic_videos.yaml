@@ -208,7 +208,7 @@ datasets:
   - name: fakeparts-stylechange
     path: hi-paris/FakeParts
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
@@ -324,7 +324,7 @@ datasets:
   - name: semisynthetic-video
     path: bitmind/semisynthetic-video
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: zip
     media_per_archive: 100
     archives_per_dataset: 10
@@ -334,7 +334,7 @@ datasets:
   - name: senorita-controllable-videos
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -389,7 +389,7 @@ datasets:
   - name: senorita-style-transfer
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -632,7 +632,7 @@ datasets:
   - name: dagan
     path: 34data/dagan
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
@@ -676,7 +676,7 @@ datasets:
   - name: fomm
     path: 34data/fomm
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -696,7 +696,7 @@ datasets:
   - name: hyperreenact
     path: 34data/hyperreenact
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -718,7 +718,7 @@ datasets:
   - name: lia
     path: 34data/lia
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -728,7 +728,7 @@ datasets:
   - name: mcnet
     path: 34data/mcnet
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -749,7 +749,7 @@ datasets:
   - name: mraa
     path: 34data/mraa
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -759,7 +759,7 @@ datasets:
   - name: oneshot
     path: 34data/oneshot
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -769,7 +769,7 @@ datasets:
   - name: pirender
     path: 34data/pirender
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -827,7 +827,7 @@ datasets:
   - name: v15-human-vid-digifakeavfvfa_with_audio
     path: 34data/v15-human-vid-digifakeavfvfa_with_audio
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -838,7 +838,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-english_echomimic
     path: 34data/v15-human-vid-mavos-dd-english_echomimic
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -860,7 +860,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-english_liveportrait
     path: 34data/v15-human-vid-mavos-dd-english_liveportrait
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -927,7 +927,7 @@ datasets:
   - name: facevid2vid
     path: 34data/facevid2vid
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -947,7 +947,7 @@ datasets:
   - name: tpsm
     path: 34data/tpsm
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1

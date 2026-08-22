@@ -6,10 +6,10 @@
 # Video is 4-class:                0=real, 1=synthetic, 2=semisynthetic, 3=rendered.
 # Audio stays binary:              0=real, 1=synthetic (semisynthetic collapsed).
 #
-# Semisynthetic media must derive materially from captured source media. An edit
-# of exclusively synthetic or rendered inputs retains that fully synthetic
-# provenance; the operation name alone (i2i, inpaint, etc.) does not determine
-# the class. The captured contribution may be spatial, temporal, or global.
+# Semisynthetic media retains materially captured visual content alongside
+# spatially localized generated or replaced visual content. Fully synthesized
+# output remains synthetic, even when captured media conditions its generation;
+# modifying exclusively synthetic or rendered media does not make it semisynthetic.
 #
 # Image has no rendered class: CGI/game-engine stills are excluded from image configs.
 IMAGE_MEDIA_TYPE_TO_LABEL = {

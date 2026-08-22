@@ -2,9 +2,9 @@
 # 4-class video taxonomy: real | synthetic | rendered | semisynthetic.
 # media_type: synthetic = fully neural-generated (t2v/i2v).
 # media_type: rendered = classical CGI / game engine / sim (not neural gen).
-# media_type: semisynthetic = neural edit derived materially from captured video.
-#   Edits of exclusively synthetic/rendered inputs retain their original fully
-#   synthetic provenance; spatial, temporal, and global edits can all qualify.
+# media_type: semisynthetic = materially captured visual content retained alongside
+#   spatially localized generated/replaced content. Fully synthesized output remains
+#   synthetic; modifying exclusively synthetic/rendered media does not change that.
 #
 # Excluded (cannot assign a correct 4-class label; no reliable split):
 #   artifact-bench — 34data dump is 1,350 rows = full Artifact-Bench mix

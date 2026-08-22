@@ -108,15 +108,6 @@ def command_run(args):
             print("Custom model directories must contain: model_config.yaml, model.py, and weights file")
             return 1
         print(f"📦 Using custom PyTorch model from: {model_path}")
-    elif model_path.suffix.lower() == ".onnx":
-        # ONNX format no longer supported for competition
-        print("Error: ONNX format is no longer supported for competition.")
-        print("Please use a safetensors model directory containing:")
-        print("  - model_config.yaml")
-        print("  - model.py")
-        print("  - *.safetensors weights")
-        print("See docs/Safetensors.md for requirements.")
-        return 1
     else:
         print("Error: Model must be a directory with model_config.yaml, model.py, and *.safetensors")
         print(f"Got: {model_path}")

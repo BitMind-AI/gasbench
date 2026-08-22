@@ -2,8 +2,6 @@
 
 This document defines the requirements for **safetensors** format models used with GASBench on Subnet 34.
 
-> **Note:** ONNX format is no longer accepted for competition submissions. All new models must use safetensors format.
-
 ---
 
 ## 1. Required Files
@@ -355,5 +353,3 @@ gascli d push --audio-model my_model.zip
 4. **Mismatched resize dimensions**: Ensure `preprocessing.resize` in config matches your model's expected input size.
 
 5. **Mismatched frame count**: Ensure `preprocessing.num_frames` matches the temporal dimension your model expects. If `frame_rate` is set, frames are sampled at that fps from frame 0; otherwise the first `num_frames` consecutive frames are used.
-
-5. **ONNX format**: ONNX is no longer accepted. Convert your model to safetensors format.

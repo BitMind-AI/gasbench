@@ -1,4 +1,4 @@
-"""PyTorch inference session with ONNX-compatible interface."""
+"""PyTorch inference session used by the benchmark pipeline."""
 
 import time
 import torch
@@ -22,7 +22,7 @@ _DTYPE_MAP = {
 
 
 class InputSpec:
-    """Mock ONNX InputSpec for interface compatibility."""
+    """Description of a model input."""
     
     def __init__(self, name: str, shape: List, type: str):
         self.name = name
@@ -31,7 +31,7 @@ class InputSpec:
 
 
 class OutputSpec:
-    """Mock ONNX OutputSpec for interface compatibility."""
+    """Description of a model output."""
     
     def __init__(self, name: str, shape: List):
         self.name = name
@@ -40,10 +40,7 @@ class OutputSpec:
 
 class PyTorchInferenceSession:
     """
-    Wrapper providing ONNX-like interface for PyTorch models.
-
-    This allows custom PyTorch models to be used interchangeably with
-    ONNX models in the benchmark code.
+    Wrapper exposing the inference interface used by the benchmark code.
     """
 
     def __init__(self, model_dir: str, model_type: str):
@@ -121,25 +118,25 @@ class PyTorchInferenceSession:
         return self.config.get("preprocessing", {})
 
     def get_inputs(self) -> List[InputSpec]:
-        """Return input specifications (ONNX-compatible interface)."""
+        """Return input specifications."""
         return [InputSpec(name=self._input_name, shape=self._input_shape, type="float32")]
 
     def get_outputs(self) -> List[OutputSpec]:
-        """Return output specifications (ONNX-compatible interface)."""
+        """Return output specifications."""
         return [OutputSpec(name="output", shape=[None, self._num_classes])]
 
     def get_providers(self) -> List[str]:
-        """Return execution providers (ONNX-compatible interface)."""
+        """Return execution providers."""
         if self.device.type == "cuda":
             return ["CUDAExecutionProvider", "CPUExecutionProvider"]
         return ["CPUExecutionProvider"]
 
     def run(self, output_names: Any, input_dict: dict) -> List[np.ndarray]:
         """
-        Run inference (ONNX-compatible interface).
+        Run inference.
 
         Args:
-            output_names: Ignored (for ONNX compatibility)
+            output_names: Ignored; retained as part of the benchmark session interface
             input_dict: Dict mapping input name to numpy array
 
         Returns:

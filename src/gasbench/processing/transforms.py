@@ -12,7 +12,7 @@ from torchvision.io import decode_jpeg, encode_jpeg
 
 def extract_target_size_from_input_specs(input_specs):
     """
-    Extract target (H, W) dimensions from ONNX input specs.
+    Extract target (H, W) dimensions from model input specs.
     Expected shapes:
         - Image: [batch, channels, height, width] or [batch, height, width, channels]
         - Video: [batch, time, channels, height, width] or [batch, time, height, width, channels]
@@ -1389,5 +1389,4 @@ class RandomRotationWithParams:
             )
             return img, mask
         return img
-
 

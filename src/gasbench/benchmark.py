@@ -43,7 +43,7 @@ async def run_benchmark(
 ) -> Dict:
     """
     Args:
-        model_path: Path to ONNX model file
+        model_path: Path to a custom PyTorch model directory
         modality: Type of modality to test ("image" or "video")
         mode: Benchmark mode - "debug", "small", or "full" (default: "full")
         gasstation_only: If True, only use gasstation datasets
@@ -162,7 +162,7 @@ async def run_benchmark(
 async def load_model_for_benchmark(
     model_path: str, modality: str, benchmark_results: Dict
 ):
-    """Load and validate ONNX model for benchmarking."""
+    """Load and validate a model for benchmarking."""
 
     if not os.path.exists(model_path):
         benchmark_results["errors"].append(f"Model file not found: {model_path}")
@@ -199,7 +199,7 @@ async def load_model_for_benchmark(
 
     except Exception as e:
         logger.error(f"Failed to load model for inference: {e}")
-        benchmark_results["errors"].append(f"ONNX runtime error: {str(e)}")
+        benchmark_results["errors"].append(f"Model loading error: {str(e)}")
         benchmark_results["benchmark_completed"] = False
         return None, None
 

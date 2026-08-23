@@ -14,7 +14,6 @@ from .config import BenchmarkDatasetConfig
 from .download import download_and_extract
 from .cache import save_sample_to_cache, save_dataset_cache_files
 from .utils import gasstation_utils
-import huggingface_hub as hf_hub
 
 logger = get_logger(__name__)
 
@@ -70,19 +69,6 @@ class DatasetIterator:
 
         self.source_kind = getattr(self.config, "source", "huggingface")
         self.hf_resolved_revision = None
-        try:
-            if (
-                self.source_kind == "huggingface"
-                and download
-                and not self._has_cached_dataset()
-            ):
-                api = hf_hub.HfApi()
-                info = api.repo_info(
-                    repo_id=self.config.path, repo_type="dataset", revision="main"
-                )
-                self.hf_resolved_revision = getattr(info, "sha", None)
-        except Exception:
-            self.hf_resolved_revision = None
 
         if download:
             self.ensure_cached()
@@ -714,18 +700,19 @@ class DatasetIterator:
                 elif self.config.modality == "audio":
                     try:
                         # Check if this is a preprocessed tensor (.pt file)
-                        if filename.endswith('.pt'):
+                        if filename.endswith(".pt"):
                             # Load preprocessed tensor directly (much faster!)
                             import torch
-                            data = torch.load(file_path, map_location='cpu')
+
+                            data = torch.load(file_path, map_location="cpu")
                             sample = {
-                                "preprocessed_waveform": data['waveform'],
-                                "label": data['label'],
+                                "preprocessed_waveform": data["waveform"],
+                                "label": data["label"],
                                 "dataset_name": self.config.name,
                                 "media_type": self.config.media_type,
                                 "cached_filename": filename,
                                 "is_preprocessed": True,
-                                **data.get('metadata', {}),
+                                **data.get("metadata", {}),
                                 **metadata,
                             }
                             yield sample

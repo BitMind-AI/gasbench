@@ -66,7 +66,6 @@ def _calculate_files_to_download(
     return archives_per_dataset
 
 
-
 def download_and_extract(
     dataset,  # BenchmarkDatasetConfig
     media_per_archive: int = 100,
@@ -148,9 +147,13 @@ def download_and_extract(
                     all_filenames = _list_remote_dataset_files(
                         dataset.path,
                         dataset.source_format or "parquet",
-                        False, None, None,
-                        include_paths, exclude_paths,
-                        source, hf_token,
+                        False,
+                        None,
+                        None,
+                        include_paths,
+                        exclude_paths,
+                        source,
+                        hf_token,
                         max_files=None,  # need full list to shuffle and pick from
                     )
                 except DatasetAccessError as e:
@@ -178,10 +181,13 @@ def download_and_extract(
                 return
             # ── Standard (non-filtered) download path ────────────────────────
 
+            fallback_formats = [".parquet", ".zip", ".tar", ".tar.gz"]
+            requested_format = dataset.source_format
+            listing_formats = list(dict.fromkeys([requested_format, *fallback_formats]))
             try:
-                filenames = _list_remote_dataset_files(
+                listed_filenames = _list_remote_dataset_files(
                     dataset.path,
-                    dataset.source_format,
+                    listing_formats,
                     current_week_only,
                     num_weeks,
                     target_week,
@@ -192,10 +198,27 @@ def download_and_extract(
                     max_files=max_files_to_list,
                 )
             except DatasetAccessError as e:
-                logger.warning(
-                    f"Skipping dataset {dataset.name}: {e}"
-                )
+                logger.warning(f"Skipping dataset {dataset.name}: {e}")
                 return
+
+            def matches_format(filename, source_format):
+                if source_format == "frames":
+                    return True
+                normalized = (
+                    source_format
+                    if source_format.startswith(".")
+                    else f".{source_format}"
+                )
+                if normalized in {".tar", ".tar.gz", ".tgz"}:
+                    return filename.endswith((".tar", ".tar.gz", ".tgz"))
+                return filename.endswith(normalized)
+
+            filenames = [
+                name
+                for name in listed_filenames
+                if matches_format(name, requested_format)
+            ]
+            selected_format = requested_format
 
             if not filenames:
                 is_gasstation = "gasstation" in dataset.name.lower()
@@ -205,36 +228,20 @@ def download_and_extract(
                         f"Gasstation datasets require parquet metadata files."
                     )
                     return
-                
+
                 logger.warning(
                     f"No files found for {dataset.path} with format {dataset.source_format}"
                 )
 
-                fallback_formats = [".parquet", ".zip", ".tar", ".tar.gz"]
                 for fallback_format in fallback_formats:
                     if fallback_format != dataset.source_format:
-                        logger.info(
-                            f"Trying fallback format {fallback_format} for {dataset.path}"
-                        )
-                        try:
-                            filenames = _list_remote_dataset_files(
-                                dataset.path,
-                                fallback_format,
-                                current_week_only,
-                                num_weeks,
-                                target_week,
-                                include_paths,
-                                exclude_paths,
-                                source,
-                                hf_token,
-                                max_files=max_files_to_list,
-                            )
-                        except DatasetAccessError as e:
-                            logger.warning(
-                                f"Skipping dataset {dataset.name}: {e}"
-                            )
-                            return
+                        filenames = [
+                            name
+                            for name in listed_filenames
+                            if matches_format(name, fallback_format)
+                        ]
                         if filenames:
+                            selected_format = fallback_format
                             logger.info(
                                 f"Found {len(filenames)} files with format {fallback_format}"
                             )
@@ -244,7 +251,10 @@ def download_and_extract(
                             # format (parquet/zip/tar) should only download
                             # archives_per_dataset files, not media_per_archive.
                             n_files = _calculate_files_to_download(
-                                dataset, fallback_format, media_per_archive, archives_per_dataset
+                                dataset,
+                                selected_format,
+                                media_per_archive,
+                                archives_per_dataset,
                             )
                             break
 
@@ -350,7 +360,6 @@ def download_and_extract(
         logger.error(f"Error processing {dataset.path}: {e}")
 
 
-
 def _process_gasstation(
     dataset,
     to_download: List[str],
@@ -450,7 +459,9 @@ def _process_gasstation(
         try:
             # Resolve original URL basename (not hash-appended) for archive tracking
             original_url = _downloaded_name_to_url.get(parquet_path.name)
-            original_basename = os.path.basename(original_url) if original_url else parquet_path.name
+            original_basename = (
+                os.path.basename(original_url) if original_url else parquet_path.name
+            )
 
             iso_week = extract_iso_week_from_path(original_url or str(parquet_path))
 
@@ -553,10 +564,7 @@ def _process_gasstation(
             except (OSError, pyarrow.ArrowInvalid):
                 pass
 
-    logger.info(
-        f"Extracted {total_samples} samples from {total_archives} archives"
-    )
-
+    logger.info(f"Extracted {total_samples} samples from {total_archives} archives")
 
 
 def _download_filtered_sequential(
@@ -596,8 +604,12 @@ def _download_filtered_sequential(
         try:
             remaining = target_total - collected
             for sample in yield_media_from_source(
-                parquet_path, dataset, remaining, iso_week=None,
-                hf_token=hf_token, seed=seed,
+                parquet_path,
+                dataset,
+                remaining,
+                iso_week=None,
+                hf_token=hf_token,
+                seed=seed,
             ):
                 yield sample
                 collected += 1
@@ -612,6 +624,3 @@ def _download_filtered_sequential(
     logger.info(
         f"Filtered download complete: {collected}/{target_total} samples for {dataset.name}"
     )
-
-
-

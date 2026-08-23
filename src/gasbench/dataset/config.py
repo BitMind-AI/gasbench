@@ -54,6 +54,8 @@ class BenchmarkDatasetConfig:
     archives_per_dataset: int = 5
     source_format: str = ""  # Auto-detected if empty
     source: str = "huggingface"  # "huggingface", "modelscope", or "s3"
+    hf_revision: Optional[str] = None
+    hf_subfolders: Optional[List[str]] = None
 
     include_paths: Optional[List[str]] = None
     exclude_paths: Optional[List[str]] = None
@@ -372,6 +374,8 @@ def _dataset_dict_to_config(d: dict, **overrides) -> BenchmarkDatasetConfig:
         "media_type": d["media_type"],
         "source_format": d.get("source_format", ""),
         "source": d.get("source", "huggingface"),
+        "hf_revision": d.get("hf_revision"),
+        "hf_subfolders": d.get("hf_subfolders"),
         "media_per_archive": d.get("media_per_archive", 100),
         "archives_per_dataset": d.get("archives_per_dataset", 5),
         "include_paths": d.get("include_paths"),
@@ -466,6 +470,7 @@ def _obfuscate_holdout_names(
         orig_name = d.name
         include_paths = ",".join(sorted(d.include_paths)) if d.include_paths else ""
         exclude_paths = ",".join(sorted(d.exclude_paths)) if d.exclude_paths else ""
+        hf_subfolders = ",".join(sorted(d.hf_subfolders)) if d.hf_subfolders else ""
         fingerprint = "|".join(
             [
                 d.path or "",
@@ -475,6 +480,8 @@ def _obfuscate_holdout_names(
                 include_paths,
                 exclude_paths,
                 (d.source or ""),
+                (d.hf_revision or ""),
+                hf_subfolders,
             ]
         )
         short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]

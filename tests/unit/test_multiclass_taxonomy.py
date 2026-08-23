@@ -164,8 +164,7 @@ class TestYamlTaxonomy:
         names = {d.name: d for d in configs["video"]}
         for name in (
             "abot-world-explorer",
-            "physicalai-part1-split4",
-            "physicalai-part1-split5",
+            "physicalai-autonomous-driving-pedestrian",
             "bedlam-closeup-suburb-a",
             "nvidia-sdg-synhuman-shard-7",
             "cs2-10k-data-ancient-part-01",

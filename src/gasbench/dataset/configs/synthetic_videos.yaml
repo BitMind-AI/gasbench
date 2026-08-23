@@ -26,27 +26,18 @@ datasets:
     content_category: scenes
     notes: Released from v22 bmcore holdouts; game/simulation world-exploration footage
 
-  - name: physicalai-part1-split4
-    path: 34data/physicalai-part1-split4
+  - name: physicalai-autonomous-driving-pedestrian
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Autonomous-Driving-Scenarios
     modality: video
     media_type: rendered
     source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
+    media_per_archive: 2000
+    archives_per_dataset: 1
+    hf_revision: c6fceba249770c5f8c61c7a6addab847003dca4f
+    hf_subfolders: [pedestrian]
     generator_family: rendered
     content_category: scenes
-    notes: Released from v22 bmcore holdouts
-
-  - name: physicalai-part1-split5
-    path: 34data/physicalai-part1-split5
-    modality: video
-    media_type: rendered
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: scenes
-    notes: Released from v22 bmcore holdouts
+    notes: NVIDIA Omniverse-rendered pedestrian driving scenarios; pinned upstream source replacing two 34data mirrors
 
   - name: bedlam-closeup-suburb-a
     path: 34data/bedlam-closeup-suburb-a

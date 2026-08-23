@@ -128,6 +128,8 @@ def download_and_extract(
             include_paths = getattr(dataset, "include_paths", None)
             exclude_paths = getattr(dataset, "exclude_paths", None)
             source = getattr(dataset, "source", "huggingface")
+            hf_revision = getattr(dataset, "hf_revision", None)
+            hf_subfolders = getattr(dataset, "hf_subfolders", None)
 
             n_files = _calculate_files_to_download(
                 dataset,
@@ -155,6 +157,8 @@ def download_and_extract(
                         source,
                         hf_token,
                         max_files=None,  # need full list to shuffle and pick from
+                        hf_revision=hf_revision,
+                        hf_subfolders=hf_subfolders,
                     )
                 except DatasetAccessError as e:
                     logger.warning(f"Skipping {dataset.name}: {e}")
@@ -196,6 +200,8 @@ def download_and_extract(
                     source,
                     hf_token,
                     max_files=max_files_to_list,
+                    hf_revision=hf_revision,
+                    hf_subfolders=hf_subfolders,
                 )
             except DatasetAccessError as e:
                 logger.warning(f"Skipping dataset {dataset.name}: {e}")
@@ -262,7 +268,9 @@ def download_and_extract(
                     logger.warning(f"No files found for {dataset.path} with any format")
                     return
 
-            remote_paths = _get_download_urls(dataset.path, filenames, source)
+            remote_paths = _get_download_urls(
+                dataset.path, filenames, source, hf_revision
+            )
 
             is_gasstation = "gasstation" in dataset.name.lower()
             to_download = _select_files_to_download(
@@ -491,7 +499,12 @@ def _process_gasstation(
                 f"archives/{week}/{basename}"
                 for basename, week in archive_to_week.items()
             ]
-            archive_urls = _get_download_urls(dataset.path, archive_paths, source)
+            archive_urls = _get_download_urls(
+                dataset.path,
+                archive_paths,
+                source,
+                getattr(dataset, "hf_revision", None),
+            )
 
             if not archive_urls:
                 logger.warning(f"No archive URLs resolved for {original_basename}")
@@ -581,7 +594,9 @@ def _download_filtered_sequential(
     Filtering is handled inside _process_parquet via dataset.filter_column/filter_value,
     so all media decoding follows the exact same path as regular parquet downloads.
     """
-    remote_paths = _get_download_urls(dataset.path, filenames, source)
+    remote_paths = _get_download_urls(
+        dataset.path, filenames, source, getattr(dataset, "hf_revision", None)
+    )
     if seed is not None:
         random.Random(seed).shuffle(remote_paths)
     else:

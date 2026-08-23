@@ -64,6 +64,8 @@ def _list_remote_dataset_files(
     source: str = "huggingface",
     hf_token: Optional[str] = None,
     max_files: Optional[int] = None,
+    hf_revision: Optional[str] = None,
+    hf_subfolders: Optional[List[str]] = None,
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format and path patterns.
 
@@ -141,6 +143,8 @@ def _list_remote_dataset_files(
             max_files=listing_max,
             include_paths=include_paths,
             exclude_paths=exclude_paths,
+            revision=hf_revision,
+            subfolders=hf_subfolders,
         )
 
     if is_gasstation:
@@ -168,7 +172,10 @@ def _list_remote_dataset_files(
 
 
 def _get_download_urls(
-    dataset_path: str, filenames: List[str], source: str = "huggingface"
+    dataset_path: str,
+    filenames: List[str],
+    source: str = "huggingface",
+    hf_revision: Optional[str] = None,
 ) -> List[str]:
     """Get download URLs for data files from the specified source.
 
@@ -185,12 +192,15 @@ def _get_download_urls(
     elif source == "s3":
         return _get_s3_urls(dataset_path, filenames)
     else:
-        return _get_huggingface_urls(dataset_path, filenames)
+        return _get_huggingface_urls(dataset_path, filenames, hf_revision)
 
 
-def _get_huggingface_urls(dataset_path: str, filenames: List[str]) -> List[str]:
+def _get_huggingface_urls(
+    dataset_path: str, filenames: List[str], revision: Optional[str] = None
+) -> List[str]:
+    revision = quote(revision or "main", safe="")
     return [
-        f"https://huggingface.co/datasets/{dataset_path}/resolve/main/{quote(f, safe='/')}"
+        f"https://huggingface.co/datasets/{dataset_path}/resolve/{revision}/{quote(f, safe='/')}"
         for f in filenames
     ]
 
@@ -211,6 +221,8 @@ def list_hf_files(
     include_paths=None,
     exclude_paths=None,
     preferred_extension=None,
+    revision=None,
+    subfolders=None,
 ):
     """List files from a Hugging Face repository with early termination support.
 
@@ -241,9 +253,25 @@ def list_hf_files(
         exts = None
 
     try:
-        for f in hf_hub.list_repo_files(
-            repo_id=repo_id, repo_type=repo_type, token=token
-        ):
+        api = hf_hub.HfApi()
+        roots = subfolders or [None]
+        entries = (
+            entry
+            for root in roots
+            for entry in api.list_repo_tree(
+                repo_id=repo_id,
+                path_in_repo=root,
+                recursive=True,
+                expand=False,
+                revision=revision,
+                repo_type=repo_type,
+                token=token,
+            )
+        )
+        for entry in entries:
+            f = getattr(entry, "path", None)
+            if not f:
+                continue
             if exts and not f.endswith(exts):
                 continue
             if include_paths and not any(path_seg in f for path_seg in include_paths):

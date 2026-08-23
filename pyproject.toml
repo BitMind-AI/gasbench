@@ -88,5 +88,6 @@ follow_imports = "silent"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"
 markers = ["slow: marks tests as slow (network I/O)"]
 filterwarnings = ["ignore::DeprecationWarning:pkg_resources.*"]

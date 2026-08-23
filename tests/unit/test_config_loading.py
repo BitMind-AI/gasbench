@@ -63,3 +63,47 @@ def test_legacy_datasets_are_not_in_the_active_registry():
 
     overlap = sorted(active & legacy)
     assert not overlap, f"legacy datasets still active: {overlap}"
+
+
+def test_direct_huggingface_sources_are_pinned_and_scoped():
+    configs = load_benchmark_datasets_from_yaml()
+    datasets = {
+        dataset.name: dataset
+        for modality in ("image", "video")
+        for dataset in configs[modality]
+    }
+    expected = {
+        "synwts": (
+            "mlcglab/synwts",
+            "3c57d64f8603441b43f69dca9a123999776bc014",
+            ["data/videos"],
+        ),
+        "social-media-deepfakes-real": (
+            "acroitoru/social_media_deepfakes",
+            "14bf14c255e222ebd2f0adadb2de83784695e72a",
+            ["social_media/real"],
+        ),
+        "social-media-deepfakes-fake": (
+            "acroitoru/social_media_deepfakes",
+            "14bf14c255e222ebd2f0adadb2de83784695e72a",
+            ["social_media/fake"],
+        ),
+        "vigilvid-research-real": (
+            "farouk04/vigilvid-research",
+            "f4ec1afcc9599861b41cffb7768ad16340c41612",
+            ["videos/test/real"],
+        ),
+        "vigilvid-research-fake": (
+            "farouk04/vigilvid-research",
+            "f4ec1afcc9599861b41cffb7768ad16340c41612",
+            ["videos/test/fake"],
+        ),
+    }
+
+    for name, (path, revision, subfolders) in expected.items():
+        dataset = datasets[name]
+        assert (dataset.path, dataset.hf_revision, dataset.hf_subfolders) == (
+            path,
+            revision,
+            subfolders,
+        )

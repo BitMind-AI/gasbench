@@ -554,7 +554,8 @@ datasets:
     content_category: faces
 
   - name: synthetic_cards
-    path: 34data/synthetic_cards
+    path: sugiv/synthetic_cards
+    hf_revision: 18b74fbb6b5d26e3b11c4a6206f65acd48d31489
     modality: image
     media_type: synthetic
     source_format: png

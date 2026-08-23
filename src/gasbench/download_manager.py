@@ -29,6 +29,7 @@ logger = get_logger(__name__)
 @dataclass
 class DatasetTask:
     """Single dataset download/processing task."""
+
     dataset: BenchmarkDatasetConfig
     cache_dir: str
     num_weeks: Optional[int] = None
@@ -39,7 +40,7 @@ class DatasetTask:
 
 class DownloadManager:
     """Orchestrates concurrent dataset downloads using DatasetIterator."""
-    
+
     def __init__(
         self,
         max_workers: int,
@@ -57,30 +58,26 @@ class DownloadManager:
         self.completed = []
         self.failed = {}
         self.active_tasks = {}  # Track active progress bars
-        
+
     async def download_all(self, tasks: List[DatasetTask]):
         """Execute download tasks with progress tracking."""
         if not tasks:
             logger.info("No downloads needed - all datasets cached")
             return
-        
+
         logger.info(
             f"Download plan: {len(tasks)} datasets, "
             f"{self.max_workers} concurrent workers"
         )
-        
+
         with Progress(
             "[progress.description]{task.description}",
             BarColumn(),
             TaskProgressColumn(),
             TimeRemainingColumn(),
         ) as progress:
-            
-            main_task = progress.add_task(
-                "[cyan]Overall Progress", 
-                total=len(tasks)
-            )
-            
+            main_task = progress.add_task("[cyan]Overall Progress", total=len(tasks))
+
             download_tasks = []
             for dataset_task in tasks:
                 task = asyncio.create_task(
@@ -89,27 +86,24 @@ class DownloadManager:
                     )
                 )
                 download_tasks.append(task)
-            
+
             await asyncio.gather(*download_tasks, return_exceptions=True)
-        
+
         self._print_summary(len(tasks))
-        
+
         # Raise error if all downloads failed
         if len(self.failed) == len(tasks) and len(tasks) > 0:
             raise RuntimeError(f"All {len(tasks)} dataset downloads failed")
-        
+
         # Return summary
         return {
             "total": len(tasks),
             "completed": len(self.completed),
-            "failed": len(self.failed)
+            "failed": len(self.failed),
         }
-    
+
     async def _download_dataset_with_semaphore(
-        self, 
-        task: DatasetTask, 
-        progress: Progress,
-        main_task: TaskID
+        self, task: DatasetTask, progress: Progress, main_task: TaskID
     ):
         """Download single dataset with semaphore control."""
         async with self.semaphore:
@@ -122,53 +116,47 @@ class DownloadManager:
                 self.failed[task.dataset.name] = error_msg
                 logger.error(f"Failed to download {task.dataset.name}: {error_msg}")
                 progress.update(main_task, advance=1)
-    
+
     async def _download_dataset(self, task: DatasetTask, progress: Progress):
         """Download and process single dataset using DatasetIterator."""
         # Create spinner for this dataset (no percentage since we can't update from sync executor)
         task_id = progress.add_task(
-            f"[cyan]⏳ {task.dataset.name[:45]}", 
-            total=None,
-            visible=True
+            f"[cyan]⏳ {task.dataset.name[:45]}", total=None, visible=True
         )
-        
+
         try:
             loop = asyncio.get_event_loop()
-            
+
             # Use DatasetIterator which calls download_and_extract internally
-            await loop.run_in_executor(
-                None,
-                self._process_dataset_sync,
-                task
-            )
-            
+            await loop.run_in_executor(None, self._process_dataset_sync, task)
+
             # Mark as complete
             progress.update(task_id, description=f"[green]✅ {task.dataset.name[:45]}")
-            
+
             # Give it a moment to show, then remove
             await asyncio.sleep(0.3)
             progress.remove_task(task_id)
-            
+
         except Exception:
             progress.update(task_id, description=f"[red]❌ {task.dataset.name[:45]}")
             await asyncio.sleep(0.3)
             progress.remove_task(task_id)
             raise
-    
+
     def _process_dataset_sync(self, task: DatasetTask):
         """Synchronous dataset processing using DatasetIterator."""
         import logging
-        
+
         # Temporarily suppress INFO logs to avoid interfering with Rich progress display
-        download_logger = logging.getLogger('gasbench.dataset.download')
-        iterator_logger = logging.getLogger('gasbench.dataset.iterator')
-        
+        download_logger = logging.getLogger("gasbench.dataset.download")
+        iterator_logger = logging.getLogger("gasbench.dataset.iterator")
+
         old_download_level = download_logger.level
         old_iterator_level = iterator_logger.level
-        
+
         download_logger.setLevel(logging.WARNING)
         iterator_logger.setLevel(logging.WARNING)
-        
+
         try:
             if task.unlimited_samples:
                 max_samples = 999999  # Effectively unlimited
@@ -176,7 +164,7 @@ class DownloadManager:
                 max_samples = 2000
             else:
                 max_samples = 10000
-            
+
             # DatasetIterator with download=True will call download_and_extract
             # Same exact same logic as `gasbench run``
             iterator = DatasetIterator(
@@ -195,7 +183,7 @@ class DownloadManager:
                 sample_count += 1
 
             logger.debug(f"Processed {sample_count} samples from {task.dataset.name}")
-            
+
             if sample_count == 0:
                 raise RuntimeError(f"No samples downloaded for {task.dataset.name}")
 
@@ -203,21 +191,21 @@ class DownloadManager:
             # Restore original log levels
             download_logger.setLevel(old_download_level)
             iterator_logger.setLevel(old_iterator_level)
-    
+
     def _print_summary(self, total: int):
         """Print download summary."""
         logger.info("\n" + "=" * 60)
         logger.info("DOWNLOAD SUMMARY")
         logger.info("=" * 60)
         logger.info(f"✅ Completed: {len(self.completed)}/{total}")
-        
+
         if self.failed:
             logger.info(f"❌ Failed: {len(self.failed)}/{total}")
             for name, error in list(self.failed.items())[:5]:
                 logger.error(f"  {name}: {error}")
             if len(self.failed) > 5:
                 logger.error(f"  ... and {len(self.failed) - 5} more failures")
-        
+
         logger.info("=" * 60)
 
 
@@ -225,20 +213,22 @@ def get_optimal_workers() -> int:
     """Calculate optimal concurrent downloads based on system resources."""
     cpu_count = psutil.cpu_count(logical=False) or 4
     available_memory_gb = psutil.virtual_memory().available / (1024**3)
-    
+
     # Conservative: assume 2GB per worker for extraction + downloads
     memory_limited = max(1, int(available_memory_gb / 2))
-    
+
     # CPU-based heuristic: 1 worker per 2 cores (I/O bound workload)
     cpu_limited = max(1, cpu_count // 2)
-    
-    optimal = min(memory_limited, cpu_limited, 16)
-    
+
+    # Each dataset may perform multiple file transfers. Keep dataset-level
+    # concurrency deliberately low; HTTP concurrency is capped separately.
+    optimal = min(memory_limited, cpu_limited, 4)
+
     logger.info(
         f"Resource calculation: {cpu_count} CPUs, {available_memory_gb:.1f}GB RAM "
         f"→ {optimal} workers (memory limit: {memory_limited}, CPU limit: {cpu_limited})"
     )
-    
+
     return optimal
 
 
@@ -259,7 +249,7 @@ async def download_datasets(
     dataset_filters: Optional[List[str]] = None,
 ):
     """Main entry point for efficient dataset downloads.
-    
+
     Args:
         modality: 'image', 'video', or None for all
         mode: 'debug', 'small', or 'full'
@@ -278,18 +268,27 @@ async def download_datasets(
     """
     if not cache_dir:
         cache_dir = "/.cache/gasbench"
-    
+
     logger.info(f"Discovering datasets (modality={modality or 'all'}, mode={mode})")
-    
+
     datasets = _discover_datasets(
-        modality, mode, gasstation_only, no_gasstation, dataset_config, holdout_config, cache_dir, holdouts_only
+        modality,
+        mode,
+        gasstation_only,
+        no_gasstation,
+        dataset_config,
+        holdout_config,
+        cache_dir,
+        holdouts_only,
     )
-    
+
     if dataset_filters:
         original_count = len(datasets)
         datasets = _filter_datasets_by_name(datasets, dataset_filters)
-        logger.info(f"Filtered {original_count} datasets to {len(datasets)} matching: {dataset_filters}")
-    
+        logger.info(
+            f"Filtered {original_count} datasets to {len(datasets)} matching: {dataset_filters}"
+        )
+
     if not datasets:
         logger.warning("No datasets found matching criteria")
         return {
@@ -297,9 +296,9 @@ async def download_datasets(
             "failed": 0,
             "total": 0,
         }
-    
+
     logger.info(f"Found {len(datasets)} datasets to process")
-    
+
     # Create tasks for datasets that need downloading
     tasks = []
     for dataset in datasets:
@@ -315,14 +314,14 @@ async def download_datasets(
             tasks.append(task)
         else:
             logger.info(f"Skipping {dataset.name} (already cached)")
-    
+
     if not tasks:
         logger.info("✅ All datasets already cached")
         return
-    
+
     workers = concurrent_downloads or get_optimal_workers()
     hf_token = os.environ.get("HF_TOKEN")
-    
+
     manager = DownloadManager(
         max_workers=workers,
         cache_dir=cache_dir,
@@ -330,7 +329,7 @@ async def download_datasets(
         seed=seed,
         allow_eviction=allow_eviction,
     )
-    
+
     return await manager.download_all(tasks)
 
 
@@ -346,52 +345,79 @@ def _discover_datasets(
 ) -> List[BenchmarkDatasetConfig]:
     """Discover datasets based on criteria."""
     datasets = []
-    
+
     if not modality or modality == "all" or modality == "image":
-        image_datasets = [] if holdouts_only else discover_benchmark_datasets("image", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        image_datasets = (
+            []
+            if holdouts_only
+            else discover_benchmark_datasets(
+                "image", mode, gasstation_only, no_gasstation, yaml_path=dataset_config
+            )
+        )
         if holdout_config and not gasstation_only:
             try:
                 logger.info(f"Loading holdout datasets from: {holdout_config}")
-                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("image", [])
+                holdouts = load_holdout_datasets_from_yaml(
+                    holdout_config, cache_dir=cache_dir
+                ).get("image", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
                 logger.info(f"Loaded {len(holdouts)} holdout image datasets")
                 image_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout image datasets: {e}")
                 import traceback
+
                 logger.error(traceback.format_exc())
         datasets.extend(image_datasets)
-    
+
     if not modality or modality == "all" or modality == "video":
-        video_datasets = [] if holdouts_only else discover_benchmark_datasets("video", mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        video_datasets = (
+            []
+            if holdouts_only
+            else discover_benchmark_datasets(
+                "video", mode, gasstation_only, no_gasstation, yaml_path=dataset_config
+            )
+        )
         if holdout_config and not gasstation_only:
             try:
                 logger.info(f"Loading holdout video datasets from: {holdout_config}")
-                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("video", [])
+                holdouts = load_holdout_datasets_from_yaml(
+                    holdout_config, cache_dir=cache_dir
+                ).get("video", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
                 logger.info(f"Loaded {len(holdouts)} holdout video datasets")
                 video_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout video datasets: {e}")
                 import traceback
+
                 logger.error(traceback.format_exc())
         datasets.extend(video_datasets)
-    
+
     if not modality or modality == "all" or modality == "audio":
-        audio_datasets = [] if holdouts_only else discover_benchmark_audio_datasets(mode, gasstation_only, no_gasstation, yaml_path=dataset_config)
+        audio_datasets = (
+            []
+            if holdouts_only
+            else discover_benchmark_audio_datasets(
+                mode, gasstation_only, no_gasstation, yaml_path=dataset_config
+            )
+        )
         if holdout_config and not gasstation_only:
             try:
                 logger.info(f"Loading holdout audio datasets from: {holdout_config}")
-                holdouts = load_holdout_datasets_from_yaml(holdout_config, cache_dir=cache_dir).get("audio", [])
+                holdouts = load_holdout_datasets_from_yaml(
+                    holdout_config, cache_dir=cache_dir
+                ).get("audio", [])
                 holdouts = apply_mode_to_datasets(holdouts, mode)
                 logger.info(f"Loaded {len(holdouts)} holdout audio datasets")
                 audio_datasets.extend(holdouts)
             except Exception as e:
                 logger.error(f"Failed to load holdout audio datasets: {e}")
                 import traceback
+
                 logger.error(traceback.format_exc())
         datasets.extend(audio_datasets)
-    
+
     return datasets
 
 
@@ -400,29 +426,30 @@ def _filter_datasets_by_name(
     filters: List[str],
 ) -> List[BenchmarkDatasetConfig]:
     """Filter datasets by name patterns (case-insensitive partial matches).
-    
+
     Args:
         datasets: List of dataset configs
         filters: List of name patterns to match
-        
+
     Returns:
         Filtered list of datasets that match any of the patterns
     """
     if not filters:
         return datasets
-    
+
     filtered = []
     filters_lower = [f.lower() for f in filters]
-    
+
     for dataset in datasets:
         dataset_name_lower = dataset.name.lower()
         original_name_lower = (dataset.original_name or "").lower()
         if any(
-            filter_pattern in dataset_name_lower or filter_pattern in original_name_lower
+            filter_pattern in dataset_name_lower
+            or filter_pattern in original_name_lower
             for filter_pattern in filters_lower
         ):
             filtered.append(dataset)
-    
+
     return filtered
 
 
@@ -433,9 +460,9 @@ def _needs_download(
 ) -> bool:
     """Check if dataset needs to be downloaded based on mode requirements."""
     from .dataset.utils import gasstation_utils
-    
+
     is_gasstation = "gasstation" in dataset.name.lower()
-    
+
     if is_gasstation:
         target_weeks = gasstation_utils.calculate_target_weeks(
             num_weeks,
@@ -461,33 +488,35 @@ def _needs_download(
         return not _is_dataset_cached_for_mode(dataset_dir, dataset)
 
 
-
 def _get_required_samples_for_mode(dataset: BenchmarkDatasetConfig) -> int:
     """Calculate required samples based on dataset config (reflects mode)."""
     if dataset.media_per_archive == -1 or dataset.archives_per_dataset == -1:
         return 10000  # "full" download within reason
-    
+
     expected = dataset.media_per_archive * dataset.archives_per_dataset
     return max(expected, 10)
 
 
-def _is_dataset_cached_for_mode(dataset_dir: Path, dataset: BenchmarkDatasetConfig) -> bool:
+def _is_dataset_cached_for_mode(
+    dataset_dir: Path, dataset: BenchmarkDatasetConfig
+) -> bool:
     """Check if dataset is cached with enough samples for the requested mode."""
     if not dataset_dir.exists():
         return False
-    
+
     metadata_file = dataset_dir / "sample_metadata.json"
-    
+
     if not metadata_file.exists():
         return False
-    
+
     try:
         import json
-        with open(metadata_file, 'r') as f:
+
+        with open(metadata_file, "r") as f:
             metadata = json.load(f)
             cached_count = len(metadata)
             required_samples = _get_required_samples_for_mode(dataset)
-            
+
             # Check if we have enough samples for this mode
             # Allow 10% margin (e.g., 90 samples is enough for 100 required)
             return cached_count >= (required_samples * 0.9)

@@ -3,10 +3,7 @@
 import numpy as np
 import pytest
 
-from src.gasbench.constants import (
-    VALID_MEDIA_TYPES,
-    media_type_to_label,
-)
+from src.gasbench.constants import media_type_to_label
 from src.gasbench.dataset.config import load_benchmark_datasets_from_yaml
 
 
@@ -50,8 +47,7 @@ def _load_metrics():
         sys.modules["src.gasbench.logger"] = logmod
 
     path = (
-        Path(__file__).resolve().parents[2]
-        / "src/gasbench/benchmarks/utils/metrics.py"
+        Path(__file__).resolve().parents[2] / "src/gasbench/benchmarks/utils/metrics.py"
     )
     spec = importlib.util.spec_from_file_location(
         "src.gasbench.benchmarks.utils.metrics_isolated", path
@@ -104,17 +100,6 @@ class TestYamlTaxonomy:
         names = {d.name for ds in configs.values() for d in ds}
         present = EXCLUDED & names
         assert not present, f"excluded datasets still in registry: {present}"
-
-    def test_no_rendered_images(self):
-        configs = load_benchmark_datasets_from_yaml()
-        rendered = [d.name for d in configs["image"] if d.media_type == "rendered"]
-        assert rendered == []
-
-    def test_image_media_types(self):
-        configs = load_benchmark_datasets_from_yaml()
-        allowed = VALID_MEDIA_TYPES["image"]
-        bad = [d.name for d in configs["image"] if d.media_type not in allowed]
-        assert bad == []
 
     def test_video_has_all_four_classes(self):
         configs = load_benchmark_datasets_from_yaml()

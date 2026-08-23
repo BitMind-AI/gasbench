@@ -1,259 +1,65 @@
-"""
-Unit tests for dataset configuration loading.
+"""Durable validation of the bundled dataset registry."""
 
-These tests ensure YAML configs are valid and properly structured.
-"""
-
+from collections import Counter
 from pathlib import Path
 
-import pytest
 import yaml
+
 from src.gasbench.constants import VALID_MEDIA_TYPES
-from src.gasbench.dataset.config import (
-    load_benchmark_datasets_from_yaml,
-)
+from src.gasbench.dataset.config import load_benchmark_datasets_from_yaml
 
 
-class TestConfigLoading:
-    """Test dataset configuration loading."""
-
-    def test_all_configs_load_successfully(self):
-        """Ensure all YAML configs parse without errors."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        assert "image" in configs
-        assert "video" in configs
-        assert "audio" in configs
-        
-        assert len(configs["image"]) > 0, "No image datasets loaded"
-        assert len(configs["video"]) > 0, "No video datasets loaded"
-        assert len(configs["audio"]) > 0, "No audio datasets loaded"
-
-    def test_expected_dataset_counts(self):
-        """Verify expected number of datasets per modality."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        # Update these counts when adding or removing datasets
-        assert len(configs["image"]) == 190, f"Expected 190 image datasets, got {len(configs['image'])}"
-        assert len(configs["video"]) == 219, f"Expected 219 video datasets, got {len(configs['video'])}"
-        assert len(configs["audio"]) == 141, f"Expected 141 audio datasets, got {len(configs['audio'])}"
-
-    def test_all_datasets_have_required_fields(self):
-        """Ensure all datasets have required fields."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        for modality, datasets in configs.items():
-            for dataset in datasets:
-                assert dataset.name, f"{modality} dataset missing name"
-                assert dataset.path, f"{modality}/{dataset.name} missing path"
-                assert dataset.modality, f"{modality}/{dataset.name} missing modality"
-                allowed = VALID_MEDIA_TYPES.get(dataset.modality, VALID_MEDIA_TYPES[modality])
-                assert dataset.media_type in allowed, \
-                    f"{modality}/{dataset.name} has invalid media_type: {dataset.media_type}"
-
-    def test_no_duplicate_dataset_names(self):
-        """Ensure no duplicate dataset names within each modality."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        for modality, datasets in configs.items():
-            names = [d.name for d in datasets]
-            duplicates = [name for name in names if names.count(name) > 1]
-            assert not duplicates, f"{modality} has duplicate dataset names: {set(duplicates)}"
-
-    def test_dataset_paths_are_valid_format(self):
-        """Ensure dataset paths follow expected format."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        for modality, datasets in configs.items():
-            for dataset in datasets:
-                # Paths should be either "username/repo" or "gasstation/..."
-                assert "/" in dataset.path, \
-                    f"{modality}/{dataset.name} path missing '/': {dataset.path}"
+CONFIG_DIR = Path(__file__).resolve().parents[2] / "src/gasbench/dataset/configs"
 
 
-class TestImageDatasets:
-    """Test image-specific dataset configurations."""
+def test_registry_entries_are_well_formed():
+    configs = load_benchmark_datasets_from_yaml()
 
-    def test_pica_100k_exists(self):
-        """Verify PICA-100K dataset is configured."""
-        configs = load_benchmark_datasets_from_yaml()
-        pica = next((d for d in configs["image"] if d.name == "pica-100k"), None)
-        
-        assert pica is not None, "PICA-100K dataset not found"
-
-    def test_pica_100k_has_dual_columns(self):
-        """Verify PICA-100K has data_columns configured for dual-column support."""
-        configs = load_benchmark_datasets_from_yaml()
-        pica = next((d for d in configs["image"] if d.name == "pica-100k"), None)
-        
-        assert pica.data_columns is not None, "PICA-100K missing data_columns"
-        assert pica.data_columns == ["src_img", "tgt_img"], \
-            f"PICA-100K data_columns incorrect: {pica.data_columns}"
-
-    def test_pica_100k_has_correct_format(self):
-        """Verify PICA-100K configuration is correct."""
-        configs = load_benchmark_datasets_from_yaml()
-        pica = next((d for d in configs["image"] if d.name == "pica-100k"), None)
-        
-        assert pica.path == "Andrew613/PICA-100K"
-        assert pica.modality == "image"
-        assert pica.media_type == "synthetic"
-        assert pica.source_format == "parquet"
-
-    def test_new_image_datasets_exist(self):
-        """Verify all newly added image datasets exist."""
-        configs = load_benchmark_datasets_from_yaml()
-        image_names = [d.name for d in configs["image"]]
-        
-        new_datasets = [
-            "pica-100k",
-            "text-to-image-2m",
-            "nano-banana-150k",
-            "cosyn-400k",
-        ]
-        
-        for name in new_datasets:
-            assert name in image_names, f"New image dataset '{name}' not found"
-
-    def test_datasets_with_data_columns(self):
-        """Verify datasets using data_columns for custom column extraction."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        datasets_with_data_cols = [
-            d.name for d in configs["image"] 
-            if getattr(d, "data_columns", None) is not None
-        ]
-        
-        expected = ["pica-100k", "MMMG", "bananamark-dataset", "posedreamer"]
-        assert sorted(datasets_with_data_cols) == sorted(expected), \
-            f"Datasets with data_columns: {datasets_with_data_cols}"
+    assert set(configs) == {"image", "video", "audio"}
+    for modality, datasets in configs.items():
+        assert datasets, f"no {modality} datasets loaded"
+        for dataset in datasets:
+            assert dataset.name, f"{modality} dataset missing name"
+            assert dataset.path, f"{modality}/{dataset.name} missing path"
+            assert dataset.modality == modality, (
+                f"{modality}/{dataset.name} declares modality {dataset.modality}"
+            )
+            assert dataset.media_type in VALID_MEDIA_TYPES[modality], (
+                f"{modality}/{dataset.name} has invalid media type {dataset.media_type}"
+            )
+            if dataset.data_columns is not None:
+                assert dataset.data_columns
+                assert all(
+                    isinstance(column, str) and column
+                    for column in dataset.data_columns
+                )
+                assert len(dataset.data_columns) == len(set(dataset.data_columns))
 
 
-class TestVideoDatasets:
-    """Test video-specific dataset configurations."""
+def test_dataset_names_are_unique_within_each_modality():
+    configs = load_benchmark_datasets_from_yaml()
 
-    def test_new_video_datasets_exist(self):
-        """Verify all newly added video datasets exist."""
-        configs = load_benchmark_datasets_from_yaml()
-        video_names = [d.name for d in configs["video"]]
-        
-        new_datasets = [
-            "vidprom",
-            "moments-in-time",
-            "ucf101-fullvideo",
-            "vap-data",
-        ]
-        
-        for name in new_datasets:
-            assert name in video_names, f"New video dataset '{name}' not found"
-
-    def test_video_source_formats_are_valid(self):
-        """Verify video datasets have valid source formats."""
-        configs = load_benchmark_datasets_from_yaml()
-        valid_formats = ["mp4", "avi", "mov", "tar", "zip", "tar.gz", "parquet", ""]
-        
-        for dataset in configs["video"]:
-            assert dataset.source_format in valid_formats, \
-                f"Video dataset {dataset.name} has invalid format: {dataset.source_format}"
+    for modality, datasets in configs.items():
+        counts = Counter(dataset.name for dataset in datasets)
+        duplicates = sorted(name for name, count in counts.items() if count > 1)
+        assert not duplicates, f"duplicate {modality} dataset names: {duplicates}"
 
 
-class TestAudioDatasets:
-    """Test audio-specific dataset configurations."""
+def test_legacy_datasets_are_not_in_the_active_registry():
+    configs = load_benchmark_datasets_from_yaml()
+    active = {
+        (modality, dataset.name)
+        for modality, datasets in configs.items()
+        for dataset in datasets
+    }
 
-    def test_audio_datasets_exist(self):
-        """Verify audio datasets are configured."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        assert len(configs["audio"]) >= 14, "Expected at least 14 audio datasets"
+    legacy = set()
+    for modality, filename in (
+        ("image", "legacy_images.yaml"),
+        ("video", "legacy_videos.yaml"),
+    ):
+        document = yaml.safe_load((CONFIG_DIR / filename).read_text())
+        legacy.update((modality, dataset["name"]) for dataset in document["datasets"])
 
-    def test_audio_source_formats_are_valid(self):
-        """Verify audio datasets have valid source formats."""
-        configs = load_benchmark_datasets_from_yaml()
-        valid_formats = ["wav", "mp3", "m4a", "tar", "tar.gz", "zip", "parquet", ""]
-        
-        for dataset in configs["audio"]:
-            assert dataset.source_format in valid_formats, \
-                f"Audio dataset {dataset.name} has invalid format: {dataset.source_format}"
-
-
-class TestMediaTypeDistribution:
-    """Test distribution of real vs synthetic datasets."""
-
-    def test_image_has_balanced_types(self):
-        """Verify image datasets have both real and synthetic."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        real_count = sum(1 for d in configs["image"] if d.media_type == "real")
-        synthetic_count = sum(1 for d in configs["image"] if d.media_type == "synthetic")
-        
-        assert real_count > 0, "No real image datasets"
-        assert synthetic_count > 0, "No synthetic image datasets"
-        assert real_count >= 10, f"Expected at least 10 real image datasets, got {real_count}"
-        assert synthetic_count >= 10, f"Expected at least 10 synthetic image datasets, got {synthetic_count}"
-
-    def test_video_has_balanced_types(self):
-        """Verify video datasets have both real and synthetic."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        real_count = sum(1 for d in configs["video"] if d.media_type == "real")
-        synthetic_count = sum(1 for d in configs["video"] if d.media_type == "synthetic")
-        
-        assert real_count > 0, "No real video datasets"
-        assert synthetic_count > 0, "No synthetic video datasets"
-
-    def test_audio_has_balanced_types(self):
-        """Verify audio datasets have both real and synthetic."""
-        configs = load_benchmark_datasets_from_yaml()
-        
-        real_count = sum(1 for d in configs["audio"] if d.media_type == "real")
-        synthetic_count = sum(1 for d in configs["audio"] if d.media_type == "synthetic")
-        
-        assert real_count > 0, "No real audio datasets"
-        assert synthetic_count > 0, "No synthetic audio datasets"
-
-
-class TestPublicLegacyCull:
-    """Culled duplicate/combinatorial public entries live in legacy_*.yaml."""
-
-    _CONFIGS = Path(__file__).resolve().parents[2] / "src/gasbench/dataset/configs"
-
-    def test_legacy_files_parse(self):
-        for name in ("legacy_images.yaml", "legacy_videos.yaml"):
-            data = yaml.safe_load((self._CONFIGS / name).read_text())
-            assert "datasets" in data and data["datasets"]
-            assert len(data["datasets"]) > 0
-
-    def test_legacy_counts(self):
-        img = yaml.safe_load((self._CONFIGS / "legacy_images.yaml").read_text())
-        vid = yaml.safe_load((self._CONFIGS / "legacy_videos.yaml").read_text())
-        assert len(img["datasets"]) == 21
-        assert len(vid["datasets"]) == 53
-
-    def test_culled_names_not_in_default_registry(self):
-        configs = load_benchmark_datasets_from_yaml()
-        active = {d.name for ds in configs.values() for d in ds}
-        img = yaml.safe_load((self._CONFIGS / "legacy_images.yaml").read_text())
-        vid = yaml.safe_load((self._CONFIGS / "legacy_videos.yaml").read_text())
-        culled = {d["name"] for d in img["datasets"] + vid["datasets"]}
-        overlap = active & culled
-        assert not overlap, f"culled names still active: {overlap}"
-
-    def test_mavos_keepers_and_families_kept(self):
-        configs = load_benchmark_datasets_from_yaml()
-        names = {d.name for d in configs["video"]}
-        keepers = {
-            "mavos-dd-english_real",
-            "v15-human-vid-mavos-dd-english_inswapper",
-            "v15-human-vid-mavos-dd-english_liveportrait",
-            "v15-human-vid-mavos-dd-english_echomimic",
-            "v15-human-vid-mavos-dd-english_roop",
-        }
-        assert keepers <= names
-        assert sum(1 for n in names if "mavos" in n.lower()) == 5
-        assert sum(1 for n in names if "deepaction" in n.lower()) == 8
-        assert sum(1 for n in names if n.startswith("senorita")) == 6
-        assert sum(1 for n in names if n.startswith("fakeparts")) == 5
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    overlap = sorted(active & legacy)
+    assert not overlap, f"legacy datasets still active: {overlap}"

@@ -30,7 +30,9 @@ datasets:
     content_category: animals
 
   - name: fake-animals-images
-    path: 34data/fake-animals-images
+    path: Prgckwb/fake-animals
+    hf_revision: 210cb3fde51890fabec7a9ebcc857781cdd9c284
+    hf_subfolders: [data]
     modality: image
     media_type: synthetic
     source_format: parquet

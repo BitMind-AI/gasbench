@@ -1119,9 +1119,7 @@ datasets:
     content_category: diverse
 
   - name: synwts
-    path: mlcglab/synwts
-    hf_revision: 3c57d64f8603441b43f69dca9a123999776bc014
-    hf_subfolders: [data/videos]
+    path: 34data/synwts
     modality: video
     media_type: rendered
     source_format: mp4

@@ -331,7 +331,9 @@ datasets:
   # -- documents --
 
   - name: Aslan-mingye-OCR-Quality
-    path: 34data/Aslan-mingye-OCR-Quality
+    path: Aslan-mingye/OCR-Quality
+    hf_revision: d6d42fc01b7aea801da3a429cc31350932bdbf87
+    hf_subfolders: [pics]
     modality: image
     media_type: real
     source_format: png

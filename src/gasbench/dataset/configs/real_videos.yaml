@@ -722,7 +722,9 @@ datasets:
     content_category: action
 
   - name: facebook-2M-Flores-ASL
-    path: 34data/facebook-2M-Flores-ASL
+    path: facebook/2M-Flores-ASL
+    hf_revision: b450c1a427738e78f06362fc4619674f5d74f774
+    hf_subfolders: [data]
     modality: video
     media_type: real
     source_format: mp4
@@ -754,7 +756,9 @@ datasets:
     content_category: diverse
 
   - name: omnivideo-test
-    path: 34data/omnivideo-test
+    path: MiG-NJU/OmniVideo-Test
+    hf_revision: a69c23eb3c7f065d3cd8cf98ed9704a5250427f4
+    hf_subfolders: [videos]
     modality: video
     media_type: real
     source_format: mp4
@@ -797,7 +801,9 @@ datasets:
     content_category: diverse
 
   - name: deeptumorvqa
-    path: 34data/deeptumorvqa
+    path: tumor-vqa/DeepTumorVQA_2.0
+    hf_revision: a8b9db5133fda02567476dcb49498ec51f6aed37
+    hf_subfolders: [train/videos, benchmark/videos]
     modality: video
     media_type: real
     source_format: mp4
@@ -1085,7 +1091,9 @@ datasets:
     notes: Released from v22 bmcore holdouts
 
   - name: human-motion-tracking-deeplabcut
-    path: 34data/human-motion-tracking-deeplabcut
+    path: pratikshapai/human-motion-tracking-deeplabcut
+    hf_revision: 202b971078b1b1be719bab211bfdc7b9848bed71
+    hf_subfolders: [videos]
     modality: video
     media_type: real
     source_format: mp4

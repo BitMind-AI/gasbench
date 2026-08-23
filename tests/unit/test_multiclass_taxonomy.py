@@ -95,6 +95,11 @@ class TestMetricsCollapse:
 
 
 class TestYamlTaxonomy:
+    def test_code_rendered_images_are_non_generative(self):
+        configs = load_benchmark_datasets_from_yaml()
+        datasets = {dataset.name: dataset for dataset in configs["image"]}
+        assert datasets["cosyn-400k"].media_type == "real"
+
     def test_excluded_datasets_absent(self):
         configs = load_benchmark_datasets_from_yaml()
         names = {d.name for ds in configs.values() for d in ds}

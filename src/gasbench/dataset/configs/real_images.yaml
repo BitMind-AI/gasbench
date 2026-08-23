@@ -10,6 +10,17 @@
 
 datasets:
 
+  - name: cosyn-400k
+    path: allenai/CoSyn-400K
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: rendered-code
+    content_category: diverse
+    notes: Code-rendered text-rich images (Matplotlib, HTML, LaTeX, etc.); no generative pixel synthesis
+
   - name: Shooter-real
     path: 34data/Shooter-real
     modality: image

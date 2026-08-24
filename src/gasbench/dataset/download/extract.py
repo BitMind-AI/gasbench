@@ -1,6 +1,7 @@
 """Extract and decode media samples from parquet, tar, zip, and raw sources."""
 
 import base64
+import binascii
 import io
 import json
 import random
@@ -33,6 +34,29 @@ from .constants import (
 )
 
 logger = get_logger(__name__)
+
+
+def _open_image_bytes(data: bytes) -> Image.Image:
+    """Open raw image bytes, transparently handling base64-wrapped payloads."""
+    try:
+        return Image.open(BytesIO(data))
+    except (OSError, ValueError) as raw_error:
+        encoded = data.strip()
+        if encoded.startswith(b"data:"):
+            header, separator, encoded = encoded.partition(b",")
+            if not separator or b";base64" not in header.lower():
+                raise raw_error
+
+        # Whitespace is legal in base64 streams, but validate the normalized
+        # payload so arbitrary corrupt files are not silently transformed.
+        encoded = b"".join(encoded.split())
+        try:
+            decoded = base64.b64decode(encoded, validate=True)
+            image = Image.open(BytesIO(decoded))
+            image.verify()
+            return Image.open(BytesIO(decoded))
+        except (binascii.Error, OSError, ValueError):
+            raise raw_error
 
 
 def yield_media_from_source(
@@ -217,7 +241,7 @@ def _process_tar_with_metadata(
 
                     if dataset.modality == "image":
                         try:
-                            media_obj = Image.open(BytesIO(data_bytes))
+                            media_obj = _open_image_bytes(data_bytes)
                         except (OSError, FileNotFoundError) as e:
                             logger.warning(f"Failed to open image {member.name}: {e}")
                             continue
@@ -318,7 +342,7 @@ def _process_zip_or_tar(
 
                     if dataset.modality == "image":
                         try:
-                            media_obj = Image.open(BytesIO(data_bytes))
+                            media_obj = _open_image_bytes(data_bytes)
                         except (OSError, FileNotFoundError):
                             logger.warning(
                                 f"Failed to open image {get_name(entry)} from {source_path}"
@@ -355,7 +379,7 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
         if dataset.modality == "image" and any(
             filename.endswith(ext) for ext in IMAGE_FILE_EXTENSIONS
         ):
-            media_obj = Image.open(BytesIO(data_bytes))
+            media_obj = _open_image_bytes(data_bytes)
         elif dataset.modality == "audio" and any(
             filename.endswith(ext) for ext in AUDIO_FILE_EXTENSIONS
         ):
@@ -562,11 +586,11 @@ def _process_parquet(
                             continue
 
                         try:
-                            img = Image.open(BytesIO(media_data))
+                            img = _open_image_bytes(media_data)
                         except (OSError, FileNotFoundError):
                             if isinstance(media_data, str):
-                                media_data = base64.b64decode(media_data)
-                            img = Image.open(BytesIO(media_data))
+                                media_data = media_data.encode()
+                            img = _open_image_bytes(media_data)
                         sample = create_sample(dataset, img, source_path, iso_week)
                     else:
                         if media_data is None or isinstance(media_data, (int, float)):
@@ -729,6 +753,5 @@ def _process_frame_directory(
     except Exception as e:
         logger.warning(f"Error processing frame directory {frame_dir}: {e}")
         return
-
 
 

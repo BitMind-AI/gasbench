@@ -21,7 +21,7 @@ from .dataset.config import (
     load_holdout_datasets_from_yaml,
     apply_mode_to_datasets,
 )
-from .dataset.iterator import DatasetIterator
+from .dataset.iterator import CACHE_MAX_SAMPLES, DatasetIterator
 
 logger = get_logger(__name__)
 
@@ -488,19 +488,10 @@ def _needs_download(
         return not _is_dataset_cached_for_mode(dataset_dir, dataset)
 
 
-def _get_required_samples_for_mode(dataset: BenchmarkDatasetConfig) -> int:
-    """Calculate required samples based on dataset config (reflects mode)."""
-    if dataset.media_per_archive == -1 or dataset.archives_per_dataset == -1:
-        return 10000  # "full" download within reason
-
-    expected = dataset.media_per_archive * dataset.archives_per_dataset
-    return max(expected, 10)
-
-
 def _is_dataset_cached_for_mode(
     dataset_dir: Path, dataset: BenchmarkDatasetConfig
 ) -> bool:
-    """Check if dataset is cached with enough samples for the requested mode."""
+    """Return whether the iterator would treat this cache as complete."""
     if not dataset_dir.exists():
         return False
 
@@ -509,16 +500,17 @@ def _is_dataset_cached_for_mode(
     if not metadata_file.exists():
         return False
 
+    # The iterator writes this when the source is exhausted, including when it
+    # contains fewer samples than the normal cache cap.
+    if (dataset_dir / ".download_complete").exists():
+        return True
+
     try:
         import json
 
         with open(metadata_file, "r") as f:
             metadata = json.load(f)
             cached_count = len(metadata)
-            required_samples = _get_required_samples_for_mode(dataset)
-
-            # Check if we have enough samples for this mode
-            # Allow 10% margin (e.g., 90 samples is enough for 100 required)
-            return cached_count >= (required_samples * 0.9)
+            return cached_count >= CACHE_MAX_SAMPLES
     except Exception:
         return False

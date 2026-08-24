@@ -110,6 +110,7 @@ class BenchmarkRunConfig:
     holdouts_only: bool = False  # If True, only run holdout datasets (requires holdout_config_path)
     content_category: Optional[str] = None  # Filter datasets by content_category (e.g. "faces")
     score_composition: Optional[Dict[str, float]] = None  # Target score weight share per provenance class, e.g. {"public": 0.5, "holdout": 0.3, "gasstation": 0.2}; weights all metrics incl. sn34_score
+    multiclass_scoring: bool = False  # Derive sn34_score from Gorodkin multiclass MCC + multiclass Brier instead of the binary real-vs-not-real collapse. No-op for audio (2 classes).
     n_aug_per_dataset: int = 0  # Number of samples per dataset to re-evaluate with robustness augmentations (0 = disabled)
     aug_weight: float = 0.2  # Weight of aug_sn34_score in blended final score (when n_aug_per_dataset > 0)
 
@@ -269,6 +270,7 @@ def finalize_run(
         df,
         holdout_weight=config.holdout_weight,
         score_composition=config.score_composition,
+        multiclass_scoring=config.multiclass_scoring,
     )
 
     # Blend aug_sn34_score into sn34_score when an aug pass was run.

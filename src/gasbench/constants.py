@@ -41,6 +41,14 @@ _MODALITY_LABELS = {
     "audio": AUDIO_MEDIA_TYPE_TO_LABEL,
 }
 
+# Number of scored classes per modality, derived from the label maps above so
+# the two can never drift. image=3, video=4, audio=2 (semisynthetic collapses
+# onto synthetic for audio). Used to size the multiclass confusion matrix and
+# to pick the random-guess baselines in Metrics.
+MODALITY_NUM_CLASSES = {
+    modality: max(table.values()) + 1 for modality, table in _MODALITY_LABELS.items()
+}
+
 # Legacy binary map (real vs not-real). Prefer media_type_to_label(media_type, modality).
 MEDIA_TYPE_TO_LABEL = {
     "real": 0,

@@ -81,6 +81,7 @@ async def run_audio_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: dict = None,
+    multiclass_scoring: bool = False,
 ) -> pd.DataFrame:
     """Test model on benchmark audio datasets for AI-generated content detection.
     
@@ -117,6 +118,7 @@ async def run_audio_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
         )
 
         plan = build_plan(logger, run_config, input_specs)

@@ -36,6 +36,7 @@ async def run_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: Optional[Dict[str, float]] = None,
+    multiclass_scoring: bool = False,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
@@ -125,6 +126,7 @@ async def run_benchmark(
             holdouts_only,
             content_category,
             score_composition,
+            multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -225,6 +227,7 @@ async def execute_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: Optional[Dict[str, float]] = None,
+    multiclass_scoring: bool = False,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
@@ -232,7 +235,7 @@ async def execute_benchmark(
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category}, score_composition={score_composition})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category}, score_composition={score_composition}, multiclass_scoring={multiclass_scoring})")
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
@@ -256,6 +259,7 @@ async def execute_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -283,6 +287,7 @@ async def execute_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -310,6 +315,7 @@ async def execute_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

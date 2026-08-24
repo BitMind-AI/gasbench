@@ -150,15 +150,18 @@ datasets:
     generator_family: real
     content_category: action
 
-  - name: sports-qa
-    path: HopLeeTop/Sports-QA
-    modality: video
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    generator_family: real
-    content_category: action
+  # Temporarily disabled: the selected upstream ZIPs are approximately 8.8 GB
+  # and 14.5 GB, and HF Xet transfers repeatedly terminate without resumable
+  # progress. Re-enable after the source is available in practical shards.
+  # - name: sports-qa
+  #   path: HopLeeTop/Sports-QA
+  #   modality: video
+  #   media_type: real
+  #   source_format: zip
+  #   media_per_archive: 500
+  #   archives_per_dataset: 2
+  #   generator_family: real
+  #   content_category: action
 
   - name: utd-mhad
     path: 34data/utd-mhad

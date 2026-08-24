@@ -281,16 +281,17 @@ datasets:
     generator_family: real
     content_category: diverse
 
-  - name: vcc2020-real
-    path: 34data/vcc2020-real
-    modality: audio
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    notes: Voice Conversion Challenge 2020 — source (real) speech
-    generator_family: real
-    content_category: diverse
+  # REMOVED: vcc2020-real (34data/vcc2020-real).
+  # That repo's single data_001.zip is a MIXED archive — 280 files, of which
+  # only 80 are natural speech (68 ref-*, 12 TAR_*). The other 200 are team34_*
+  # voice-conversion outputs, using the same <team>_<task>-<target>_<source>_
+  # <utt> naming as every file in vcc2020-fake; a filename carrying both a
+  # source and a target speaker is a conversion by definition. Serving the whole
+  # archive as media_type: real labeled 71% converted speech as real.
+  # Dropped rather than split: voice conversion is already covered by
+  # vcc2020-fake (teams 01-07, 12 zips), and the 80 natural files do not justify
+  # a member-level filtering mechanism. Do not re-add this path without first
+  # splitting the upstream repo.
 
   # -- music --
 
@@ -711,3 +712,46 @@ datasets:
     archives_per_dataset: 2
     generator_family: real
     content_category: speech
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: cml-tts-french
+    path: 34data/cml-tts-french
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: speech
+    notes: Released from v22 bmcore holdouts
+
+  - name: cml-tts-german
+    path: ylacombe/cml-tts
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    hf_subfolders: [german]
+    include_paths: [train-]
+    data_columns: [audio]
+    generator_family: real
+    content_category: speech
+    notes: CML-TTS German train split, released from v22 bmcore holdouts
+
+  - name: cml-tts-spanish
+    path: ylacombe/cml-tts
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    hf_subfolders: [spanish]
+    include_paths: [train-]
+    data_columns: [audio]
+    generator_family: real
+    content_category: speech
+    notes: CML-TTS Spanish train split, released from v22 bmcore holdouts

@@ -26,15 +26,23 @@ def _img(seed=0, h=260, w=300):
 @pytest.mark.parametrize("level", [0, 1, 2, 3])
 def test_same_seed_same_output(level):
     img = _img()
-    a, *_ = apply_random_augmentations(img.copy(), TARGET, level=level, crop_prob=0.5, seed=42)
-    b, *_ = apply_random_augmentations(img.copy(), TARGET, level=level, crop_prob=0.5, seed=42)
+    a, *_ = apply_random_augmentations(
+        img.copy(), TARGET, level=level, crop_prob=0.5, seed=42
+    )
+    b, *_ = apply_random_augmentations(
+        img.copy(), TARGET, level=level, crop_prob=0.5, seed=42
+    )
     assert np.array_equal(a, b)
 
 
 def test_different_seed_different_output():
     img = _img()
-    a, *_ = apply_random_augmentations(img.copy(), TARGET, level=3, crop_prob=0.5, seed=1)
-    b, *_ = apply_random_augmentations(img.copy(), TARGET, level=3, crop_prob=0.5, seed=2)
+    a, *_ = apply_random_augmentations(
+        img.copy(), TARGET, level=3, crop_prob=0.5, seed=1
+    )
+    b, *_ = apply_random_augmentations(
+        img.copy(), TARGET, level=3, crop_prob=0.5, seed=2
+    )
     assert not np.array_equal(a, b)
 
 
@@ -45,7 +53,9 @@ def test_deterministic_under_thread_pool():
 
     def one(item):
         img, seed = item
-        out, *_ = apply_random_augmentations(img.copy(), TARGET, level=3, crop_prob=0.5, seed=seed)
+        out, *_ = apply_random_augmentations(
+            img.copy(), TARGET, level=3, crop_prob=0.5, seed=seed
+        )
         return out
 
     serial = [one(s) for s in samples]
@@ -53,7 +63,9 @@ def test_deterministic_under_thread_pool():
         concurrent = list(ex.map(one, samples))
 
     for i, (s, c) in enumerate(zip(serial, concurrent)):
-        assert np.array_equal(s, c), f"sample {i} differed between serial and concurrent runs"
+        assert np.array_equal(s, c), (
+            f"sample {i} differed between serial and concurrent runs"
+        )
 
 
 def test_robustness_pass_is_deterministic():

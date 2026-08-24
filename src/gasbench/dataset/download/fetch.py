@@ -2,10 +2,14 @@
 
 import hashlib
 import os
+import random
+import shutil
+import threading
 import time
 import traceback
 from pathlib import Path
 from typing import Generator, List, Optional
+from urllib.parse import unquote, urlsplit
 
 import requests
 
@@ -13,6 +17,65 @@ from ...logger import get_logger
 from ..utils.s3_utils import download_s3_file
 
 logger = get_logger(__name__)
+
+# Dataset downloads are nested: several datasets run concurrently and each one
+# may download several files concurrently. Bound the actual network transfers
+# globally so those two levels cannot multiply into hundreds of HF connections.
+MAX_CONCURRENT_HTTP_TRANSFERS = 12
+_http_transfer_semaphore = threading.BoundedSemaphore(MAX_CONCURRENT_HTTP_TRANSFERS)
+
+
+def _parse_huggingface_dataset_url(url: str):
+    """Return ``(repo_id, revision, filename)`` for canonical HF dataset URLs."""
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https") or parsed.netloc not in (
+        "huggingface.co",
+        "www.huggingface.co",
+    ):
+        return None
+
+    parts = parsed.path.split("/")
+    # /datasets/{owner}/{repo}/resolve/{revision}/{filename...}
+    if len(parts) < 7 or parts[1] != "datasets" or parts[4] != "resolve":
+        return None
+
+    repo_id = f"{unquote(parts[2])}/{unquote(parts[3])}"
+    revision = unquote(parts[5])
+    filename = unquote("/".join(parts[6:]))
+    if not revision or not filename:
+        return None
+    return repo_id, revision, filename
+
+
+def _download_huggingface_file(
+    url: str,
+    output_dir: Path,
+    filepath: Path,
+    hf_token: Optional[str],
+) -> Optional[Path]:
+    """Download one already-selected HF file through huggingface_hub/hf_xet."""
+    parsed = _parse_huggingface_dataset_url(url)
+    if parsed is None:
+        return None
+
+    from huggingface_hub import hf_hub_download
+
+    repo_id, revision, filename = parsed
+    downloaded_path = Path(
+        hf_hub_download(
+            repo_id=repo_id,
+            filename=filename,
+            repo_type="dataset",
+            revision=revision,
+            token=hf_token,
+            local_dir=str(output_dir),
+        )
+    )
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    if downloaded_path != filepath:
+        shutil.move(str(downloaded_path), filepath)
+    return filepath
+
 
 def _stream_downloads(
     urls: List[str],
@@ -40,7 +103,6 @@ def _stream_downloads(
         futures = {executor.submit(download_url, url): url for url in urls}
         for future in as_completed(futures):
             yield future.result()
-
 
 
 def download_files(
@@ -87,7 +149,6 @@ def download_files(
                 downloaded_files.append(result)
 
     return downloaded_files
-
 
 
 def download_single_file(
@@ -145,6 +206,21 @@ def download_single_file(
 
         logger.debug(f"Downloading {url}")
 
+        if _parse_huggingface_dataset_url(url) is not None:
+            try:
+                return _download_huggingface_file(
+                    url=url,
+                    output_dir=output_dir,
+                    filepath=filepath,
+                    hf_token=hf_token,
+                )
+            except Exception as e:
+                logger.warning(
+                    "huggingface_hub download failed for %s; falling back to HTTP: %s",
+                    url,
+                    e,
+                )
+
         max_retries = 5
         effective_chunk_size = max(chunk_size, 1024 * 1024)
 
@@ -160,39 +236,50 @@ def download_single_file(
                     headers["Range"] = f"bytes={downloaded_size}-"
                     logger.info(f"Resuming download from {downloaded_size} bytes")
 
-                response = requests.get(
-                    url, stream=True, timeout=(30, 300), headers=headers
-                )
-
-                if response.status_code == 416:
-                    logger.info("Server returned 416 (range not satisfiable), restarting download")
-                    partial_filepath.unlink(missing_ok=True)
-                    downloaded_size = 0
-                    del headers["Range"]
+                with _http_transfer_semaphore:
                     response = requests.get(
                         url, stream=True, timeout=(30, 300), headers=headers
                     )
 
-                if response.status_code not in (200, 206):
-                    logger.error(f"Failed to download {url}: Status {response.status_code}")
-                    return None
+                    if response.status_code == 416:
+                        logger.info(
+                            "Server returned 416 (range not satisfiable), restarting download"
+                        )
+                        response.close()
+                        partial_filepath.unlink(missing_ok=True)
+                        downloaded_size = 0
+                        headers.pop("Range", None)
+                        response = requests.get(
+                            url, stream=True, timeout=(30, 300), headers=headers
+                        )
 
-                if response.status_code == 200 and downloaded_size > 0:
-                    logger.info("Server doesn't support resume, restarting download")
-                    partial_filepath.unlink(missing_ok=True)
-                    downloaded_size = 0
+                    if response.status_code not in (200, 206):
+                        logger.error(
+                            f"Failed to download {url}: Status {response.status_code}"
+                        )
+                        response.close()
+                        return None
 
-                total_size = int(response.headers.get("content-length", 0))
-                if response.status_code == 200:
-                    expected_total = total_size
-                else:
-                    expected_total = downloaded_size + total_size
+                    if response.status_code == 200 and downloaded_size > 0:
+                        logger.info(
+                            "Server doesn't support resume, restarting download"
+                        )
+                        partial_filepath.unlink(missing_ok=True)
+                        downloaded_size = 0
 
-                mode = "ab" if downloaded_size > 0 else "wb"
-                with open(partial_filepath, mode) as f:
-                    for chunk in response.iter_content(chunk_size=effective_chunk_size):
-                        if chunk:
-                            f.write(chunk)
+                    total_size = int(response.headers.get("content-length", 0))
+                    if response.status_code == 200:
+                        expected_total = total_size
+                    else:
+                        expected_total = downloaded_size + total_size
+
+                    mode = "ab" if downloaded_size > 0 else "wb"
+                    with response, open(partial_filepath, mode) as f:
+                        for chunk in response.iter_content(
+                            chunk_size=effective_chunk_size
+                        ):
+                            if chunk:
+                                f.write(chunk)
 
                 actual_size = partial_filepath.stat().st_size
                 if expected_total > 0 and actual_size != expected_total:
@@ -204,14 +291,18 @@ def download_single_file(
                 return filepath
 
             except (requests.exceptions.RequestException, IOError) as e:
-                wait_time = min(30 * (2 ** attempt), 300)
-                logger.warning(
-                    f"Download attempt {attempt + 1}/{max_retries} failed: {e}. "
-                    f"Retrying in {wait_time}s..."
-                )
+                base_wait = min(30 * (2**attempt), 300)
+                wait_time = base_wait * random.uniform(0.75, 1.25)
                 if attempt < max_retries - 1:
+                    logger.warning(
+                        f"Download attempt {attempt + 1}/{max_retries} failed: {e}. "
+                        f"Retrying in {wait_time:.1f}s..."
+                    )
                     time.sleep(wait_time)
                 else:
+                    logger.warning(
+                        f"Download attempt {attempt + 1}/{max_retries} failed: {e}"
+                    )
                     raise
 
         return None
@@ -220,7 +311,6 @@ def download_single_file(
         logger.error(f"Error downloading {url}: {str(e)}")
         logger.error(traceback.format_exc())
         return None
-
 
 
 def _get_expected_download_filename(url: str) -> str:
@@ -242,6 +332,3 @@ def _get_expected_download_filename(url: str) -> str:
         base_filename = os.path.basename(url)
     name, ext = os.path.splitext(base_filename)
     return f"{name}_{url_hash}{ext}"
-
-
-

@@ -7,6 +7,7 @@ from importlib.resources import files
 import hashlib
 
 from ..logger import get_logger
+from ..constants import VALID_MEDIA_TYPES
 
 logger = get_logger(__name__)
 
@@ -46,16 +47,22 @@ class BenchmarkDatasetConfig:
     name: str
     path: str
     modality: str  # "image", "video", or "audio"
-    media_type: str  # "real", "synthetic", or "semisynthetic"
+    media_type: str  # image: real/synthetic/semisynthetic; video also allows rendered
 
     # Download parameters
     media_per_archive: int = 100
     archives_per_dataset: int = 5
     source_format: str = ""  # Auto-detected if empty
     source: str = "huggingface"  # "huggingface", "modelscope", or "s3"
+    hf_revision: Optional[str] = None
+    hf_subfolders: Optional[List[str]] = None
 
     include_paths: Optional[List[str]] = None
     exclude_paths: Optional[List[str]] = None
+    # Filter media entries inside ZIP/TAR archives. Unlike include_paths and
+    # exclude_paths, these do not affect which remote archive files are listed.
+    archive_include_paths: Optional[List[str]] = None
+    archive_exclude_paths: Optional[List[str]] = None
     
     # For parquet datasets: specify column name(s) containing media bytes
     # Works for any modality (image, audio, video)
@@ -324,11 +331,14 @@ def validate_dataset_config(
             )
 
     if "media_type" in config_dict:
-        valid_media_types = ["real", "synthetic", "semisynthetic"]
+        modality = config_dict.get("modality", "image")
+        valid_media_types = VALID_MEDIA_TYPES.get(
+            modality, VALID_MEDIA_TYPES["image"]
+        )
         if config_dict["media_type"] not in valid_media_types:
             errors.append(
-                f"Dataset '{dataset_name}': Invalid media_type '{config_dict['media_type']}'. "
-                f"Must be one of {valid_media_types}"
+                f"Dataset '{dataset_name}': Invalid media_type '{config_dict['media_type']}' "
+                f"for modality '{modality}'. Must be one of {sorted(valid_media_types)}"
             )
 
     if "source" in config_dict:
@@ -368,10 +378,14 @@ def _dataset_dict_to_config(d: dict, **overrides) -> BenchmarkDatasetConfig:
         "media_type": d["media_type"],
         "source_format": d.get("source_format", ""),
         "source": d.get("source", "huggingface"),
+        "hf_revision": d.get("hf_revision"),
+        "hf_subfolders": d.get("hf_subfolders"),
         "media_per_archive": d.get("media_per_archive", 100),
         "archives_per_dataset": d.get("archives_per_dataset", 5),
         "include_paths": d.get("include_paths"),
         "exclude_paths": d.get("exclude_paths"),
+        "archive_include_paths": d.get("archive_include_paths"),
+        "archive_exclude_paths": d.get("archive_exclude_paths"),
         "data_columns": d.get("data_columns"),
         "notes": d.get("notes"),
         "filter_column": d.get("filter_column"),
@@ -462,6 +476,7 @@ def _obfuscate_holdout_names(
         orig_name = d.name
         include_paths = ",".join(sorted(d.include_paths)) if d.include_paths else ""
         exclude_paths = ",".join(sorted(d.exclude_paths)) if d.exclude_paths else ""
+        hf_subfolders = ",".join(sorted(d.hf_subfolders)) if d.hf_subfolders else ""
         fingerprint = "|".join(
             [
                 d.path or "",
@@ -471,6 +486,8 @@ def _obfuscate_holdout_names(
                 include_paths,
                 exclude_paths,
                 (d.source or ""),
+                (d.hf_revision or ""),
+                hf_subfolders,
             ]
         )
         short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
@@ -609,7 +626,8 @@ def _load_modality_config(modality: str, custom_path: Optional[str] = None) -> l
             data = yaml.safe_load(f)
         return data.get("datasets", [])
     
-    # Load from split real + synthetic configs and merge
+    # Load from split real + synthetic configs and merge.
+    # legacy_images.yaml / legacy_videos.yaml are bundled but not loaded here.
     SPLIT_CONFIGS = {
         "image": ("real_images.yaml", "synthetic_images.yaml"),
         "video": ("real_videos.yaml", "synthetic_videos.yaml"),
@@ -742,11 +760,12 @@ def get_benchmark_dataset_summary() -> Dict:
     summary = {
         "image": {
             "total": len(image_datasets),
-            "active": len(
-                [d for d in image_datasets if d.media_type in ["real", "synthetic"]]
-            ),
+            "active": len(image_datasets),
             "synthetic": len(
                 [d for d in image_datasets if d.media_type == "synthetic"]
+            ),
+            "semisynthetic": len(
+                [d for d in image_datasets if d.media_type == "semisynthetic"]
             ),
             "real": len([d for d in image_datasets if d.media_type == "real"]),
             "datasets": [
@@ -756,11 +775,15 @@ def get_benchmark_dataset_summary() -> Dict:
         },
         "video": {
             "total": len(video_datasets),
-            "active": len(
-                [d for d in video_datasets if d.media_type in ["real", "synthetic"]]
-            ),
+            "active": len(video_datasets),
             "synthetic": len(
                 [d for d in video_datasets if d.media_type == "synthetic"]
+            ),
+            "semisynthetic": len(
+                [d for d in video_datasets if d.media_type == "semisynthetic"]
+            ),
+            "rendered": len(
+                [d for d in video_datasets if d.media_type == "rendered"]
             ),
             "real": len([d for d in video_datasets if d.media_type == "real"]),
             "datasets": [

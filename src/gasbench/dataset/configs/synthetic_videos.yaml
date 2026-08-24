@@ -1,8 +1,98 @@
-# Image Dataset Configurations -- Synthetic Videos
+# Video Dataset Configurations -- Synthetic, Rendered, Semisynthetic Videos
+# 4-class video taxonomy: real | synthetic | rendered | semisynthetic.
+# media_type: synthetic = fully neural-generated (t2v/i2v).
+# media_type: rendered = classical CGI / game engine / sim (not neural gen).
+# media_type: semisynthetic = materially captured visual content retained alongside
+#   spatially localized generated/replaced content. Fully synthesized output remains
+#   synthetic; modifying exclusively synthetic/rendered media does not change that.
 #
+# Excluded (cannot assign a correct 4-class label; no reliable split):
+#   artifact-bench — 34data dump is 1,350 rows = full Artifact-Bench mix
+#     (Task_1 250 real + 250 fake, Task_2 500 fake, Task_3 350 fake). HF copy
+#     is parquet-converted; include_paths cannot isolate real_*.mp4 vs fake.
+
+# Some previously-active entries were moved to legacy_videos.yaml (not loaded by default).
+
 datasets:
 
-  # -- action --
+  - name: abot-world-explorer
+    path: 34data/abot-world-explorer
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: scenes
+    notes: Released from v22 bmcore holdouts; game/simulation world-exploration footage
+
+  - name: physicalai-autonomous-driving-pedestrian
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Autonomous-Driving-Scenarios
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: 2000
+    archives_per_dataset: 1
+    hf_revision: c6fceba249770c5f8c61c7a6addab847003dca4f
+    hf_subfolders: [pedestrian]
+    generator_family: rendered
+    content_category: scenes
+    notes: NVIDIA Omniverse-rendered pedestrian driving scenarios; pinned upstream source replacing two 34data mirrors
+
+  - name: bedlam-closeup-suburb-a
+    path: 34data/bedlam-closeup-suburb-a
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: bedlam-closeup-suburb-b
+    path: 34data/bedlam-closeup-suburb-b
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: nvidia-sdg-synhuman-shard-7
+    path: 34data/nvidia-sdg-synhuman-shard-7
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: nvidia-sdg-synhuman-shard-8
+    path: 34data/nvidia-sdg-synhuman-shard-8
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: humans
+    notes: Released from v22 bmcore holdouts
+
+  - name: cs2-10k-data-ancient-part-01
+    path: 34data/cs2-10k-data-ancient-part-01
+    modality: video
+    media_type: rendered
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: rendered
+    content_category: action
+    notes: Released from v22 bmcore holdouts
 
   - name: deepaction-bdanimate
     path: faridlab/deepaction_v1
@@ -109,7 +199,7 @@ datasets:
   - name: fakeparts-stylechange
     path: hi-paris/FakeParts
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10
@@ -133,7 +223,7 @@ datasets:
   - name: ByteDance_Synthetic_Videos
     path: kevinzzz8866/ByteDance_Synthetic_Videos
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: 1000
     archives_per_dataset: 1
@@ -225,7 +315,7 @@ datasets:
   - name: semisynthetic-video
     path: bitmind/semisynthetic-video
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: zip
     media_per_archive: 100
     archives_per_dataset: 10
@@ -246,7 +336,7 @@ datasets:
   - name: senorita-inpainting
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -257,7 +347,7 @@ datasets:
   - name: senorita-local-style-transfer
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -268,7 +358,7 @@ datasets:
   - name: senorita-obj-removal-videos
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -279,7 +369,7 @@ datasets:
   - name: senorita-obj-swap
     path: SENORITADATASET/Senorita
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: tar.gz
     media_per_archive: 250
     archives_per_dataset: 2
@@ -321,7 +411,7 @@ datasets:
   - name: v13-e4s
     path: 34data/v13-e4s
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -350,16 +440,6 @@ datasets:
 
   - name: v14-fake-animatediff
     path: 34data/v14-fake-animatediff
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: diverse
-
-  - name: v14-fake-animatediffturbo
-    path: 34data/v14-fake-animatediffturbo
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -528,357 +608,6 @@ datasets:
 
   # -- faces --
 
-  - name: MAVOS-DD-english_sonic
-    path: 34data/MAVOS-DD-english_sonic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-
-  - name: MAVOS-DD-german_echomimic
-    path: 34data/MAVOS-DD-german_echomimic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-
-  - name: MAVOS-DD-german_hififace
-    path: 34data/MAVOS-DD-german_hififace
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-german_inswapper
-    path: 34data/MAVOS-DD-german_inswapper
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: faceswap
-    content_category: faces
-
-
-  - name: MAVOS-DD-german_liveportrait
-    path: 34data/MAVOS-DD-german_liveportrait
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-german_memo
-    path: 34data/MAVOS-DD-german_memo
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-german_roop
-    path: 34data/MAVOS-DD-german_roop
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-german_sonic
-    path: 34data/MAVOS-DD-german_sonic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-hindi_echomimic
-    path: 34data/MAVOS-DD-hindi_echomimic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-hindi_hififace
-    path: 34data/MAVOS-DD-hindi_hififace
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-hindi_inswapper
-    path: 34data/MAVOS-DD-hindi_inswapper
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: faceswap
-    content_category: faces
-
-
-  - name: MAVOS-DD-hindi_liveportrait
-    path: 34data/MAVOS-DD-hindi_liveportrait
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-hindi_memo
-    path: 34data/MAVOS-DD-hindi_memo
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-hindi_roop
-    path: 34data/MAVOS-DD-hindi_roop
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-hindi_sonic
-    path: 34data/MAVOS-DD-hindi_sonic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-
-  - name: MAVOS-DD-mandarin_echomimic
-    path: 34data/MAVOS-DD-mandarin_echomimic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-
-  - name: MAVOS-DD-mandarin_hififace
-    path: 34data/MAVOS-DD-mandarin_hififace
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-mandarin_inswapper
-    path: 34data/MAVOS-DD-mandarin_inswapper
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: faceswap
-    content_category: faces
-
-
-  - name: MAVOS-DD-mandarin_liveportrait
-    path: 34data/MAVOS-DD-mandarin_liveportrait
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-mandarin_memo
-    path: 34data/MAVOS-DD-mandarin_memo
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-mandarin_roop
-    path: 34data/MAVOS-DD-mandarin_roop
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-mandarin_sonic
-    path: 34data/MAVOS-DD-mandarin_sonic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-romanian_echomimic
-    path: 34data/MAVOS-DD-romanian_echomimic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-
-  - name: MAVOS-DD-romanian_hififace
-    path: 34data/MAVOS-DD-romanian_hififace
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-romanian_inswapper
-    path: 34data/MAVOS-DD-romanian_inswapper
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: faceswap
-    content_category: faces
-
-
-  - name: MAVOS-DD-romanian_liveportrait
-    path: 34data/MAVOS-DD-romanian_liveportrait
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-romanian_memo
-    path: 34data/MAVOS-DD-romanian_memo
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-romanian_roop
-    path: 34data/MAVOS-DD-romanian_roop
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-romanian_sonic
-    path: 34data/MAVOS-DD-romanian_sonic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: MAVOS-DD-russian_echomimic
-    path: 34data/MAVOS-DD-russian_echomimic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-
-  - name: MAVOS-DD-russian_hififace
-    path: 34data/MAVOS-DD-russian_hififace
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
   - name: blendface
     path: 34data/blendface
     modality: video
@@ -894,7 +623,7 @@ datasets:
   - name: dagan
     path: 34data/dagan
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
@@ -948,7 +677,7 @@ datasets:
   - name: fsgan
     path: 34data/fsgan
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -968,7 +697,7 @@ datasets:
   - name: inswap
     path: 34data/inswap
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1001,7 +730,7 @@ datasets:
   - name: mobileswap
     path: 34data/mobileswap
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1075,65 +804,10 @@ datasets:
     generator_variant: uniface
     content_category: faces
 
-  - name: v15-human-vid-dfdm_cfr23-fake
-    path: 34data/v15-human-vid-dfdm_cfr23-fake
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-dfdm_cfr23-dfaker
-    path: 34data/v15-human-vid-dfdm_cfr23-dfaker
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
   - name: v15-human-vid-dfdm_cfr23-dfl-h128
     path: 34data/v15-human-vid-dfdm_cfr23-dfl-h128
     modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-dfdm_cfr23-iae
-    path: 34data/v15-human-vid-dfdm_cfr23-iae
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-dfdm_cfr23-lightweight
-    path: 34data/v15-human-vid-dfdm_cfr23-lightweight
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-digifakeav_echomimic_21501_22000
-    path: 34data/v15-human-vid-digifakeav_echomimic_21501_22000
-    modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1144,73 +818,7 @@ datasets:
   - name: v15-human-vid-digifakeavfvfa_with_audio
     path: 34data/v15-human-vid-digifakeavfvfa_with_audio
     modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-mavos-dd-arabic-echomimic
-    path: 34data/v15-human-vid-mavos-dd-arabic-echomimic
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-mavos-dd-arabic-hififace
-    path: 34data/v15-human-vid-mavos-dd-arabic-hififace
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-mavos-dd-arabic-inswapper
-    path: 34data/v15-human-vid-mavos-dd-arabic-inswapper
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: faceswap
-    content_category: faces
-
-  - name: v15-human-vid-mavos-dd-arabic-liveportrait
-    path: 34data/v15-human-vid-mavos-dd-arabic-liveportrait
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-mavos-dd-arabic-roop
-    path: 34data/v15-human-vid-mavos-dd-arabic-roop
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: v15-human-vid-mavos-dd-arabic-sonic
-    path: 34data/v15-human-vid-mavos-dd-arabic-sonic
-    modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1229,29 +837,16 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-
-  - name: v15-human-vid-mavos-dd-english_hififace
-    path: 34data/v15-human-vid-mavos-dd-english_hififace
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
   - name: v15-human-vid-mavos-dd-english_inswapper
     path: 34data/v15-human-vid-mavos-dd-english_inswapper
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v15 bmcore holdouts
     generator_family: faceswap
     content_category: faces
-
 
   - name: v15-human-vid-mavos-dd-english_liveportrait
     path: 34data/v15-human-vid-mavos-dd-english_liveportrait
@@ -1264,21 +859,10 @@ datasets:
     generator_family: mixed-generation
     content_category: faces
 
-  - name: v15-human-vid-mavos-dd-english_memo
-    path: 34data/v15-human-vid-mavos-dd-english_memo
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v15 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
   - name: v15-human-vid-mavos-dd-english_roop
     path: 34data/v15-human-vid-mavos-dd-english_roop
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1309,16 +893,6 @@ datasets:
     generator_family: mixed-generation
     content_category: scenes
 
-  - name: v14-fake-opensora
-    path: 34data/v14-fake-opensora
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: sora
-    content_category: scenes
-
   - name: v14-fake-opensora12
     path: 34data/v14-fake-opensora12
     modality: video
@@ -1334,7 +908,7 @@ datasets:
   - name: facedancer
     path: 34data/facedancer
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1354,7 +928,7 @@ datasets:
   - name: swimswap
     path: 34data/swimswap
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1374,7 +948,9 @@ datasets:
   # ── Released v19 holdouts ─────────────────────────────────────────────────
 
   - name: gen-videos-fastwan2
-    path: 34data/gen-videos-fastwan2
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [FastWan2.2-TI2V-5B-FullAttn-Diffusers]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1385,7 +961,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-hunyuanvideo
-    path: 34data/gen-videos-hunyuanvideo
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [HunyuanVideo-1.5]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1396,7 +974,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-kling
-    path: 34data/gen-videos-kling
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Kelin2_6]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1407,7 +987,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-veo3
-    path: 34data/gen-videos-veo3
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Veo3_1]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1417,7 +999,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-wan2
-    path: 34data/gen-videos-wan2
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Wan2_6]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1428,7 +1012,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-sora2
-    path: 34data/gen-videos-sora2
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Sora2]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1441,7 +1027,7 @@ datasets:
   - name: scene-decoupled-video-dataset
     path: 34data/scene-decoupled-video-dataset
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1451,7 +1037,7 @@ datasets:
   - name: synthetic-vstat-block-counting
     path: nyu-visionx/VSTAT
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1462,7 +1048,7 @@ datasets:
   - name: synthetic-vstat-shuffle-puzzle
     path: nyu-visionx/VSTAT
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1473,7 +1059,7 @@ datasets:
   - name: tonystark03-deepfake-fake
     path: 34data/tonystark03-deepfake-fake
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1505,7 +1091,7 @@ datasets:
   - name: lav-df
     path: 34data/lav-df
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1532,20 +1118,12 @@ datasets:
     generator_family: seedance
     content_category: diverse
 
-  - name: artifact-bench
-    path: 34data/artifact-bench
-    modality: video
-    media_type: synthetic
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: humans
-
   - name: synwts
-    path: 34data/synwts
+    path: mlcglab/synwts
+    hf_revision: 3c57d64f8603441b43f69dca9a123999776bc014
+    hf_subfolders: [data/videos]
     modality: video
-    media_type: synthetic
+    media_type: rendered
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1594,3 +1172,97 @@ datasets:
     generator_family: minimax
     content_category: diverse
 
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: videogen-rewardbench-gen3
+    path: 34data/videogen-rewardbench-gen3
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: runway
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: videogen-rewardbench-luma
+    path: 34data/videogen-rewardbench-luma
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: luma
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: tip-i2v-cogvideo
+    path: 34data/tip-i2v-cogvideo
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: cogvideox
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: tip-i2v-opensora
+    path: 34data/tip-i2v-opensora
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: opensora
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: tip-i2v-svd
+    path: 34data/tip-i2v-svd
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: svd
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: vigilvid-research-fake
+    path: farouk04/vigilvid-research
+    hf_revision: f4ec1afcc9599861b41cffb7768ad16340c41612
+    hf_subfolders: [videos/test/fake]
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: social-media-deepfakes-fake
+    path: acroitoru/social_media_deepfakes
+    hf_revision: 14bf14c255e222ebd2f0adadb2de83784695e72a
+    hf_subfolders: [social_media/fake]
+    modality: video
+    media_type: semisynthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: faceswap
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: vidpair-halluc
+    path: 34data/vidpair-halluc
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts

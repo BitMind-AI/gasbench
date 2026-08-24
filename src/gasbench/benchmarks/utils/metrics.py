@@ -7,8 +7,16 @@ logger = get_logger(__name__)
 
 
 class Metrics:
-    
-    def __init__(self):
+
+    def __init__(self, num_classes: int = 2):
+        """
+        Args:
+            num_classes: Number of scored classes for this modality (see
+                constants.MODALITY_NUM_CLASSES: image=3, video=4, audio=2).
+                num_classes=2 makes the multiclass metrics reduce exactly to
+                the binary ones.
+        """
+        self.num_classes = max(2, int(num_classes))
         self.true_positives = 0.0
         self.true_negatives = 0.0
         self.false_positives = 0.0
@@ -16,39 +24,111 @@ class Metrics:
         self.binary_y_true = []
         self.binary_probs = []
         self.binary_weights = []
-    
+        # Multiclass accumulators. confusion[true][pred], weighted.
+        self.confusion = np.zeros((self.num_classes, self.num_classes), dtype=float)
+        self.mc_sq_error = 0.0   # weighted sum of per-sample multiclass Brier
+        self.mc_weight = 0.0
+        self._clipped_preds = 0
+
     def update(
-        self, 
+        self,
         label: int,
-        pred: int, 
+        pred: int,
         pred_probs: np.ndarray = None,
         weight: float = 1.0,
     ):
-        """Update confusion matrix with new prediction.
+        """Update confusion matrices with a new prediction.
 
         A sample with weight=w contributes to every metric exactly as w copies
         of the same sample would. Default weight=1.0 reproduces unweighted
         behavior.
+
+        Maintains both the binary (real vs not-real) and the full multiclass
+        accumulators, so either score can be computed from one pass.
         """
-        if label == 1 and pred == 1:
+        K = self.num_classes
+
+        # ---- binary (real vs not-real) ----------------------------------
+        binary_label = 0 if label == 0 else 1
+
+        # Derive the binary decision from the collapsed not-real mass rather
+        # than from argmax over the full head. A K>2 head splits its not-real
+        # mass across classes while p[real] stays whole, so argmax only leaves
+        # class 0 once p[real] < max(p[1:]) — p_not_real > 0.75 for an even
+        # 3-way split versus > 0.5 for a binary head with identical beliefs.
+        # Exactly equivalent to argmax when len(pred_probs) <= 2.
+        if pred_probs is None or len(pred_probs) == 0:
+            p_not_real = None
+        elif len(pred_probs) >= 2:
+            p_not_real = float(1.0 - pred_probs[0])
+        else:
+            p_not_real = float(pred_probs[0])
+
+        if p_not_real is None:
+            binary_pred = 0 if pred == 0 else 1
+        else:
+            binary_pred = int(p_not_real > 0.5)
+
+        if binary_label == 1 and binary_pred == 1:
             self.true_positives += weight
-        elif label == 0 and pred == 0:
+        elif binary_label == 0 and binary_pred == 0:
             self.true_negatives += weight
-        elif label == 0 and pred == 1:
+        elif binary_label == 0 and binary_pred == 1:
             self.false_positives += weight
-        elif label == 1 and pred == 0:
+        elif binary_label == 1 and binary_pred == 0:
             self.false_negatives += weight
 
-        if pred_probs is not None:
-            self.binary_y_true.append(label)
+        if p_not_real is not None:
+            self.binary_y_true.append(binary_label)
             self.binary_weights.append(weight)
-            if len(pred_probs) == 3:
-                binary_prob = 1.0 - pred_probs[0]
-                self.binary_probs.append(binary_prob)
-            elif len(pred_probs) == 2:
-                self.binary_probs.append(pred_probs[1])
+            self.binary_probs.append(p_not_real)
+
+        # ---- multiclass --------------------------------------------------
+        # A head wider than this modality's class count can emit an index that
+        # does not exist here (e.g. a 4-wide head predicting rendered=3 on a
+        # 3-class image run). See the out-of-range handling below.
+        t = int(label)
+        if not (0 <= t < K):
+            t = min(max(t, 0), K - 1)
+
+        # Project the head's distribution onto this modality's classes. A narrow
+        # head is padded with zeros (it assigns no mass to classes it cannot
+        # express); a wide one is truncated (mass outside this modality's
+        # classes is simply lost, which costs Brier).
+        probs = None
+        if pred_probs is not None and len(pred_probs) > 0:
+            probs = np.zeros(K, dtype=float)
+            src = np.asarray(pred_probs, dtype=float).ravel()
+            if len(src) == 1:
+                # single-logit head: [p_not_real] -> [1-p, p]
+                probs[0] = 1.0 - float(src[0])
+                probs[1] = float(src[0])
             else:
-                self.binary_probs.append(pred_probs[0])
+                n = min(K, len(src))
+                probs[:n] = src[:n]
+
+        p = int(pred)
+        if not (0 <= p < K):
+            # Do NOT clip to K-1: that lands on the diagonal whenever the true
+            # label happens to be K-1, scoring a prediction of a class that does
+            # not exist in this modality as correct. Fall back to the model's
+            # best VALID class — the same projection Brier uses, and what you
+            # would do at inference time — or, with no probabilities to fall
+            # back on, to a deterministic non-matching class so an invalid
+            # prediction can never be counted correct.
+            self._clipped_preds += 1
+            if probs is not None and probs.sum() > 0:
+                p = int(np.argmax(probs))
+            else:
+                p = (t + 1) % K
+
+        self.confusion[t, p] += weight
+
+        if probs is not None:
+            onehot = np.zeros(K, dtype=float)
+            onehot[t] = 1.0
+            self.mc_sq_error += weight * float(np.sum((probs - onehot) ** 2))
+            self.mc_weight += weight
 
     def calculate_binary_mcc(self) -> float:
         """Calculate Matthews Correlation Coefficient for binary classification."""
@@ -96,11 +176,68 @@ class Metrics:
 
         return float(np.average((y_prob - y_true) ** 2, weights=weights))
 
+    def calculate_multiclass_mcc(self) -> float:
+        """Gorodkin's R_K — the multiclass generalisation of MCC.
+
+            R_K = (N*Tr(C) - sum_k t_k*p_k)
+                  / sqrt((N^2 - sum_k p_k^2) * (N^2 - sum_k t_k^2))
+
+        where C is the weighted confusion matrix, t_k the true count of class k
+        and p_k the predicted count of class k.
+
+        Reduces exactly to the binary MCC when num_classes == 2. Range is
+        [-1, 1] for K=2; for K>2 the attainable minimum is -1/(K-1) rather
+        than -1, so the normalised floor in compute_sn34_score is above 0.
+        Returns 0.0 for a degenerate matrix (single class present or a model
+        that emitted only one class), matching calculate_binary_mcc.
+        """
+        C = self.confusion
+        N = float(C.sum())
+        if N <= 0:
+            return 0.0
+        t = C.sum(axis=1)  # true totals per class
+        p = C.sum(axis=0)  # predicted totals per class
+        numerator = N * float(np.trace(C)) - float(np.dot(t, p))
+        denominator = np.sqrt(
+            max(0.0, N * N - float(np.dot(p, p)))
+            * max(0.0, N * N - float(np.dot(t, t)))
+        )
+        return float(numerator / denominator) if denominator > 0 else 0.0
+
+    def calculate_multiclass_brier(self) -> float:
+        """Multiclass Brier score: mean over samples of sum_k (p_k - y_k)^2.
+
+        Range [0, 2]. A uniform guesser (p_k = 1/K) scores (K-1)/K, i.e. 0.5
+        for K=2, 0.667 for K=3, 0.75 for K=4 — that is the baseline used for
+        normalisation in compute_sn34_score.
+
+        For K=2 this is exactly twice the binary calculate_brier(), and the
+        baseline is exactly twice 0.25, so the normalised value is identical.
+        """
+        if self.mc_weight <= 0:
+            K = self.num_classes
+            return (K - 1) / K  # random baseline
+        return float(self.mc_sq_error / self.mc_weight)
+
+    def multiclass_random_baseline(self) -> float:
+        """Brier score of a uniform guesser over num_classes."""
+        K = self.num_classes
+        return (K - 1) / K
+
+    def per_class_recall(self) -> Dict[int, float]:
+        """Recall per true class, for diagnosing which classes a model confuses."""
+        out = {}
+        for k in range(self.num_classes):
+            total = float(self.confusion[k].sum())
+            out[k] = float(self.confusion[k, k] / total) if total > 0 else 0.0
+        return out
+
     def compute_sn34_score(
         self,
         alpha: float = 1.2,
         beta: float = 1.8,
-        agg: str = "geomean"
+        agg: str = "geomean",
+        multiclass: bool = False,
     ) -> float:
         """
         SN34 score: combined metric from binary MCC (discrimination) and Brier (calibration).
@@ -118,15 +255,23 @@ class Metrics:
             float in [0,1].
         """
 
-        # Normalize MCC: [-1, 1] -> [0, 1]
-        bin_mcc = float(self.calculate_binary_mcc())
-        mcc_norm = max(0.0, min((bin_mcc + 1.0) / 2.0, 1.0)) ** alpha
+        if multiclass:
+            # Gorodkin R_K in [-1,1] -> [0,1]. Same (x+1)/2 mapping as binary;
+            # note the attainable floor is -1/(K-1) for K>2, so a maximally
+            # wrong K=4 model lands near 0.33 rather than 0.
+            mcc = float(self.calculate_multiclass_mcc())
+            brier = self.calculate_multiclass_brier()
+            baseline = self.multiclass_random_baseline()
+        else:
+            mcc = float(self.calculate_binary_mcc())
+            brier = self.calculate_brier()
+            baseline = 0.25
 
-        # Normalize Brier: [0, 0.25] -> [1, 0] (inverted, lower is better)
-        # Then apply beta exponent
-        brier = self.calculate_brier()
-        # random=0.25 -> 0, perfect=0 -> 1
-        brier_score = max(0.0, (0.25 - brier) / 0.25) ** beta
+        mcc_norm = max(0.0, min((mcc + 1.0) / 2.0, 1.0)) ** alpha
+
+        # Normalize Brier against the uniform-guess baseline for this class
+        # count: random -> 0, perfect -> 1. Then apply beta exponent.
+        brier_score = max(0.0, (baseline - brier) / baseline) ** beta
 
         if agg == "geomean":
             final = (max(1e-12, mcc_norm * brier_score)) ** 0.5

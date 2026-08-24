@@ -9,7 +9,7 @@ Example usage:
     from gasbench import run_benchmark
 
     results = await run_benchmark(
-        model_path="path/to/model.onnx",
+        model_path="path/to/model_directory",
         modality="image",
         mode="debug"
     )
@@ -35,7 +35,7 @@ __all__ = [
 
 # Benchmark exports resolve lazily (PEP 562) so that the base install —
 # which carries only the dataset registry and pyyaml — can import
-# gasbench.dataset.config without pulling in torch/onnxruntime. The full
+# gasbench.dataset.config without pulling in torch. The full
 # benchmark stack requires the `gpu` extra: pip install gasbench[gpu]
 _LAZY_EXPORTS = {
     "run_image_benchmark": ("gasbench.benchmarks.image_bench", "run_image_benchmark"),

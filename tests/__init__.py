@@ -7,4 +7,3 @@ Test structure:
 - smoke/: Smoke tests with real datasets (slow, optional)
 - fixtures/: Test data fixtures
 """
-

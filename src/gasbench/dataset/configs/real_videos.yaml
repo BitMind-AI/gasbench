@@ -1,8 +1,10 @@
-# Image Dataset Configurations -- Real Videos
-#
-datasets:
+# Video Dataset Configurations -- Real Videos
+# 4-class video taxonomy: real | synthetic | rendered | semisynthetic.
+# This file: camera-captured video only. CGI/game-engine lives in synthetic_videos as rendered.
 
-  # -- action --
+# Some previously-active entries were moved to legacy_videos.yaml (not loaded by default).
+
+datasets:
 
   - name: FreeTacMan
     path: OpenDriveLab/FreeTacMan
@@ -145,16 +147,6 @@ datasets:
     source_format: mp4
     media_per_archive: 1000
     archives_per_dataset: 1
-    generator_family: real
-    content_category: action
-
-  - name: sports-qa
-    path: HopLeeTop/Sports-QA
-    modality: video
-    media_type: real
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
     generator_family: real
     content_category: action
 
@@ -326,48 +318,10 @@ datasets:
     generator_family: real
     content_category: diverse
 
-  - name: mavos-dd-arabic-real
-    path: 34data/mavos-dd-arabic-real
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
   - name: mavos-dd-english_real
-    path: 34data/mavos-dd-english_real
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
-  - name: mavos-dd-german_real
-    path: 34data/mavos-dd-german_real
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
-  - name: mavos-dd-hindi_real
-    path: 34data/mavos-dd-hindi_real
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
-  - name: mavos-dd-mandarin_real
-    path: 34data/mavos-dd-mandarin_real
+    path: unibuc-cs/MAVOS-DD
+    hf_revision: 3ea7e6dbf0ed7e4f279bb8e6340bf55f0f2e55a5
+    hf_subfolders: [english/real]
     modality: video
     media_type: real
     source_format: mp4
@@ -759,39 +713,10 @@ datasets:
     generator_family: real
     content_category: action
 
-  - name: MAVOS-DD-romanian_real
-    path: 34data/MAVOS-DD-romanian_real
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
-  - name: MAVOS-DD-russian_real
-    path: 34data/MAVOS-DD-russian_real
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
-  - name: MAVOS-DD-spanish_real
-    path: 34data/MAVOS-DD-spanish_real
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: real
-    content_category: diverse
-
-
   - name: facebook-2M-Flores-ASL
-    path: 34data/facebook-2M-Flores-ASL
+    path: facebook/2M-Flores-ASL
+    hf_revision: b450c1a427738e78f06362fc4619674f5d74f774
+    hf_subfolders: [data]
     modality: video
     media_type: real
     source_format: mp4
@@ -823,7 +748,9 @@ datasets:
     content_category: diverse
 
   - name: omnivideo-test
-    path: 34data/omnivideo-test
+    path: MiG-NJU/OmniVideo-Test
+    hf_revision: a69c23eb3c7f065d3cd8cf98ed9704a5250427f4
+    hf_subfolders: [videos]
     modality: video
     media_type: real
     source_format: mp4
@@ -843,7 +770,9 @@ datasets:
     content_category: medical
 
   - name: qa-v1
-    path: 34data/qa-v1
+    path: aslhlf/QA_V1
+    hf_revision: fc13e6e41f855051420f5d87ff0f5a861bf40851
+    hf_subfolders: [videos]
     modality: video
     media_type: real
     source_format: mp4
@@ -853,7 +782,8 @@ datasets:
     content_category: diverse
 
   - name: qa-test-h264
-    path: 34data/qa-test-h264
+    path: aslhlf/QA_test_h264
+    hf_revision: c2b18ce4fd8bd698e77b92a02b4ce9354ae95b10
     modality: video
     media_type: real
     source_format: mp4
@@ -863,7 +793,9 @@ datasets:
     content_category: diverse
 
   - name: deeptumorvqa
-    path: 34data/deeptumorvqa
+    path: tumor-vqa/DeepTumorVQA_2.0
+    hf_revision: a8b9db5133fda02567476dcb49498ec51f6aed37
+    hf_subfolders: [train/videos, benchmark/videos]
     modality: video
     media_type: real
     source_format: mp4
@@ -1076,3 +1008,88 @@ datasets:
     archives_per_dataset: -1
     generator_family: real
     content_category: diverse
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: grounded-videollm-moment-10m
+    path: 34data/grounded-videollm-moment-10m
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: grounded-videollm-vtimellm-stage2
+    path: 34data/grounded-videollm-vtimellm-stage2
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: lanyuer-bili
+    path: 34data/lanyuer-bili
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: vigilvid-research-real
+    path: farouk04/vigilvid-research
+    hf_revision: f4ec1afcc9599861b41cffb7768ad16340c41612
+    hf_subfolders: [videos/test/real]
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: social-media-deepfakes-real
+    path: acroitoru/social_media_deepfakes
+    hf_revision: 14bf14c255e222ebd2f0adadb2de83784695e72a
+    hf_subfolders: [social_media/real]
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: sekai-real-walking
+    path: 34data/sekai-real-walking
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts
+
+  - name: human-motion-tracking-deeplabcut
+    path: pratikshapai/human-motion-tracking-deeplabcut
+    hf_revision: 202b971078b1b1be719bab211bfdc7b9848bed71
+    hf_subfolders: [videos]
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: real
+    content_category: action
+    notes: Released from v22 bmcore holdouts

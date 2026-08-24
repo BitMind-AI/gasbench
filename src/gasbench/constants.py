@@ -1,15 +1,76 @@
 """Constants used throughout the gasbench package."""
 
-# Media type to label mapping for binary classification
-# 0 = real, 1 = AI-generated (synthetic or semisynthetic)
-# Note: Dataset configs still distinguish synthetic vs semisynthetic for provenance tracking
+# Per-modality class indices. Class 0 is always real so binary collapse is 1 - p[0].
+#
+# Image is 3-class (no rendered): 0=real, 1=synthetic, 2=semisynthetic.
+# Video is 4-class:                0=real, 1=synthetic, 2=semisynthetic, 3=rendered.
+# Audio stays binary:              0=real, 1=synthetic (semisynthetic collapsed).
+#
+# Semisynthetic media retains materially captured visual content alongside
+# spatially localized generated or replaced visual content. Fully synthesized
+# output remains synthetic, even when captured media conditions its generation;
+# modifying exclusively synthetic or rendered media does not make it semisynthetic.
+#
+# Image has no rendered class: CGI/game-engine stills are excluded from image configs.
+IMAGE_MEDIA_TYPE_TO_LABEL = {
+    "real": 0,
+    "synthetic": 1,
+    "semisynthetic": 2,
+}
+VIDEO_MEDIA_TYPE_TO_LABEL = {
+    "real": 0,
+    "synthetic": 1,
+    "semisynthetic": 2,
+    "rendered": 3,
+}
+AUDIO_MEDIA_TYPE_TO_LABEL = {
+    "real": 0,
+    "synthetic": 1,
+    "semisynthetic": 1,
+}
+
+VALID_MEDIA_TYPES = {
+    "image": frozenset(IMAGE_MEDIA_TYPE_TO_LABEL),
+    "video": frozenset(VIDEO_MEDIA_TYPE_TO_LABEL),
+    "audio": frozenset({"real", "synthetic", "semisynthetic"}),
+}
+
+_MODALITY_LABELS = {
+    "image": IMAGE_MEDIA_TYPE_TO_LABEL,
+    "video": VIDEO_MEDIA_TYPE_TO_LABEL,
+    "audio": AUDIO_MEDIA_TYPE_TO_LABEL,
+}
+
+# Number of scored classes per modality, derived from the label maps above so
+# the two can never drift. image=3, video=4, audio=2 (semisynthetic collapses
+# onto synthetic for audio). Used to size the multiclass confusion matrix and
+# to pick the random-guess baselines in Metrics.
+MODALITY_NUM_CLASSES = {
+    modality: max(table.values()) + 1 for modality, table in _MODALITY_LABELS.items()
+}
+
+# Legacy binary map (real vs not-real). Prefer media_type_to_label(media_type, modality).
 MEDIA_TYPE_TO_LABEL = {
     "real": 0,
     "synthetic": 1,
     "semisynthetic": 1,
 }
 
+
+def media_type_to_label(media_type: str, modality: str) -> int:
+    """Map a dataset media_type to the integer class index for this modality."""
+    table = _MODALITY_LABELS.get(modality)
+    if table is None:
+        raise KeyError(f"Unknown modality '{modality}'")
+    try:
+        return table[media_type]
+    except KeyError:
+        raise KeyError(
+            f"Invalid media_type '{media_type}' for modality '{modality}'. "
+            f"Valid: {sorted(table)}"
+        ) from None
+
+
 # Video evaluation limits
 # Caps num_frames to prevent submitted models from overwhelming the eval system.
 MAX_VIDEO_NUM_FRAMES = 64
-

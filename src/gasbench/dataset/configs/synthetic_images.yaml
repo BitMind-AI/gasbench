@@ -1,8 +1,21 @@
-# Image Dataset Configurations -- Synthetic Images
+# Image Dataset Configurations -- Synthetic + Semisynthetic Images
+# 3-class image taxonomy: real | synthetic | semisynthetic. No rendered class.
+# media_type: synthetic = fully neural-generated (t2i/GAN).
+# media_type: semisynthetic = materially captured visual content retained alongside
+#   spatially localized generated/replaced content. Fully synthesized output remains
+#   synthetic; modifying exclusively synthetic/rendered media does not change that.
 #
-datasets:
+# Excluded (cannot assign a correct 3-class label; no reliable split):
+#   justweirdimages — mixed real photos, 2D animation, photoshops; no sidecar
+#     or path/column that isolates a single class.
+#   cg-fake-id — CGI identity-document stills (filenames *cg*.jpg). Images have
+#     no rendered class; the dump is uniformly CGI so it cannot be split.
+#   deepfake-insight — parquet filenames are IMDB-WIKI celebrity IDs with no
+#     real/fake marker. Cannot verify every row is manipulated vs real photo.
 
-  # -- animals --
+# Some previously-active entries were moved to legacy_images.yaml (not loaded by default).
+
+datasets:
 
   - name: Synthetic-Dog-Images
     path: 34data/Synthetic-Dog-Images
@@ -17,7 +30,9 @@ datasets:
     content_category: animals
 
   - name: fake-animals-images
-    path: 34data/fake-animals-images
+    path: Prgckwb/fake-animals
+    hf_revision: 210cb3fde51890fabec7a9ebcc857781cdd9c284
+    hf_subfolders: [data]
     modality: image
     media_type: synthetic
     source_format: parquet
@@ -41,31 +56,6 @@ datasets:
     generator_family: sd
     generator_variant: sd15
     content_category: art
-
-  - name: SDv15R-dpmsolver-25-15K-part1
-    path: 34data/SDv15R-dpmsolver-25-15K-part1
-    modality: image
-    media_type: synthetic
-    source_format: png
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: sd
-    generator_variant: sd15
-    content_category: art
-
-  - name: SDv15R-dpmsolver-25-15K-part3
-    path: 34data/SDv15R-dpmsolver-25-15K-part3
-    modality: image
-    media_type: synthetic
-    source_format: png
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: sd
-    generator_variant: sd15
-    content_category: art
-
-  # -- diverse --
 
   - name: fake_sdxl_12k
     path: Kyleyee/fake_sdxl_12k
@@ -122,21 +112,10 @@ datasets:
     generator_variant: aura
     content_category: diverse
 
-  - name: fakeclue-fake-chameleon
-    path: bitmind/FakeClue
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/fake/chameleon/]
-    generator_family: mixed-generation
-    content_category: diverse
-
   - name: fakeclue-fake-ffpp
     path: bitmind/FakeClue
     modality: image
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
@@ -152,17 +131,6 @@ datasets:
     media_per_archive: 500
     archives_per_dataset: 2
     include_paths: [data/fake/genimage/]
-    generator_family: mixed-generation
-    content_category: diverse
-
-  - name: fakeclue-fake-satellite
-    path: bitmind/FakeClue
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/fake/satellite/]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -270,18 +238,6 @@ datasets:
     generator_family: mixed-generation
     content_category: diverse
 
-  - name: pica-100k
-    path: Andrew613/PICA-100K
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: 200
-    archives_per_dataset: 5
-    data_columns: [src_img, tgt_img]
-    notes: Video-derived images stored in both src_img and tgt_img columns
-    generator_family: mixed-generation
-    content_category: diverse
-
   - name: ptd-synthetic
     path: 34data/ptd-synthetic
     modality: image
@@ -373,17 +329,6 @@ datasets:
     generator_family: mixed-generation
     content_category: documents
 
-  - name: fakeclue-fake-doc
-    path: bitmind/FakeClue
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [data/fake/doc/]
-    generator_family: mixed-generation
-    content_category: documents
-
   - name: idnet-2025
     path: cactuslab/IDNet-2025
     modality: image
@@ -409,7 +354,7 @@ datasets:
   - name: receipts-i2i
     path: 34data/receipts-i2i
     modality: image
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
@@ -497,42 +442,6 @@ datasets:
     generator_variant: stylegan2
     content_category: faces
 
-  - name: SFHQ-part2
-    path: bitmind/SyntheticFacesHQ
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    include_paths: [SFHQ-part2.zip]
-    generator_family: stylegan
-    generator_variant: stylegan2
-    content_category: faces
-
-  - name: SFHQ-part3
-    path: bitmind/SyntheticFacesHQ
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    include_paths: [SFHQ-part3.zip]
-    generator_family: stylegan
-    generator_variant: stylegan2
-    content_category: faces
-
-  - name: SFHQ-part4
-    path: bitmind/SyntheticFacesHQ
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    include_paths: [SFHQ-part4.zip]
-    generator_family: stylegan
-    generator_variant: stylegan2
-    content_category: faces
-
   - name: STARGAN
     path: 34data/STARGAN
     modality: image
@@ -589,17 +498,6 @@ datasets:
     generator_variant: arc2face
     content_category: faces
 
-  - name: cg-fake-id
-    path: 34data/cg-fake-id
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
   - name: digi2real
     path: 34data/digi2real
     modality: image
@@ -624,94 +522,6 @@ datasets:
 
   - name: human-faces-dataset-r1
     path: 34data/human-faces-dataset-r1
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r2
-    path: 34data/human-faces-dataset-r2
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r3
-    path: 34data/human-faces-dataset-r3
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r4
-    path: 34data/human-faces-dataset-r4
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r5
-    path: 34data/human-faces-dataset-r5
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r6
-    path: 34data/human-faces-dataset-r6
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r7
-    path: 34data/human-faces-dataset-r7
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r8
-    path: 34data/human-faces-dataset-r8
-    modality: image
-    media_type: synthetic
-    source_format: jpeg
-    media_per_archive: -1
-    archives_per_dataset: -1
-    notes: Released from v14 bmcore holdouts
-    generator_family: mixed-generation
-    content_category: faces
-
-  - name: human-faces-dataset-r9
-    path: 34data/human-faces-dataset-r9
     modality: image
     media_type: synthetic
     source_format: jpeg
@@ -746,7 +556,8 @@ datasets:
     content_category: faces
 
   - name: synthetic_cards
-    path: 34data/synthetic_cards
+    path: sugiv/synthetic_cards
+    hf_revision: 18b74fbb6b5d26e3b11c4a6206f65acd48d31489
     modality: image
     media_type: synthetic
     source_format: png
@@ -769,20 +580,10 @@ datasets:
 
   # ── Released v18 holdouts ─────────────────────────────────────────────────
 
-  - name: deepfake-insight
-    path: 34data/deepfake-insight
-    modality: image
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: faces
-
   - name: deepfakeface-inpainting
     path: 34data/deepfakeface-inpainting
     modality: image
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
@@ -921,16 +722,6 @@ datasets:
     generator_family: mixed-generation
     content_category: diverse
 
-  - name: justweirdimages
-    path: pipyp/justweirdimages
-    modality: image
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: diverse
-
   - name: flux-sd15-ipadapter
     path: 34data/flux-sd15-ipadapter
     modality: image
@@ -998,9 +789,10 @@ datasets:
     content_category: faces
 
   - name: deepfakes-qa-15k
-    path: 34data/deepfakes-qa-15k
+    path: prithivMLmods/Deepfakes-QA-15K
+    hf_revision: 9159d410b8872e1595f0d63f490683b5b1f957df
     modality: image
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: parquet
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1059,3 +851,94 @@ datasets:
     generator_variant: sdxl
     content_category: faces
 
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: ntire-robustaigendetection-fake
+    path: 34data/ntire-robustaigendetection-fake
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: gemini31-flash-lite-train
+    path: 34data/gemini31-flash-lite-train
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: gemini
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: gemini31-flash-lite-val
+    path: 34data/gemini31-flash-lite-val
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: gemini
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: ai-generated-ecommerce-damaged-electronics
+    path: 34data/ai-generated-ecommerce-damaged-electronics
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: gpt-image-edit-1-5m-hqedit
+    path: 34data/gpt-image-edit-1-5m-hqedit
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: gpt-image
+    content_category: diverse
+    notes: Released from v22 bmcore holdouts
+
+  - name: deepfake-identity-isolated-fake
+    path: 34data/deepfake-identity-isolated-fake
+    modality: image
+    media_type: semisynthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: faceswap
+    content_category: faces
+    notes: Released from v22 bmcore holdouts
+
+  - name: sid-set-synthetic
+    path: 34data/sid-set-synthetic
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    generator_family: mixed-generation
+    content_category: documents
+    notes: Released from v22 bmcore holdouts
+
+  - name: pica-100k
+    path: Andrew613/PICA-100K
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 200
+    archives_per_dataset: 5
+    data_columns: [src_img, tgt_img]
+    notes: PICA-100K is purely synthetic (PICABench; video-derived src and edited tgt). Not split — src is not camera-real.
+    generator_family: mixed-generation
+    content_category: diverse

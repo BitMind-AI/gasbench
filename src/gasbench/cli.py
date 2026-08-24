@@ -108,15 +108,6 @@ def command_run(args):
             print("Custom model directories must contain: model_config.yaml, model.py, and weights file")
             return 1
         print(f"📦 Using custom PyTorch model from: {model_path}")
-    elif model_path.suffix.lower() == ".onnx":
-        # ONNX format no longer supported for competition
-        print("Error: ONNX format is no longer supported for competition.")
-        print("Please use a safetensors model directory containing:")
-        print("  - model_config.yaml")
-        print("  - model.py")
-        print("  - *.safetensors weights")
-        print("See docs/Safetensors.md for requirements.")
-        return 1
     else:
         print("Error: Model must be a directory with model_config.yaml, model.py, and *.safetensors")
         print(f"Got: {model_path}")
@@ -146,6 +137,7 @@ def command_run(args):
         config["cache_directory"] = args.cache_dir
     if score_composition:
         config["score_composition"] = score_composition
+    config["multiclass_scoring"] = bool(getattr(args, "multiclass_scoring", False))
 
     print("\n🎯 Starting gasbench evaluation")
     print(json.dumps(config, indent=2))
@@ -170,6 +162,7 @@ def command_run(args):
                 holdout_weight=getattr(args, "holdout_weight", 1.0),
                 holdouts_only=holdouts_only,
                 score_composition=score_composition,
+                multiclass_scoring=bool(getattr(args, "multiclass_scoring", False)),
                 dataset_filters=getattr(args, "datasets", None),
                 content_category=args.content_category,
                 n_aug_per_dataset=getattr(args, "n_aug_per_dataset", 0),
@@ -564,6 +557,16 @@ See docs/Safetensors.md for detailed requirements.
         metavar="SHARE",
         help="Target share of total score weight carried by gasstation samples (0-1). "
              "See --holdout-share. Public corpus receives the remaining share.",
+    )
+    run_parser.add_argument(
+        "--multiclass-scoring",
+        action="store_true",
+        help="Derive sn34_score from Gorodkin's multiclass MCC and the multiclass "
+             "Brier score instead of the binary real-vs-not-real collapse, so "
+             "distinguishing synthetic / semisynthetic / rendered earns points. "
+             "Mathematically identical to binary scoring for audio (2 classes). "
+             "Both variants are always reported as binary_sn34_score and "
+             "multiclass_sn34_score regardless of this flag.",
     )
     run_parser.add_argument(
         "--holdouts-only",

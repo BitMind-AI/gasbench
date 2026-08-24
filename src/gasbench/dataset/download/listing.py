@@ -2,7 +2,7 @@
 
 import random
 from urllib.parse import quote
-from typing import List, Optional
+from typing import List, Optional, Sequence, Union
 
 import huggingface_hub as hf_hub
 from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError
@@ -53,10 +53,9 @@ def _select_files_to_download(
     return random.sample(urls, min(count, len(urls)))
 
 
-
 def _list_remote_dataset_files(
     dataset_path: str,
-    source_format: str = ".parquet",
+    source_format: Union[str, Sequence[str]] = ".parquet",
     current_week_only: bool = False,
     num_weeks: int = None,
     target_week: str = None,
@@ -65,6 +64,8 @@ def _list_remote_dataset_files(
     source: str = "huggingface",
     hf_token: Optional[str] = None,
     max_files: Optional[int] = None,
+    hf_revision: Optional[str] = None,
+    hf_subfolders: Optional[List[str]] = None,
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format and path patterns.
 
@@ -85,45 +86,65 @@ def _list_remote_dataset_files(
     """
     if max_files is None:
         max_files = MAX_FILES_DEFAULT
-    # Don't add "." prefix for special formats like "frames"
-    if source_format != "frames" and not source_format.startswith("."):
-        source_format = "." + source_format
-
-    if source_format in [".tar", ".tar.gz", ".tgz"]:
-        source_format = [".tar", ".tar.gz", ".tgz"]
+    formats = [source_format] if isinstance(source_format, str) else list(source_format)
+    formats = [
+        fmt if fmt == "frames" or fmt.startswith(".") else f".{fmt}" for fmt in formats
+    ]
+    if any(fmt in {".tar", ".tar.gz", ".tgz"} for fmt in formats):
+        formats = list(dict.fromkeys([*formats, ".tar", ".tar.gz", ".tgz"]))
+    preferred_format = formats[0]
+    preferred_extensions = (
+        (".tar", ".tar.gz", ".tgz")
+        if preferred_format in {".tar", ".tar.gz", ".tgz"}
+        else preferred_format
+    )
+    source_format = preferred_format if len(formats) == 1 else formats
 
     # For gasstation datasets with week filtering, we must fetch ALL files before
     # applying max_files. Otherwise early termination picks up files from older
     # weeks (alphabetically first) and the subsequent week filter discards them all,
     # resulting in zero files.
     is_gasstation = "gasstation" in dataset_path.lower()
-    needs_week_filter = is_gasstation and (target_week or num_weeks or current_week_only)
+    needs_week_filter = is_gasstation and (
+        target_week or num_weeks or current_week_only
+    )
     listing_max = None if needs_week_filter else max_files
 
     if source == "modelscope":
         files = list_modelscope_files(repo_id=dataset_path, extension=source_format)
         if include_paths:
-            files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
+            files = [
+                f for f in files if any(path_seg in f for path_seg in include_paths)
+            ]
         if exclude_paths:
-            files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
+            files = [
+                f for f in files if not any(path_seg in f for path_seg in exclude_paths)
+            ]
         if not needs_week_filter:
             files = files[:max_files]
     elif source == "s3":
         files = list_s3_files(path=dataset_path, extension=source_format)
         if include_paths:
-            files = [f for f in files if any(path_seg in f for path_seg in include_paths)]
+            files = [
+                f for f in files if any(path_seg in f for path_seg in include_paths)
+            ]
         if exclude_paths:
-            files = [f for f in files if not any(path_seg in f for path_seg in exclude_paths)]
+            files = [
+                f for f in files if not any(path_seg in f for path_seg in exclude_paths)
+            ]
         if not needs_week_filter:
             files = files[:max_files]
     else:  # hf - supports early termination natively
         files = list_hf_files(
             repo_id=dataset_path,
             extension=source_format,
+            preferred_extension=preferred_extensions if len(formats) > 1 else None,
             token=hf_token,
             max_files=listing_max,
             include_paths=include_paths,
             exclude_paths=exclude_paths,
+            revision=hf_revision,
+            subfolders=hf_subfolders,
         )
 
     if is_gasstation:
@@ -150,9 +171,11 @@ def _list_remote_dataset_files(
     return files
 
 
-
 def _get_download_urls(
-    dataset_path: str, filenames: List[str], source: str = "huggingface"
+    dataset_path: str,
+    filenames: List[str],
+    source: str = "huggingface",
+    hf_revision: Optional[str] = None,
 ) -> List[str]:
     """Get download URLs for data files from the specified source.
 
@@ -169,16 +192,17 @@ def _get_download_urls(
     elif source == "s3":
         return _get_s3_urls(dataset_path, filenames)
     else:
-        return _get_huggingface_urls(dataset_path, filenames)
+        return _get_huggingface_urls(dataset_path, filenames, hf_revision)
 
 
-
-def _get_huggingface_urls(dataset_path: str, filenames: List[str]) -> List[str]:
+def _get_huggingface_urls(
+    dataset_path: str, filenames: List[str], revision: Optional[str] = None
+) -> List[str]:
+    revision = quote(revision or "main", safe="")
     return [
-        f"https://huggingface.co/datasets/{dataset_path}/resolve/main/{quote(f, safe='/')}"
+        f"https://huggingface.co/datasets/{dataset_path}/resolve/{revision}/{quote(f, safe='/')}"
         for f in filenames
     ]
-
 
 
 def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
@@ -186,7 +210,6 @@ def _get_modelscope_urls(dataset_path: str, filenames: List[str]) -> List[str]:
         f"https://www.modelscope.cn/api/v1/datasets/{dataset_path}/repo?Revision=master&FilePath={f}"
         for f in filenames
     ]
-
 
 
 def list_hf_files(
@@ -197,6 +220,9 @@ def list_hf_files(
     max_files=None,
     include_paths=None,
     exclude_paths=None,
+    preferred_extension=None,
+    revision=None,
+    subfolders=None,
 ):
     """List files from a Hugging Face repository with early termination support.
 
@@ -216,6 +242,8 @@ def list_hf_files(
         DatasetAccessError: If the repository is gated/private without access, or not found
     """
     files = []
+    preferred_matches = 0
+    extension_counts = {}
     if extension:
         if isinstance(extension, (list, tuple, set)):
             exts = tuple(extension)
@@ -225,16 +253,45 @@ def list_hf_files(
         exts = None
 
     try:
-        for f in hf_hub.list_repo_files(repo_id=repo_id, repo_type=repo_type, token=token):
+        api = hf_hub.HfApi()
+        roots = subfolders or [None]
+        entries = (
+            entry
+            for root in roots
+            for entry in api.list_repo_tree(
+                repo_id=repo_id,
+                path_in_repo=root,
+                recursive=True,
+                expand=False,
+                revision=revision,
+                repo_type=repo_type,
+                token=token,
+            )
+        )
+        for entry in entries:
+            f = getattr(entry, "path", None)
+            if not f:
+                continue
             if exts and not f.endswith(exts):
                 continue
             if include_paths and not any(path_seg in f for path_seg in include_paths):
                 continue
             if exclude_paths and any(path_seg in f for path_seg in exclude_paths):
                 continue
-            files.append(f)
-            if max_files and len(files) >= max_files:
-                logger.info(f"Early termination: collected {max_files} files from {repo_id}")
+            is_preferred = preferred_extension is None or f.endswith(preferred_extension)
+            if is_preferred:
+                preferred_matches += 1
+            # Retain enough candidates for each format without allowing a
+            # fallback extension to crowd the preferred extension out.
+            matched_extension = next((ext for ext in exts or () if f.endswith(ext)), None)
+            retained_for_extension = extension_counts.get(matched_extension, 0)
+            if not max_files or retained_for_extension < max_files:
+                files.append(f)
+                extension_counts[matched_extension] = retained_for_extension + 1
+            if max_files and preferred_matches >= max_files:
+                logger.info(
+                    f"Early termination: collected {max_files} files from {repo_id}"
+                )
                 break
     except GatedRepoError:
         raise DatasetAccessError(
@@ -248,7 +305,6 @@ def list_hf_files(
     except Exception as e:
         logger.error(f"Failed to list files of type {extension} in {repo_id}: {e}")
     return files
-
 
 
 def list_modelscope_files(repo_id, extension=None):
@@ -291,6 +347,3 @@ def list_modelscope_files(repo_id, extension=None):
         )
 
     return files
-
-
-

@@ -252,6 +252,7 @@ async def run_image_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: dict = None,
+    multiclass_scoring: bool = False,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
@@ -288,6 +289,7 @@ async def run_image_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
         )

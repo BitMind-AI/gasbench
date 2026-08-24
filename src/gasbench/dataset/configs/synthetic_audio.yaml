@@ -723,3 +723,76 @@ datasets:
     archives_per_dataset: 2
     generator_family: mixed-generation
     content_category: speech
+
+  # ── Released v22 holdouts ─────────────────────────────────────────────────
+
+  - name: ai4bharat-speecharenabench-kn
+    path: ai4bharat/SpeechArenaBench
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [kn]
+    data_columns: [audio_a]
+    generator_family: mixed-generation
+    content_category: speech
+    notes: Kannada audio_a column, released from v22 bmcore holdouts
+
+  - name: ai4bharat-speecharenabench-mr
+    path: ai4bharat/SpeechArenaBench
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [mr]
+    data_columns: [audio_a]
+    generator_family: mixed-generation
+    content_category: speech
+    notes: Marathi audio_a column, released from v22 bmcore holdouts
+
+  - name: indic-tts-kannada
+    path: bc7ec356/synthetic-speech-indic
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 2df2bed589ba5d8f9a91ced12891300c69d567a1
+    hf_subfolders: [kannada]
+    include_paths: [train-]
+    data_columns: [audio]
+    generator_family: mixed-generation
+    content_category: speech
+    notes: Kannada train split, released from v22 bmcore holdouts
+
+  - name: indic-tts-malayalam
+    path: bc7ec356/synthetic-speech-indic
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 2df2bed589ba5d8f9a91ced12891300c69d567a1
+    hf_subfolders: [malayalam]
+    include_paths: [train-]
+    data_columns: [audio]
+    generator_family: mixed-generation
+    content_category: speech
+    notes: Malayalam train split, released from v22 bmcore holdouts
+
+  - name: ruasd-audio
+    path: lab260/RuASD
+    modality: audio
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fcbc87c57b54ef4f58e1135e2813f6f000c2b739
+    archive_include_paths: [fake]
+    generator_family: mixed-generation
+    content_category: speech
+    notes: Synthetic subset of the official RuASD anti-spoofing dataset

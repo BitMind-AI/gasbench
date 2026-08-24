@@ -3,11 +3,13 @@
 import hashlib
 import os
 import random
+import shutil
 import threading
 import time
 import traceback
 from pathlib import Path
 from typing import Generator, List, Optional
+from urllib.parse import unquote, urlsplit
 
 import requests
 
@@ -21,6 +23,58 @@ logger = get_logger(__name__)
 # globally so those two levels cannot multiply into hundreds of HF connections.
 MAX_CONCURRENT_HTTP_TRANSFERS = 12
 _http_transfer_semaphore = threading.BoundedSemaphore(MAX_CONCURRENT_HTTP_TRANSFERS)
+
+
+def _parse_huggingface_dataset_url(url: str):
+    """Return ``(repo_id, revision, filename)`` for canonical HF dataset URLs."""
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https") or parsed.netloc not in (
+        "huggingface.co",
+        "www.huggingface.co",
+    ):
+        return None
+
+    parts = parsed.path.split("/")
+    # /datasets/{owner}/{repo}/resolve/{revision}/{filename...}
+    if len(parts) < 7 or parts[1] != "datasets" or parts[4] != "resolve":
+        return None
+
+    repo_id = f"{unquote(parts[2])}/{unquote(parts[3])}"
+    revision = unquote(parts[5])
+    filename = unquote("/".join(parts[6:]))
+    if not revision or not filename:
+        return None
+    return repo_id, revision, filename
+
+
+def _download_huggingface_file(
+    url: str,
+    output_dir: Path,
+    filepath: Path,
+    hf_token: Optional[str],
+) -> Optional[Path]:
+    """Download one already-selected HF file through huggingface_hub/hf_xet."""
+    parsed = _parse_huggingface_dataset_url(url)
+    if parsed is None:
+        return None
+
+    from huggingface_hub import hf_hub_download
+
+    repo_id, revision, filename = parsed
+    downloaded_path = Path(
+        hf_hub_download(
+            repo_id=repo_id,
+            filename=filename,
+            repo_type="dataset",
+            revision=revision,
+            token=hf_token,
+            local_dir=str(output_dir),
+        )
+    )
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    if downloaded_path != filepath:
+        shutil.move(str(downloaded_path), filepath)
+    return filepath
 
 
 def _stream_downloads(
@@ -151,6 +205,21 @@ def download_single_file(
         partial_filepath = Path(str(filepath) + ".partial")
 
         logger.debug(f"Downloading {url}")
+
+        if _parse_huggingface_dataset_url(url) is not None:
+            try:
+                return _download_huggingface_file(
+                    url=url,
+                    output_dir=output_dir,
+                    filepath=filepath,
+                    hf_token=hf_token,
+                )
+            except Exception as e:
+                logger.warning(
+                    "huggingface_hub download failed for %s; falling back to HTTP: %s",
+                    url,
+                    e,
+                )
 
         max_retries = 5
         effective_chunk_size = max(chunk_size, 1024 * 1024)

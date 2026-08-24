@@ -30,7 +30,9 @@ datasets:
     content_category: animals
 
   - name: fake-animals-images
-    path: 34data/fake-animals-images
+    path: Prgckwb/fake-animals
+    hf_revision: 210cb3fde51890fabec7a9ebcc857781cdd9c284
+    hf_subfolders: [data]
     modality: image
     media_type: synthetic
     source_format: parquet
@@ -554,7 +556,8 @@ datasets:
     content_category: faces
 
   - name: synthetic_cards
-    path: 34data/synthetic_cards
+    path: sugiv/synthetic_cards
+    hf_revision: 18b74fbb6b5d26e3b11c4a6206f65acd48d31489
     modality: image
     media_type: synthetic
     source_format: png
@@ -786,7 +789,8 @@ datasets:
     content_category: faces
 
   - name: deepfakes-qa-15k
-    path: 34data/deepfakes-qa-15k
+    path: prithivMLmods/Deepfakes-QA-15K
+    hf_revision: 9159d410b8872e1595f0d63f490683b5b1f957df
     modality: image
     media_type: semisynthetic
     source_format: parquet

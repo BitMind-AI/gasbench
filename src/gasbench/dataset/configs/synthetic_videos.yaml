@@ -948,7 +948,9 @@ datasets:
   # ── Released v19 holdouts ─────────────────────────────────────────────────
 
   - name: gen-videos-fastwan2
-    path: 34data/gen-videos-fastwan2
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [FastWan2.2-TI2V-5B-FullAttn-Diffusers]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -959,7 +961,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-hunyuanvideo
-    path: 34data/gen-videos-hunyuanvideo
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [HunyuanVideo-1.5]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -970,7 +974,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-kling
-    path: 34data/gen-videos-kling
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Kelin2_6]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -981,7 +987,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-veo3
-    path: 34data/gen-videos-veo3
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Veo3_1]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -991,7 +999,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-wan2
-    path: 34data/gen-videos-wan2
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Wan2_6]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1002,7 +1012,9 @@ datasets:
     content_category: diverse
 
   - name: gen-videos-sora2
-    path: 34data/gen-videos-sora2
+    path: aslhlf/Gen_videos
+    hf_revision: 8acaa74cd9425fc722e4c8eae096778417e1a14c
+    hf_subfolders: [Sora2]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1107,7 +1119,9 @@ datasets:
     content_category: diverse
 
   - name: synwts
-    path: 34data/synwts
+    path: mlcglab/synwts
+    hf_revision: 3c57d64f8603441b43f69dca9a123999776bc014
+    hf_subfolders: [data/videos]
     modality: video
     media_type: rendered
     source_format: mp4
@@ -1217,7 +1231,9 @@ datasets:
     notes: Released from v22 bmcore holdouts
 
   - name: vigilvid-research-fake
-    path: 34data/vigilvid-research-fake
+    path: farouk04/vigilvid-research
+    hf_revision: f4ec1afcc9599861b41cffb7768ad16340c41612
+    hf_subfolders: [videos/test/fake]
     modality: video
     media_type: synthetic
     source_format: mp4
@@ -1228,7 +1244,9 @@ datasets:
     notes: Released from v22 bmcore holdouts
 
   - name: social-media-deepfakes-fake
-    path: 34data/social-media-deepfakes-fake
+    path: acroitoru/social_media_deepfakes
+    hf_revision: 14bf14c255e222ebd2f0adadb2de83784695e72a
+    hf_subfolders: [social_media/fake]
     modality: video
     media_type: semisynthetic
     source_format: mp4

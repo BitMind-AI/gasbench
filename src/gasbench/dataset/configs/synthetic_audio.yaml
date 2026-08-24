@@ -727,48 +727,62 @@ datasets:
   # ── Released v22 holdouts ─────────────────────────────────────────────────
 
   - name: ai4bharat-speecharenabench-kn
-    path: 34data/ai4bharat-speecharenabench-kn
+    path: ai4bharat/SpeechArenaBench
     modality: audio
     media_type: synthetic
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [kn]
+    data_columns: [audio_a]
     generator_family: mixed-generation
     content_category: speech
-    notes: Released from v22 bmcore holdouts
+    notes: Kannada audio_a column, released from v22 bmcore holdouts
 
   - name: ai4bharat-speecharenabench-mr
-    path: 34data/ai4bharat-speecharenabench-mr
+    path: ai4bharat/SpeechArenaBench
     modality: audio
     media_type: synthetic
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [mr]
+    data_columns: [audio_a]
     generator_family: mixed-generation
     content_category: speech
-    notes: Released from v22 bmcore holdouts
+    notes: Marathi audio_a column, released from v22 bmcore holdouts
 
   - name: indic-tts-kannada
-    path: 34data/indic-tts-kannada
+    path: bc7ec356/synthetic-speech-indic
     modality: audio
     media_type: synthetic
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 2df2bed589ba5d8f9a91ced12891300c69d567a1
+    hf_subfolders: [kannada]
+    include_paths: [train-]
+    data_columns: [audio]
     generator_family: mixed-generation
     content_category: speech
-    notes: Released from v22 bmcore holdouts
+    notes: Kannada train split, released from v22 bmcore holdouts
 
   - name: indic-tts-malayalam
-    path: 34data/indic-tts-malayalam
+    path: bc7ec356/synthetic-speech-indic
     modality: audio
     media_type: synthetic
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 2df2bed589ba5d8f9a91ced12891300c69d567a1
+    hf_subfolders: [malayalam]
+    include_paths: [train-]
+    data_columns: [audio]
     generator_family: mixed-generation
     content_category: speech
-    notes: Released from v22 bmcore holdouts
+    notes: Malayalam train split, released from v22 bmcore holdouts
 
   - name: ruasd-audio
     path: 34data/ruasd-audio
@@ -780,4 +794,3 @@ datasets:
     generator_family: mixed-generation
     content_category: speech
     notes: Released from v22 bmcore holdouts
-

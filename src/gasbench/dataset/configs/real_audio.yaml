@@ -726,24 +726,31 @@ datasets:
     notes: Released from v22 bmcore holdouts
 
   - name: cml-tts-german
-    path: 34data/cml-tts-german
+    path: ylacombe/cml-tts
     modality: audio
     media_type: real
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    hf_subfolders: [german]
+    include_paths: [train-]
+    data_columns: [audio]
     generator_family: real
     content_category: speech
-    notes: Released from v22 bmcore holdouts
+    notes: CML-TTS German train split, released from v22 bmcore holdouts
 
   - name: cml-tts-spanish
-    path: 34data/cml-tts-spanish
+    path: ylacombe/cml-tts
     modality: audio
     media_type: real
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    hf_subfolders: [spanish]
+    include_paths: [train-]
+    data_columns: [audio]
     generator_family: real
     content_category: speech
-    notes: Released from v22 bmcore holdouts
-
+    notes: CML-TTS Spanish train split, released from v22 bmcore holdouts

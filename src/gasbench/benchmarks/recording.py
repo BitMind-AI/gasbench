@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 
 from .utils import Metrics
+from ..constants import MODALITY_NUM_CLASSES
 
 
 class BenchmarkRunRecorder:
@@ -414,6 +415,7 @@ def compute_metrics_from_df(
     df: pd.DataFrame,
     holdout_weight: float = 1.0,
     score_composition: Optional[Dict[str, float]] = None,
+    multiclass_scoring: bool = False,
 ) -> Dict[str, Any]:
     """Compute benchmark metrics from a DataFrame of results.
 
@@ -429,6 +431,12 @@ def compute_metrics_from_df(
             so each class contributes its target share to ALL metrics
             (accuracy, MCC, Brier, CE — and therefore sn34_score). Classes
             absent from the run are dropped and remaining shares renormalized.
+        multiclass_scoring: When True, sn34_score is derived from Gorodkin's
+            multiclass MCC and the multiclass Brier score, so distinguishing
+            synthetic / semisynthetic / rendered earns points. When False
+            (default) sn34_score stays the binary real-vs-not-real score.
+            Both variants are always reported as binary_sn34_score and
+            multiclass_sn34_score so a round can be compared under either.
 
     Returns:
         Dict with benchmark_score, timing metrics, and other computed metrics.
@@ -524,7 +532,15 @@ def compute_metrics_from_df(
     avg_time = float(times.mean()) if times is not None else 0.0
     p95_time = float(np.percentile(times, 95)) if times is not None else 0.0
 
-    metrics = Metrics()
+    # Class count comes from the run's modality (image=3, video=4, audio=2).
+    # Falls back to 2 — which makes the multiclass metrics reduce exactly to
+    # the binary ones — if the column is missing or unrecognised.
+    num_classes = 2
+    if "modality" in ok_df.columns and not ok_df["modality"].isna().all():
+        run_modality = str(ok_df["modality"].dropna().iloc[0])
+        num_classes = MODALITY_NUM_CLASSES.get(run_modality, 2)
+
+    metrics = Metrics(num_classes=num_classes)
     for (_, r), weight in zip(ok_df.iterrows(), sample_weights):
         try:
             probs = [
@@ -546,7 +562,7 @@ def compute_metrics_from_df(
             weight=float(weight),
         )
 
-    base_sn34 = metrics.compute_sn34_score()
+    base_sn34 = metrics.compute_sn34_score(multiclass=multiclass_scoring)
     result.update(
         {
             "benchmark_score": accuracy,
@@ -556,13 +572,33 @@ def compute_metrics_from_df(
             "binary_cross_entropy": metrics.calculate_binary_cross_entropy(),
             "binary_brier": metrics.calculate_brier(),
             "sn34_score": base_sn34,
+            # Always reported so both scorings can be compared on the same run,
+            # regardless of which one sn34_score is currently derived from.
+            "num_classes": num_classes,
+            "multiclass_scoring": bool(multiclass_scoring),
+            # Named gorodkin_mcc, NOT multiclass_mcc: bmcore already has a
+            # legacy multiclass_mcc column that is hardcoded to binary_mcc and
+            # feeds winner_creation's (binary_mcc + multiclass_mcc)/2. Reusing
+            # the name would silently change winner selection.
+            "gorodkin_mcc": metrics.calculate_multiclass_mcc(),
+            "multiclass_brier": metrics.calculate_multiclass_brier(),
+            "multiclass_sn34_score": metrics.compute_sn34_score(multiclass=True),
+            "binary_sn34_score": metrics.compute_sn34_score(multiclass=False),
+            "per_class_recall": metrics.per_class_recall(),
         }
     )
     result.update(composition_fields)
 
     if not aug_ok_df.empty:
         result.update(
-            _compute_aug_metrics(aug_ok_df, base_sn34, ok_df, class_weights if score_composition else {})
+            _compute_aug_metrics(
+                aug_ok_df,
+                base_sn34,
+                ok_df,
+                class_weights if score_composition else {},
+                num_classes=num_classes,
+                multiclass_scoring=multiclass_scoring,
+            )
         )
 
     return result
@@ -573,6 +609,8 @@ def _compute_aug_metrics(
     base_sn34: float,
     base_df: "pd.DataFrame",
     class_weights: Dict[str, float],
+    num_classes: int = 2,
+    multiclass_scoring: bool = False,
 ) -> Dict[str, Any]:
     """Compute augmentation robustness metrics from the aug-pass rows.
 
@@ -580,7 +618,7 @@ def _compute_aug_metrics(
     aug_weighted_sn34_score, and per-sample degradation stats.
     All fields are only present when aug rows exist.
     """
-    aug_metrics = Metrics()
+    aug_metrics = Metrics(num_classes=num_classes)
     aug_sample_weights = np.ones(len(aug_df), dtype=float)
     if class_weights and "dataset_name" in aug_df.columns:
         provenance = aug_df["dataset_name"].map(classify_sample_provenance)
@@ -598,7 +636,7 @@ def _compute_aug_metrics(
             probs = []
         aug_metrics.update(int(r["label"]), int(r["predicted"]), probs, weight=float(weight))
 
-    aug_sn34 = aug_metrics.compute_sn34_score()
+    aug_sn34 = aug_metrics.compute_sn34_score(multiclass=multiclass_scoring)
     robustness_ratio = (aug_sn34 / base_sn34) if base_sn34 > 0 else 0.0
 
     out: Dict[str, Any] = {

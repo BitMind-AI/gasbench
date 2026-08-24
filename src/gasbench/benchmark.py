@@ -36,6 +36,7 @@ async def run_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: Optional[Dict[str, float]] = None,
+    multiclass_scoring: bool = False,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
@@ -125,6 +126,7 @@ async def run_benchmark(
             holdouts_only,
             content_category,
             score_composition,
+            multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -225,6 +227,7 @@ async def execute_benchmark(
     holdouts_only: bool = False,
     content_category: Optional[str] = None,
     score_composition: Optional[Dict[str, float]] = None,
+    multiclass_scoring: bool = False,
     n_aug_per_dataset: int = 0,
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
@@ -232,7 +235,7 @@ async def execute_benchmark(
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category}, score_composition={score_composition})")
+    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category}, score_composition={score_composition}, multiclass_scoring={multiclass_scoring})")
     if dataset_filters:
         logger.info(f"Dataset filters: {dataset_filters}")
     if modality == "image":
@@ -256,6 +259,7 @@ async def execute_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -283,6 +287,7 @@ async def execute_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -310,6 +315,7 @@ async def execute_benchmark(
             holdouts_only=holdouts_only,
             content_category=content_category,
             score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:
@@ -506,6 +512,18 @@ def save_results_to_json(
                 "aug_binary_mcc": results.get("aug_binary_mcc"),
                 "aug_binary_ce": results.get("aug_binary_ce"),
                 "aug_binary_brier": results.get("aug_binary_brier"),
+                # Multiclass metrics are recorded on every run regardless of
+                # which scheme sn34_score was derived from, so a round can be
+                # compared under either. Keys must stay in sync with the dict
+                # built in recording.compute_metrics_from_df.
+                "num_classes": results.get("num_classes"),
+                "multiclass_scoring": results.get("multiclass_scoring"),
+                "gorodkin_mcc": results.get("gorodkin_mcc"),
+                "multiclass_brier": results.get("multiclass_brier"),
+                "binary_sn34_score": results.get("binary_sn34_score"),
+                "multiclass_sn34_score": results.get("multiclass_sn34_score"),
+                # int keys become strings through JSON; that is fine for a report.
+                "per_class_recall": results.get("per_class_recall"),
             }
 
             per_dataset = results.get("per_dataset_results", {})

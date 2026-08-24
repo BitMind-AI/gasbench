@@ -988,8 +988,7 @@ datasets:
     content_category: action
 
   - name: vitra-ego4d-video
-    path: leduytho/vitra-ego4d-video
-    hf_revision: a5f0a29d3ef856718bb14808e90ec23d9f1ea2a6
+    path: 34data/vitra-ego4d-video
     modality: video
     media_type: real
     source_format: mp4

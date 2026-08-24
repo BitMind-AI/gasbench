@@ -789,7 +789,8 @@ datasets:
     content_category: faces
 
   - name: deepfakes-qa-15k
-    path: 34data/deepfakes-qa-15k
+    path: prithivMLmods/Deepfakes-QA-15K
+    hf_revision: 9159d410b8872e1595f0d63f490683b5b1f957df
     modality: image
     media_type: semisynthetic
     source_format: parquet

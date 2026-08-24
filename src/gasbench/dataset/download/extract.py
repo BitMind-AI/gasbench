@@ -317,6 +317,20 @@ def _process_zip_or_tar(
                 if any(get_name(e).lower().endswith(ext) for ext in valid_exts)
                 and "MACOSX" not in get_name(e)
             ]
+            archive_include_paths = getattr(dataset, "archive_include_paths", None)
+            archive_exclude_paths = getattr(dataset, "archive_exclude_paths", None)
+            if archive_include_paths:
+                candidates = [
+                    entry
+                    for entry in candidates
+                    if any(segment in get_name(entry) for segment in archive_include_paths)
+                ]
+            if archive_exclude_paths:
+                candidates = [
+                    entry
+                    for entry in candidates
+                    if not any(segment in get_name(entry) for segment in archive_exclude_paths)
+                ]
             if not candidates:
                 logger.warning(f"No matching files found in {source_path}")
                 return
@@ -753,5 +767,4 @@ def _process_frame_directory(
     except Exception as e:
         logger.warning(f"Error processing frame directory {frame_dir}: {e}")
         return
-
 

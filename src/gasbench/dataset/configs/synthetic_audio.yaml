@@ -785,12 +785,14 @@ datasets:
     notes: Malayalam train split, released from v22 bmcore holdouts
 
   - name: ruasd-audio
-    path: 34data/ruasd-audio
+    path: lab260/RuASD
     modality: audio
     media_type: synthetic
-    source_format: zip
-    media_per_archive: -1
-    archives_per_dataset: -1
+    source_format: tar
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fcbc87c57b54ef4f58e1135e2813f6f000c2b739
+    archive_include_paths: [fake]
     generator_family: mixed-generation
     content_category: speech
-    notes: Released from v22 bmcore holdouts
+    notes: Synthetic subset of the official RuASD anti-spoofing dataset

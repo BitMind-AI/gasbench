@@ -59,6 +59,10 @@ class BenchmarkDatasetConfig:
 
     include_paths: Optional[List[str]] = None
     exclude_paths: Optional[List[str]] = None
+    # Filter media entries inside ZIP/TAR archives. Unlike include_paths and
+    # exclude_paths, these do not affect which remote archive files are listed.
+    archive_include_paths: Optional[List[str]] = None
+    archive_exclude_paths: Optional[List[str]] = None
     
     # For parquet datasets: specify column name(s) containing media bytes
     # Works for any modality (image, audio, video)
@@ -380,6 +384,8 @@ def _dataset_dict_to_config(d: dict, **overrides) -> BenchmarkDatasetConfig:
         "archives_per_dataset": d.get("archives_per_dataset", 5),
         "include_paths": d.get("include_paths"),
         "exclude_paths": d.get("exclude_paths"),
+        "archive_include_paths": d.get("archive_include_paths"),
+        "archive_exclude_paths": d.get("archive_exclude_paths"),
         "data_columns": d.get("data_columns"),
         "notes": d.get("notes"),
         "filter_column": d.get("filter_column"),

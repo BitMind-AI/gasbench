@@ -128,13 +128,34 @@ class TestHeadWidthHandling:
         # [0.8] -> [0.2, 0.8]; Brier = 0.2^2 + (0.8-1)^2
         assert m.calculate_multiclass_brier() == pytest.approx(0.04 + 0.04)
 
-    def test_out_of_range_pred_is_clipped(self):
-        # 4-wide head predicting rendered=3 on a 3-class image run.
+    def test_out_of_range_pred_falls_back_to_best_valid_class(self):
+        # 4-wide head predicting rendered=3 on a 3-class image run. Valid-class
+        # mass is [0.1, 0.2, 0.3] so the best valid guess is class 2.
         m = Metrics(num_classes=3)
         m.update(label=0, pred=3, pred_probs=np.array([0.1, 0.2, 0.3, 0.4]))
         assert m._clipped_preds == 1
         assert m.confusion.shape == (3, 3)
         assert m.confusion[0, 2] == 1.0
+
+    def test_out_of_range_pred_is_not_scored_correct_by_clipping(self):
+        # Regression: clipping pred 3 -> K-1 == 2 previously landed on the
+        # diagonal when the true label was also 2, scoring a prediction of a
+        # class that does not exist in this modality as correct.
+        m = Metrics(num_classes=3)
+        m.update(label=2, pred=3, pred_probs=np.array([0.5, 0.05, 0.05, 0.4]))
+        assert m._clipped_preds == 1
+        # Best valid class is 0 (0.5), so this must be off the diagonal.
+        assert m.confusion[2, 2] == 0.0
+        assert m.confusion[2, 0] == 1.0
+        assert m.calculate_multiclass_mcc() <= 0.0
+
+    def test_out_of_range_pred_without_probs_cannot_be_correct(self):
+        for K in (3, 4):
+            for label in range(K):
+                m = Metrics(num_classes=K)
+                m.update(label=label, pred=K + 5, pred_probs=None)
+                assert m.confusion[label, label] == 0.0, (K, label)
+                assert m.confusion[label].sum() == 1.0
 
 
 class TestWeighting:

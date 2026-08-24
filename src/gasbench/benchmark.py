@@ -512,6 +512,18 @@ def save_results_to_json(
                 "aug_binary_mcc": results.get("aug_binary_mcc"),
                 "aug_binary_ce": results.get("aug_binary_ce"),
                 "aug_binary_brier": results.get("aug_binary_brier"),
+                # Multiclass metrics are recorded on every run regardless of
+                # which scheme sn34_score was derived from, so a round can be
+                # compared under either. Keys must stay in sync with the dict
+                # built in recording.compute_metrics_from_df.
+                "num_classes": results.get("num_classes"),
+                "multiclass_scoring": results.get("multiclass_scoring"),
+                "gorodkin_mcc": results.get("gorodkin_mcc"),
+                "multiclass_brier": results.get("multiclass_brier"),
+                "binary_sn34_score": results.get("binary_sn34_score"),
+                "multiclass_sn34_score": results.get("multiclass_sn34_score"),
+                # int keys become strings through JSON; that is fine for a report.
+                "per_class_recall": results.get("per_class_recall"),
             }
 
             per_dataset = results.get("per_dataset_results", {})

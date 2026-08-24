@@ -86,21 +86,17 @@ class Metrics:
         # ---- multiclass --------------------------------------------------
         # A head wider than this modality's class count can emit an index that
         # does not exist here (e.g. a 4-wide head predicting rendered=3 on a
-        # 3-class image run). Clip it; the sample is then simply wrong unless
-        # the true label happens to be the clipped class.
+        # 3-class image run). See the out-of-range handling below.
         t = int(label)
-        p = int(pred)
         if not (0 <= t < K):
             t = min(max(t, 0), K - 1)
-        if not (0 <= p < K):
-            p = min(max(p, 0), K - 1)
-            self._clipped_preds += 1
-        self.confusion[t, p] += weight
 
+        # Project the head's distribution onto this modality's classes. A narrow
+        # head is padded with zeros (it assigns no mass to classes it cannot
+        # express); a wide one is truncated (mass outside this modality's
+        # classes is simply lost, which costs Brier).
+        probs = None
         if pred_probs is not None and len(pred_probs) > 0:
-            # Pad a narrow head with zeros (it assigns no mass to classes it
-            # cannot express) and truncate a wide one (mass outside this
-            # modality's classes is simply lost, which costs Brier).
             probs = np.zeros(K, dtype=float)
             src = np.asarray(pred_probs, dtype=float).ravel()
             if len(src) == 1:
@@ -110,6 +106,25 @@ class Metrics:
             else:
                 n = min(K, len(src))
                 probs[:n] = src[:n]
+
+        p = int(pred)
+        if not (0 <= p < K):
+            # Do NOT clip to K-1: that lands on the diagonal whenever the true
+            # label happens to be K-1, scoring a prediction of a class that does
+            # not exist in this modality as correct. Fall back to the model's
+            # best VALID class — the same projection Brier uses, and what you
+            # would do at inference time — or, with no probabilities to fall
+            # back on, to a deterministic non-matching class so an invalid
+            # prediction can never be counted correct.
+            self._clipped_preds += 1
+            if probs is not None and probs.sum() > 0:
+                p = int(np.argmax(probs))
+            else:
+                p = (t + 1) % K
+
+        self.confusion[t, p] += weight
+
+        if probs is not None:
             onehot = np.zeros(K, dtype=float)
             onehot[t] = 1.0
             self.mc_sq_error += weight * float(np.sum((probs - onehot) ** 2))

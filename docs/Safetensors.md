@@ -39,7 +39,7 @@ preprocessing:
     std: [0.229, 0.224, 0.225]
 
 model:
-  num_classes: 2           # Required: 2 for [real, synthetic]
+  num_classes: 3           # Required: [real, synthetic, semisynthetic]
   weights_file: "model.safetensors"  # Optional, defaults to model.safetensors
 ```
 
@@ -61,7 +61,7 @@ preprocessing:
                            # Falls back to 30fps assumption if video metadata is missing.
 
 model:
-  num_classes: 2
+  num_classes: 4           # [real, synthetic, semisynthetic, rendered]
   weights_file: "model.safetensors"
 ```
 
@@ -80,7 +80,7 @@ preprocessing:
   duration_seconds: 6.0    # Target duration (samples = rate * duration)
 
 model:
-  num_classes: 2
+  num_classes: 2           # [real, synthetic]
   weights_file: "model.safetensors"
 ```
 
@@ -91,7 +91,7 @@ model:
 Your `model.py` must define a `load_model()` function:
 
 ```python
-def load_model(weights_path: str, num_classes: int = 2) -> torch.nn.Module:
+def load_model(weights_path: str, num_classes: int) -> torch.nn.Module:
     """
     Load the model with pretrained weights.
     
@@ -147,6 +147,17 @@ Any model using blocked imports or calls will be rejected during evaluation.
 
 ## 4. Input/Output Specifications
 
+Class order is fixed by modality:
+
+| Modality | `num_classes` | Output indices |
+| --- | ---: | --- |
+| Image | 3 | `[real, synthetic, semisynthetic]` |
+| Video | 4 | `[real, synthetic, semisynthetic, rendered]` |
+| Audio | 2 | `[real, synthetic]` |
+
+See [Classification Taxonomy and Scoring](./Classification-and-Scoring.md) for
+the experimental taxonomy, binary compatibility collapse, and scoring rules.
+
 ### Image Models
 
 **Input:**
@@ -158,7 +169,7 @@ Any model using blocked imports or calls will be rejected during evaluation.
 **Output:**
 - Shape: `[batch_size, num_classes]`
 - Type: Logits (raw scores, before softmax)
-- Classes: `[real, synthetic]` for 2-class
+- Classes: `[real, synthetic, semisynthetic]`
 
 Your model's `forward()` always receives `uint8` and must cast and normalise internally:
 
@@ -182,6 +193,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 **Output:**
 - Shape: `[batch_size, num_classes]`
 - Type: Logits
+- Classes: `[real, synthetic, semisynthetic, rendered]`
 
 Your model should aggregate temporal information internally:
 
@@ -208,6 +220,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 **Output:**
 - Shape: `[batch_size, num_classes]`
 - Type: Logits
+- Classes: `[real, synthetic]`
 
 ```python
 def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -233,7 +246,7 @@ preprocessing:
   resize: [224, 224]
 
 model:
-  num_classes: 2
+  num_classes: 3
   weights_file: "model.safetensors"
 ```
 
@@ -245,7 +258,7 @@ from safetensors.torch import load_file
 
 
 class SimpleImageDetector(nn.Module):
-    def __init__(self, num_classes: int = 2):
+    def __init__(self, num_classes: int = 3):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
@@ -262,7 +275,7 @@ class SimpleImageDetector(nn.Module):
         return self.classifier(x)
 
 
-def load_model(weights_path: str, num_classes: int = 2) -> nn.Module:
+def load_model(weights_path: str, num_classes: int = 3) -> nn.Module:
     model = SimpleImageDetector(num_classes=num_classes)
     state_dict = load_file(weights_path)
     model.load_state_dict(state_dict)

@@ -15,7 +15,8 @@ This package provides a self-contained benchmark evaluation system for testing m
   Dataset download, caching, preprocessing, and augmentation with aspect ratio preservation for image/video, and standardized resampling/windowing for audio
 
 - **Comprehensive Metrics**  
-  Accuracy, MCC, cross-entropy, inference times, and per-dataset breakdowns
+  Binary and multiclass MCC, Brier and cross-entropy calibration metrics,
+  inference times, robustness, and per-dataset breakdowns
 
 For model submission requirements, see the  
 👉 **[Safetensors Model Specification](./docs/Safetensors.md)** (required for competition)
@@ -108,22 +109,26 @@ results = asyncio.run(evaluate_model())
 - Your `model.py` must define a `load_model(weights_path, num_classes)` function that returns a PyTorch `nn.Module`.
 - GASBench expects **batched inputs** (raw 0-255 pixel values for image/video, waveform tensors for audio) and **logits outputs**.
 - Image/video preprocessing (resize/crop/augment) and audio preprocessing (mono/resample/crop) are handled by GASBench. Input normalization should be done inside your model's `forward()` method.
-- **Binary (real vs synthetic)** classification with `num_classes: 2` is the standard format.
+- Output heads are modality-specific: image uses 3 classes, video uses 4, and audio uses 2. Class order is part of the model contract.
 
 For full submission requirements, see:  
 👉 **[Safetensors Model Specification](./docs/Safetensors.md)** (required for competition)
+
+For the experimental visual taxonomy and exact scoring definitions, see:
+👉 **[Classification Taxonomy and Scoring](./docs/Classification-and-Scoring.md)**
 
 ---
 
 ## Metrics
 
-- **sn34_score** -- Primary competition metric. Geometric mean of normalized MCC and Brier score: $\sqrt{MCC_{norm}^{1.2} \cdot Brier_{norm}^{1.8}}$. Rewards both discrimination accuracy and probability calibration.
-- **binary_mcc** -- Matthews Correlation Coefficient for binary real/synthetic classification (-1 to +1)
-- **binary_brier** -- Brier score measuring calibration quality (0 = perfect, 0.25 = random)
-- **binary_cross_entropy** -- Log-loss for predicted probabilities
-- **benchmark_score** -- Overall benchmark score
-- **avg_inference_time_ms** -- Mean inference time per sample
-- **p95_inference_time_ms** -- 95th percentile inference time
+- **sn34_score** -- Primary score selected by the benchmark configuration. It combines normalized MCC and Brier calibration performance.
+- **gorodkin_mcc / multiclass_brier / multiclass_sn34_score** -- Multiclass metrics that reward correct provenance classification.
+- **binary_mcc / binary_brier / binary_cross_entropy / binary_sn34_score** -- Compatibility metrics after collapsing all non-real classes into synthetic.
+- **base_sn34_score / aug_sn34_score** -- Normal and augmented-pass scores when robustness evaluation is enabled.
+- **benchmark_score** -- Weighted classification accuracy.
+- **avg_inference_time_ms / p95_inference_time_ms** -- Mean and 95th-percentile inference latency.
+
+See [Classification Taxonomy and Scoring](./docs/Classification-and-Scoring.md) for class definitions, formulas, dataset weighting, and robustness blending.
 
 ---
 

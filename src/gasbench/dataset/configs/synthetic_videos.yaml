@@ -315,7 +315,7 @@ datasets:
   - name: semisynthetic-video
     path: bitmind/semisynthetic-video
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: zip
     media_per_archive: 100
     archives_per_dataset: 10

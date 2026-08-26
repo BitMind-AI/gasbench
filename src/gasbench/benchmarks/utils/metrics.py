@@ -324,8 +324,9 @@ def calculate_per_source_accuracy(
 ) -> Dict[str, Dict[str, Dict]]:
     """Build per-source prediction distribution organized by media type and dataset.
 
-    For each dataset, returns counts of predictions by binary label:
-      { "real": N_real, "synthetic": N_synthetic }
+    For each dataset, returns counts for every media label. Keeping the full
+    distribution is required for image/video multiclass heads; otherwise
+    predictions above label 1 disappear from per-source reports.
     """
     per_source_accuracy = {}
     
@@ -341,7 +342,8 @@ def calculate_per_source_accuracy(
         per_source_accuracy[media_type][dataset_config.name] = {
             "real": int(preds.get("real", 0)),
             "synthetic": int(preds.get("synthetic", 0)),
+            "semisynthetic": int(preds.get("semisynthetic", 0)),
+            "rendered": int(preds.get("rendered", 0)),
         }
     
     return per_source_accuracy
-

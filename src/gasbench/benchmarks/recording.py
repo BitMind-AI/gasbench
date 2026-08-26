@@ -698,6 +698,8 @@ def compute_per_dataset_from_df(df: pd.DataFrame) -> Dict[str, Any]:
         predictions = {
             "real": int(counts.get(0, 0)),
             "synthetic": int(counts.get(1, 0)),
+            "semisynthetic": int(counts.get(2, 0)),
+            "rendered": int(counts.get(3, 0)),
         }
         per_ds[ds] = {
             "correct": correct,

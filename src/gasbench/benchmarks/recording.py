@@ -646,6 +646,8 @@ def _compute_aug_metrics(
         "aug_binary_mcc": aug_metrics.calculate_binary_mcc(),
         "aug_binary_ce": aug_metrics.calculate_binary_cross_entropy(),
         "aug_binary_brier": aug_metrics.calculate_brier(),
+        "aug_gorodkin_mcc": aug_metrics.calculate_multiclass_mcc(),
+        "aug_multiclass_brier": aug_metrics.calculate_multiclass_brier(),
     }
 
     # Per-sample degradation: join augmented rows to their base counterpart via sample_id

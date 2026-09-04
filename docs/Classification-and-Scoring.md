@@ -43,9 +43,9 @@ calibration metrics.
 
 For compatibility metrics, all non-real classes collapse into one class:
 
-\[
+$$
 p_{\text{not real}} = 1 - p_{\text{real}}.
-\]
+$$
 
 This binary view is always reported, but it does not reward a visual model for
 distinguishing synthetic, semisynthetic, and rendered media.
@@ -58,28 +58,28 @@ GASBench reports both binary and multiclass variants on every run:
 - `binary_brier`: mean squared error of `p_not real`; `0.25` is the constant
   `p=0.5` baseline.
 - `binary_cross_entropy`: binary log loss for the same collapsed probabilities.
-- `gorodkin_mcc`: Gorodkin's \(R_K\), the multiclass generalization of MCC.
-- `multiclass_brier`: mean of \(\sum_k (p_k-y_k)^2\). Its uniform-prediction
-  baseline for \(K\) classes is \((K-1)/K\).
+- `gorodkin_mcc`: Gorodkin's $R_K$, the multiclass generalization of MCC.
+- `multiclass_brier`: mean of $\sum_k (p_k-y_k)^2$. Its uniform-prediction
+  baseline for $K$ classes is $(K-1)/K$.
 - `per_class_recall`: recall indexed by the class numbers above.
 - `binary_sn34_score` and `multiclass_sn34_score`: the two comparable SN34
   score variants.
 
-For either scoring mode, let \(M\) be the relevant MCC, \(B\) the relevant
-Brier score, and \(B_0\) its random baseline (`0.25` for binary or
-\((K-1)/K\) for multiclass):
+For either scoring mode, let $M$ be the relevant MCC, $B$ the relevant Brier
+score, and $B_0$ its random baseline (`0.25` for binary or $(K-1)/K$ for
+multiclass):
 
-\[
+$$
 M_{norm} = \operatorname{clip}\left(\frac{M+1}{2},0,1\right)^{1.2}
-\]
+$$
 
-\[
+$$
 B_{norm} = \max\left(0,\frac{B_0-B}{B_0}\right)^{1.8}
-\]
+$$
 
-\[
+$$
 SN34 = \sqrt{M_{norm} B_{norm}}.
-\]
+$$
 
 `sn34_score` is the variant selected by the benchmark configuration. Subnet 34
 currently selects multiclass scoring for image and video. Audio uses binary
@@ -100,7 +100,7 @@ When an augmentation pass is enabled, GASBench reports:
 - `aug_sn34_score`: score on the augmentation pass;
 - `augmentation_robustness`: robustness diagnostics; and
 - `sn34_score`: the configured blend
-  \((1-w)\,base + w\,aug\).
+  $(1-w)\,\mathrm{base} + w\,\mathrm{aug}$.
 
 The Subnet 34 round configuration, rather than the GASBench library, is the
 source of truth for the current provenance shares, augmentation sample count,

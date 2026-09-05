@@ -1151,3 +1151,75 @@ datasets:
     generator_family: real
     content_category: documents
     notes: Released from v22 bmcore holdouts
+
+  # ── Released v23 holdouts ─────────────────────────────────────────────────
+
+  - name: kidney-stone-ct
+    path: 34data/kidney-stone-ct
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: malaria-bounding-boxes
+    path: 34data/malaria-bounding-boxes
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: pulmonary-chest-xray-abnormalities
+    path: 34data/pulmonary-chest-xray-abnormalities
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: dermnet
+    path: 34data/dermnet
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: coronahack-chest-xray
+    path: 34data/coronahack-chest-xray
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: lits-256
+    path: 34data/lits-256
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: tcga-coad-msi-mss
+    path: 34data/tcga-coad-msi-mss
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical

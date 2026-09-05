@@ -1151,3 +1151,102 @@ datasets:
     generator_family: real
     content_category: documents
     notes: Released from v22 bmcore holdouts
+
+  # ── Released v23 holdouts ─────────────────────────────────────────────────
+
+  - name: kidney-stone-ct
+    path: 34data/kidney-stone-ct
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: malaria-bounding-boxes
+    path: 34data/malaria-bounding-boxes
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: pulmonary-chest-xray-abnormalities
+    path: 34data/pulmonary-chest-xray-abnormalities
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: dermnet
+    path: 34data/dermnet
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: coronahack-chest-xray
+    path: 34data/coronahack-chest-xray
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: lits-256
+    path: 34data/lits-256
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  - name: tcga-coad-msi-mss
+    path: 34data/tcga-coad-msi-mss
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: real
+    content_category: medical
+
+  # ── Released v23 holdouts — deferred to upstream repos (no 34data mirror) ──
+
+  - name: conceptual-captions-0-1m
+    path: obscure-entropy/conceptual_captions_hu_filtered
+    hf_revision: e70871e77287ca4aec4a12ff2f9cec32cad5694a
+    modality: image
+    media_type: real
+    source_format: parquet
+    data_columns: [img]
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['data/conceptual_captions_0_1m.parquet']
+    generator_family: real
+    content_category: diverse
+
+  - name: rocov2-radiology
+    path: eltorio/ROCOv2-radiology
+    hf_revision: 80ffeef4eb8d34d27cb5c2815305f1d8aee8a83c
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['data/train-']
+    generator_family: real
+    content_category: medical

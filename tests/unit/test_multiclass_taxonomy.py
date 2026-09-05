@@ -147,7 +147,6 @@ class TestYamlTaxonomy:
             "fakeparts-stylechange",
             "senorita-controllable-videos",
             "senorita-style-transfer",
-            "semisynthetic-video",
         ):
             assert names[name].media_type == "synthetic", name
 

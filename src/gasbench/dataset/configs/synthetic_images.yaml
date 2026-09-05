@@ -942,3 +942,160 @@ datasets:
     notes: PICA-100K is purely synthetic (PICABench; video-derived src and edited tgt). Not split — src is not camera-real.
     generator_family: mixed-generation
     content_category: diverse
+
+  # ── Released v23 holdouts ─────────────────────────────────────────────────
+
+  - name: synthetic-human
+    path: 34data/synthetic-human
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: mixed-generation
+    content_category: faces
+
+  - name: ai-generated-ecommerce-damaged-product
+    path: 34data/ai-generated-ecommerce-damaged-product
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  - name: ai-generated-ecommerce-fake-logistics
+    path: 34data/ai-generated-ecommerce-fake-logistics
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    generator_family: mixed-generation
+    content_category: diverse
+
+  # ── Released v23 holdouts — deferred to upstream repos (no 34data mirror) ──
+
+  - name: swappir-gpen-celeba-hq
+    path: Sumsub/Swappir
+    hf_revision: 02bf824fdd87577979105718d066d30aae780dca
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['GPEN_CelebA_HQ.zip']
+    generator_family: gpen
+    content_category: faces
+
+  - name: swappir-gpen-fairface
+    path: Sumsub/Swappir
+    hf_revision: 02bf824fdd87577979105718d066d30aae780dca
+    modality: image
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['GPEN_fairface.zip']
+    generator_family: gpen
+    content_category: faces
+
+  - name: swappir-celeba-hq-roop
+    path: Sumsub/Swappir
+    hf_revision: 02bf824fdd87577979105718d066d30aae780dca
+    modality: image
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['CelebA_HQ_roop.zip']
+    exclude_paths: ['GPEN_']
+    generator_family: faceswap
+    content_category: faces
+
+  - name: swappir-celeba-hq-simswap
+    path: Sumsub/Swappir
+    hf_revision: 02bf824fdd87577979105718d066d30aae780dca
+    modality: image
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['CelebA_HQ_simswap.zip']
+    exclude_paths: ['GPEN_']
+    generator_family: faceswap
+    content_category: faces
+
+  - name: swappir-fairface-roop
+    path: Sumsub/Swappir
+    hf_revision: 02bf824fdd87577979105718d066d30aae780dca
+    modality: image
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['fairface_roop.zip']
+    exclude_paths: ['GPEN_']
+    generator_family: faceswap
+    content_category: faces
+
+  - name: scaledf-ffpp-deepfakes
+    path: scaledf/ScaleDF
+    hf_revision: fdc0f92f1f133d5c8742578917aa280b32d9d8ce
+    modality: image
+    media_type: semisynthetic
+    source_format: tar
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['ScaleDF/train/FFpp_Deepfakes.tar']
+    generator_family: faceswap
+    content_category: faces
+
+  - name: scaledf-ffpp-face2face
+    path: scaledf/ScaleDF
+    hf_revision: fdc0f92f1f133d5c8742578917aa280b32d9d8ce
+    modality: image
+    media_type: semisynthetic
+    source_format: tar
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['ScaleDF/train/FFpp_Face2Face.tar']
+    generator_family: face2face
+    content_category: faces
+
+  - name: scaledf-e4e
+    path: scaledf/ScaleDF
+    hf_revision: fdc0f92f1f133d5c8742578917aa280b32d9d8ce
+    modality: image
+    media_type: semisynthetic
+    source_format: tar
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['ScaleDF/train/E4E_faces.tar']
+    generator_family: e4e
+    content_category: faces
+
+  - name: scaledf-diffusionclip
+    path: scaledf/ScaleDF
+    hf_revision: fdc0f92f1f133d5c8742578917aa280b32d9d8ce
+    modality: image
+    media_type: semisynthetic
+    source_format: tar
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['ScaleDF/train/DiffusionCLIP_faces.tar']
+    generator_family: diffusionclip
+    content_category: faces
+
+  - name: dgm4-styleclip
+    path: rshaojimmy/DGM4
+    hf_revision: 9efd3f1ca14cb1dac1692cdce0beea6844b968a6
+    modality: image
+    media_type: semisynthetic
+    source_format: zip
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    include_paths: ['manipulation/StyleCLIP.zip']
+    generator_family: styleclip
+    content_category: faces

@@ -796,3 +796,67 @@ datasets:
     generator_family: mixed-generation
     content_category: speech
     notes: Synthetic subset of the official RuASD anti-spoofing dataset
+
+  # ── Released v23 holdouts ─────────────────────────────────────────────────
+
+  - name: indic-tts-urdu
+    path: 34data/indic-tts-urdu
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ai4bharat-speecharenabench-gu
+    path: ai4bharat/SpeechArenaBench
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [gu]
+    data_columns: [audio_a]
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ai4bharat-speecharenabench-ml
+    path: ai4bharat/SpeechArenaBench
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [ml]
+    data_columns: [audio_a]
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ai4bharat-speecharenabench-or
+    path: ai4bharat/SpeechArenaBench
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [or]
+    data_columns: [audio_a]
+    generator_family: mixed-generation
+    content_category: speech
+
+  - name: ai4bharat-speecharenabench-ur
+    path: ai4bharat/SpeechArenaBench
+    modality: audio
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_revision: fdd26e85ff051036e3eb49d7053d2b8f15c14ec0
+    hf_subfolders: [ur]
+    data_columns: [audio_a]
+    generator_family: mixed-generation
+    content_category: speech

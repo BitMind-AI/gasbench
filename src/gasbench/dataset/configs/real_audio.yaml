@@ -755,3 +755,57 @@ datasets:
     generator_family: real
     content_category: speech
     notes: CML-TTS Spanish train split, released from v22 bmcore holdouts
+
+  # ── Released v23 holdouts — deferred to upstream repos (no 34data mirror) ──
+
+  - name: cml-tts-dutch
+    path: ylacombe/cml-tts
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_subfolders: ['dutch']
+    include_paths: ['train-']
+    generator_family: real
+    content_category: speech
+
+  - name: cml-tts-italian
+    path: ylacombe/cml-tts
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_subfolders: ['italian']
+    include_paths: ['train-']
+    generator_family: real
+    content_category: speech
+
+  - name: cml-tts-polish
+    path: ylacombe/cml-tts
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_subfolders: ['polish']
+    include_paths: ['train-']
+    generator_family: real
+    content_category: speech
+
+  - name: cml-tts-portuguese
+    path: ylacombe/cml-tts
+    hf_revision: 48aedd7a8ea08efc75cae3e81fbefa9720df0812
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 500
+    archives_per_dataset: 2
+    hf_subfolders: ['portuguese']
+    include_paths: ['train-']
+    generator_family: real
+    content_category: speech

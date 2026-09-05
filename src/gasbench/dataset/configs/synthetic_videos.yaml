@@ -1338,3 +1338,17 @@ datasets:
     archives_per_dataset: 1
     generator_family: float
     content_category: faces
+
+  # ── Released v23 holdouts — deferred to upstream repos (no 34data mirror) ──
+
+  - name: tip-i2v-i2vgenxl
+    path: WenhaoWang/TIP-I2V
+    hf_revision: 958f51df0ba725f53e2387bc19011a001d5ce7a4
+    modality: video
+    media_type: synthetic
+    source_format: tar
+    media_per_archive: 500
+    archives_per_dataset: 1
+    include_paths: ['subset_videos_tar/i2vgenxl_videos_subset_1.tar']
+    generator_family: i2vgenxl
+    content_category: diverse

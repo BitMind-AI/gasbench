@@ -796,3 +796,15 @@ datasets:
     generator_family: mixed-generation
     content_category: speech
     notes: Synthetic subset of the official RuASD anti-spoofing dataset
+
+  # ── Released v23 holdouts ─────────────────────────────────────────────────
+
+  - name: indic-tts-urdu
+    path: 34data/indic-tts-urdu
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 2
+    generator_family: mixed-generation
+    content_category: speech

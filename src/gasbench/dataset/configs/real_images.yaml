@@ -1232,6 +1232,7 @@ datasets:
     modality: image
     media_type: real
     source_format: parquet
+    data_columns: [img]
     media_per_archive: 1000
     archives_per_dataset: 1
     include_paths: ['data/conceptual_captions_0_1m.parquet']

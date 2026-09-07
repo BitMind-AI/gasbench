@@ -142,7 +142,6 @@ class TestYamlTaxonomy:
             "facevid2vid",
             "tpsm",
             "v15-human-vid-mavos-dd-english_echomimic",
-            "v15-human-vid-mavos-dd-english_liveportrait",
             "hyperreenact",
             "fakeparts-stylechange",
             "senorita-controllable-videos",

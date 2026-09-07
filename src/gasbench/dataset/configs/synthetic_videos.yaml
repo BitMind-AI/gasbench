@@ -851,7 +851,7 @@ datasets:
   - name: v15-human-vid-mavos-dd-english_liveportrait
     path: 34data/v15-human-vid-mavos-dd-english_liveportrait
     modality: video
-    media_type: synthetic
+    media_type: semisynthetic
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1

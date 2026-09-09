@@ -240,17 +240,6 @@ datasets:
     generator_family: mixed-generation
     content_category: diverse
 
-  - name: VideoUFO
-    path: WenhaoWang/VideoUFO
-    modality: video
-    media_type: synthetic
-    source_format: tar
-    media_per_archive: 500
-    archives_per_dataset: 2
-    include_paths: [VideoUFO_tar]
-    generator_family: mixed-generation
-    content_category: diverse
-
   - name: aislop-videos
     path: bitmind/aislop-videos
     modality: video
@@ -1322,7 +1311,7 @@ datasets:
   - name: edtalk
     path: 34data/edtalk
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: 500
     archives_per_dataset: 1
@@ -1332,7 +1321,7 @@ datasets:
   - name: float-talking-head
     path: 34data/float-talking-head
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: mp4
     media_per_archive: 500
     archives_per_dataset: 1

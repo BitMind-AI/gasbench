@@ -188,7 +188,7 @@ datasets:
   - name: fakeparts-outpainting
     path: hi-paris/FakeParts
     modality: video
-    media_type: semisynthetic
+    media_type: synthetic
     source_format: parquet
     media_per_archive: 100
     archives_per_dataset: 10

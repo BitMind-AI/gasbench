@@ -433,7 +433,7 @@ def compute_metrics_from_df(
             absent from the run are dropped and remaining shares renormalized.
         multiclass_scoring: When True, sn34_score is derived from Gorodkin's
             multiclass MCC and the multiclass Brier score, so distinguishing
-            synthetic / semisynthetic / rendered earns points. When False
+            synthetic / semisynthetic earns points. When False
             (default) sn34_score stays the binary real-vs-not-real score.
             Both variants are always reported as binary_sn34_score and
             multiclass_sn34_score so a round can be compared under either.
@@ -701,7 +701,6 @@ def compute_per_dataset_from_df(df: pd.DataFrame) -> Dict[str, Any]:
             "real": int(counts.get(0, 0)),
             "synthetic": int(counts.get(1, 0)),
             "semisynthetic": int(counts.get(2, 0)),
-            "rendered": int(counts.get(3, 0)),
         }
         per_ds[ds] = {
             "correct": correct,

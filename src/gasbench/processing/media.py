@@ -234,7 +234,7 @@ def process_video_frames_sample(
     Args:
         sample: Dict containing either:
             - 'video_frames': List of frame file paths or frame bytes
-            - 'media_type': 'real', 'synthetic', 'semisynthetic', or 'rendered'
+            - 'media_type': 'real', 'synthetic', or 'semisynthetic'
         num_frames: Number of frames to use (default 16).
 
     Returns:

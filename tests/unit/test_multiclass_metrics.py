@@ -24,31 +24,30 @@ def _softmax(x):
 class TestClassCounts:
     def test_modality_num_classes(self):
         # Derived from the label maps; audio collapses semisynthetic onto synthetic.
-        assert MODALITY_NUM_CLASSES == {"image": 3, "video": 4, "audio": 2}
+        assert MODALITY_NUM_CLASSES == {"image": 3, "video": 3, "audio": 2}
 
     def test_per_dataset_report_preserves_all_video_prediction_classes(self):
         df = pd.DataFrame(
             {
-                "status": ["ok"] * 4,
-                "aug_pass": [False] * 4,
-                "dataset_name": ["video-set"] * 4,
-                "predicted": [0, 1, 2, 3],
-                "correct": [True, True, True, True],
+                "status": ["ok"] * 3,
+                "aug_pass": [False] * 3,
+                "dataset_name": ["video-set"] * 3,
+                "predicted": [0, 1, 2],
+                "correct": [True, True, True],
             }
         )
 
         per_dataset = compute_per_dataset_from_df(df)
         per_source = calculate_per_source_accuracy(
-            [SimpleNamespace(name="video-set", media_type="rendered")],
+            [SimpleNamespace(name="video-set", media_type="real")],
             per_dataset,
         )
-        predictions = per_source["rendered"]["video-set"]
+        predictions = per_source["real"]["video-set"]
 
         assert predictions == {
             "real": 1,
             "synthetic": 1,
             "semisynthetic": 1,
-            "rendered": 1,
         }
 
 

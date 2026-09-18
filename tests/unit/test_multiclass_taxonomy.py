@@ -65,11 +65,12 @@ class TestLabelMaps:
         with pytest.raises(KeyError):
             media_type_to_label("rendered", "image")
 
-    def test_video_four_class(self):
+    def test_video_three_class(self):
         assert media_type_to_label("real", "video") == 0
         assert media_type_to_label("synthetic", "video") == 1
         assert media_type_to_label("semisynthetic", "video") == 2
-        assert media_type_to_label("rendered", "video") == 3
+        with pytest.raises(KeyError):
+            media_type_to_label("rendered", "video")
 
     def test_audio_binary(self):
         assert media_type_to_label("real", "audio") == 0
@@ -83,8 +84,8 @@ class TestMetricsCollapse:
         m = Metrics()
         # semisynthetic label=2, predicted class=2 → binary TP
         m.update(label=2, pred=2, pred_probs=np.array([0.1, 0.2, 0.7]))
-        # rendered label=3, predicted class=3 → binary TP
-        m.update(label=3, pred=3, pred_probs=np.array([0.05, 0.1, 0.15, 0.7]))
+        # synthetic label=1, predicted class=1 → binary TP
+        m.update(label=1, pred=1, pred_probs=np.array([0.05, 0.8, 0.15]))
         # real correctly predicted
         m.update(label=0, pred=0, pred_probs=np.array([0.9, 0.05, 0.05]))
         assert m.true_positives == 2.0
@@ -106,10 +107,10 @@ class TestYamlTaxonomy:
         present = EXCLUDED & names
         assert not present, f"excluded datasets still in registry: {present}"
 
-    def test_video_has_all_four_classes(self):
+    def test_video_has_all_three_classes(self):
         configs = load_benchmark_datasets_from_yaml()
         types = {d.media_type for d in configs["video"]}
-        assert types == {"real", "synthetic", "semisynthetic", "rendered"}
+        assert types == {"real", "synthetic", "semisynthetic"}
 
     def test_pica_is_synthetic_not_split(self):
         configs = load_benchmark_datasets_from_yaml()
@@ -157,17 +158,12 @@ class TestYamlTaxonomy:
             == "semisynthetic"
         )
 
-    def test_cgi_videos_are_rendered(self):
+    def test_rendered_video_provenance_maps_to_real_label(self):
         configs = load_benchmark_datasets_from_yaml()
-        names = {d.name: d for d in configs["video"]}
-        for name in (
-            "abot-world-explorer",
-            "physicalai-autonomous-driving-pedestrian",
-            "bedlam-closeup-suburb-a",
-            "nvidia-sdg-synhuman-shard-7",
-            "cs2-10k-data-ancient-part-01",
-            "ByteDance_Synthetic_Videos",
-            "scene-decoupled-video-dataset",
-            "synwts",
-        ):
-            assert names[name].media_type == "rendered", name
+        rendered = [
+            d for d in configs["video"]
+            if d.generator_family == "rendered" or "rendered" in (d.notes or "")
+        ]
+        assert rendered
+        for dataset in rendered:
+            assert media_type_to_label(dataset.media_type, "video") == 0, dataset.name

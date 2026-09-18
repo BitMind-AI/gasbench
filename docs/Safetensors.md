@@ -61,7 +61,7 @@ preprocessing:
                            # Falls back to 30fps assumption if video metadata is missing.
 
 model:
-  num_classes: 4           # [real, synthetic, semisynthetic, rendered]
+  num_classes: 3           # [real, synthetic, semisynthetic]
   weights_file: "model.safetensors"
 ```
 
@@ -152,7 +152,7 @@ Class order is fixed by modality:
 | Modality | `num_classes` | Output indices |
 | --- | ---: | --- |
 | Image | 3 | `[real, synthetic, semisynthetic]` |
-| Video | 4 | `[real, synthetic, semisynthetic, rendered]` |
+| Video | 3 | `[real, synthetic, semisynthetic]` |
 | Audio | 2 | `[real, synthetic]` |
 
 See [Classification Taxonomy and Scoring](./Classification-and-Scoring.md) for
@@ -193,7 +193,7 @@ def forward(self, x: torch.Tensor) -> torch.Tensor:
 **Output:**
 - Shape: `[batch_size, num_classes]`
 - Type: Logits
-- Classes: `[real, synthetic, semisynthetic, rendered]`
+- Classes: `[real, synthetic, semisynthetic]`
 
 Your model should aggregate temporal information internally:
 

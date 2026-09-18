@@ -343,7 +343,6 @@ def calculate_per_source_accuracy(
             "real": int(preds.get("real", 0)),
             "synthetic": int(preds.get("synthetic", 0)),
             "semisynthetic": int(preds.get("semisynthetic", 0)),
-            "rendered": int(preds.get("rendered", 0)),
         }
     
     return per_source_accuracy

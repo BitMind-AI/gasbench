@@ -1292,3 +1292,45 @@ datasets:
     generator_family: mixed-generation
     content_category: humans
     notes: Formerly classified as rendered; now real under the video taxonomy
+
+  # Released v24 holdouts — 34data mirrors only.
+  - name: lanyuer-mp4s-1220
+    path: 34data/lanyuer-mp4s-1220
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: lanyuer-mp4s-yt-1122
+    path: 34data/lanyuer-mp4s-yt-1122
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: videofact-vpvm-original
+    path: 34data/videofact-vpvm-original
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: videofact-vcms-original
+    path: 34data/videofact-vcms-original
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: videofact-vpim-original
+    path: 34data/videofact-vpim-original
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '

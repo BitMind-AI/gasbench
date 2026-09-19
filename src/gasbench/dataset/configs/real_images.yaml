@@ -1250,3 +1250,38 @@ datasets:
     include_paths: ['data/train-']
     generator_family: real
     content_category: medical
+
+  # Released v24 holdouts — 34data mirrors only.
+  - name: signatures-genuine-combined-cedar-beng-hindi
+    path: 34data/signatures-genuine-combined-cedar-beng-hindi
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: signatures-genuine-bhsig-hindi
+    path: 34data/signatures-genuine-bhsig-hindi
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: sohi-genuine
+    path: 34data/sohi-genuine
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 46e76bf8acb873511245c8c8e27a2a2aa6f93bd8
+  - name: satvideoirsdt-real
+    path: 34data/satvideoirsdt-real
+    modality: image
+    media_type: real
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '

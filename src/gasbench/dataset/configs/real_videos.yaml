@@ -1302,6 +1302,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 63bfe6fad9f141cf2449a323c68b3d7ca801bce8
   - name: lanyuer-mp4s-yt-1122
     path: 34data/lanyuer-mp4s-yt-1122
     modality: video
@@ -1310,6 +1311,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 28ee0a0fa89383f7a9e111d3315a915fae73ec31
   - name: videofact-vpvm-original
     path: 34data/videofact-vpvm-original
     modality: video
@@ -1318,6 +1320,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: a28c0cf7e72efe3b83158e902500a14f8718f4a7
   - name: videofact-vcms-original
     path: 34data/videofact-vcms-original
     modality: video
@@ -1326,6 +1329,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 0344666dfdede00c27d4a6db3374de8e2a6bb367
   - name: videofact-vpim-original
     path: 34data/videofact-vpim-original
     modality: video
@@ -1334,3 +1338,4 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: f0af08aece50ff99a9c399f063d71e455d610bbf

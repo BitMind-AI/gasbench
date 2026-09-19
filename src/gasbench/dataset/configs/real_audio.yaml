@@ -819,6 +819,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: e284784e7a4ae76a5c528b84637ed92be0cef816
   - name: nepali-music-source-seperation
     path: 34data/nepali-music-source-seperation
     modality: audio
@@ -827,6 +828,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 7a05e0dc0a09f8b8673bb0ad9c56970590e4353e
   - name: newari-song
     path: 34data/newari-song
     modality: audio
@@ -835,6 +837,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 942ee47f4450be641d343772f4c9d94075795a60
   - name: traditional-nepali-instruments
     path: 34data/traditional-nepali-instruments
     modality: audio
@@ -843,6 +846,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: a4e2fa49959d1e8a23d4ac8f41be4292d911788d
   - name: synthetic-vocal-bursts
     path: 34data/synthetic-vocal-bursts
     modality: audio
@@ -851,6 +855,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: Released from v24 bmcore holdouts; exact local subset. Original label retained pending separate review.
+    hf_revision: 9ef3a115a4b762bb05facba2e1fa2aaac88282eb
   - name: zinny-asr-ach-test
     path: 34data/zinny-asr-ach-test
     modality: audio

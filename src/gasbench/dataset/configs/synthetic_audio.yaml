@@ -870,6 +870,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 15f9b7d79bde66dc9f3616fb93a6d09e592c0efe
   - name: multilingual-synthetic-tts-de
     path: 34data/multilingual-synthetic-tts-de
     modality: audio

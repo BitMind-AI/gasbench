@@ -1260,6 +1260,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 751826df16ca922bd74b72230b6265633554b2ca
   - name: signatures-genuine-bhsig-hindi
     path: 34data/signatures-genuine-bhsig-hindi
     modality: image
@@ -1268,6 +1269,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 687f1c02031b79e312108a9fa73715f2bebac7ae
   - name: sohi-genuine
     path: 34data/sohi-genuine
     modality: image
@@ -1285,3 +1287,4 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: a3cf2557e18a832c4b2921c8d20948202eab54f5

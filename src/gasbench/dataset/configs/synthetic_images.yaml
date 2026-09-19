@@ -1109,6 +1109,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: a5497d92e16c56a4cb702b728dfb9555d6a00dea
   - name: sowaiba01-deepfake-fake
     path: 34data/sowaiba01-deepfake-fake
     modality: image
@@ -1144,6 +1145,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 57b65d6c688cac0bbe66452f72c1d2aa101b96ab
   - name: midjourney-captioned-23m-images-1-0001
     path: 34data/midjourney-captioned-23m-images-1-0001
     modality: image
@@ -1152,6 +1154,7 @@ datasets:
     media_per_archive: -1
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: c4dd5f90d46caad7cc4012f1cfbe8d4e264ded56
   - name: persona-fluxed-10k-2608-belgium
     path: 34data/persona-fluxed-10k-2608-belgium
     modality: image

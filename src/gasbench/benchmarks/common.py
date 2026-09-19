@@ -224,9 +224,6 @@ def build_plan(
             "semisynthetic": len(
                 [d for d in available_datasets if d.media_type == "semisynthetic"]
             ),
-            "rendered": len(
-                [d for d in available_datasets if d.media_type == "rendered"]
-            ),
         },
     )
     logger.info(f"Sampling configuration: {json.dumps(sampling_summary.__dict__)}")

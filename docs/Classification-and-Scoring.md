@@ -12,21 +12,20 @@ Class indices are part of the model interface and must use this order:
 | Modality | Classes (`num_classes`) |
 | --- | --- |
 | Image | `0=real`, `1=synthetic`, `2=semisynthetic` (`3`) |
-| Video | `0=real`, `1=synthetic`, `2=semisynthetic`, `3=rendered` (`4`) |
+| Video | `0=real`, `1=synthetic`, `2=semisynthetic` (`3`) |
 | Audio | `0=real`, `1=synthetic` (`2`) |
 
 The classes mean:
 
 - **Real**: captured from the physical world without material generated or
-  replaced visual content.
+  replaced visual content. Video also includes classical CGI, game-engine,
+  animation, and simulation output; rendered provenance is retained in dataset
+  metadata rather than scored as a separate class.
 - **Synthetic**: fully synthesized output, including generative-model output.
   It remains synthetic when captured media conditions generation, because the
   output pixels are still synthesized.
 - **Semisynthetic**: retains materially captured visual content alongside
   spatially localized generated or replaced visual content.
-- **Rendered**: fully produced by a graphics, game-engine, animation, or
-  simulation pipeline rather than captured by a camera. This class currently
-  applies only to video.
 
 Modifying exclusively synthetic or rendered media does not make it
 semisynthetic. Image-to-video generation, for example, is synthetic when the
@@ -48,7 +47,7 @@ p_{\text{not real}} = 1 - p_{\text{real}}.
 $$
 
 This binary view is always reported, but it does not reward a visual model for
-distinguishing synthetic, semisynthetic, and rendered media.
+distinguishing synthetic and semisynthetic media.
 
 ## Metrics
 

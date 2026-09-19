@@ -1099,3 +1099,77 @@ datasets:
     include_paths: ['manipulation/StyleCLIP.zip']
     generator_family: styleclip
     content_category: faces
+
+  # Released v24 holdouts — 34data mirrors only.
+  - name: gemini31-flash-lite-reconstruct-test
+    path: 34data/gemini31-flash-lite-reconstruct-test
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: a5497d92e16c56a4cb702b728dfb9555d6a00dea
+  - name: sowaiba01-deepfake-fake
+    path: 34data/sowaiba01-deepfake-fake
+    modality: image
+    media_type: semisynthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 2fe315962f5bf69a16f26197bf889bad5b3c235c
+  - name: seq-deepfake-facial-attributes-test
+    path: 34data/seq-deepfake-facial-attributes-test
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: c1fb17e351da2163f772dc76d7635b920b106fef
+  - name: seq-deepfake-facial-attributes-train
+    path: 34data/seq-deepfake-facial-attributes-train
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: d9f18e5f66daebbf3836efd5e20d6bc5eb705a26
+  - name: midjourney-captioned-23m-images-1-0000
+    path: 34data/midjourney-captioned-23m-images-1-0000
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 57b65d6c688cac0bbe66452f72c1d2aa101b96ab
+  - name: midjourney-captioned-23m-images-1-0001
+    path: 34data/midjourney-captioned-23m-images-1-0001
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: c4dd5f90d46caad7cc4012f1cfbe8d4e264ded56
+  - name: persona-fluxed-10k-2608-belgium
+    path: 34data/persona-fluxed-10k-2608-belgium
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: d784b7486060b1a9c98f4324570538a05ba2087d
+  - name: syn-vis-v0-base
+    path: 34data/syn-vis-v0-base
+    modality: image
+    media_type: synthetic
+    source_format: parquet
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 5649a33952bb8faabf3b861ad3b5024374509e72

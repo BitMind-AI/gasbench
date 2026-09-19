@@ -563,7 +563,7 @@ See docs/Safetensors.md for detailed requirements.
         action="store_true",
         help="Derive sn34_score from Gorodkin's multiclass MCC and the multiclass "
              "Brier score instead of the binary real-vs-not-real collapse, so "
-             "distinguishing synthetic / semisynthetic / rendered earns points. "
+             "distinguishing synthetic / semisynthetic earns points. "
              "Mathematically identical to binary scoring for audio (2 classes). "
              "Both variants are always reported as binary_sn34_score and "
              "multiclass_sn34_score regardless of this flag.",

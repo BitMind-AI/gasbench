@@ -809,3 +809,72 @@ datasets:
     include_paths: ['train-']
     generator_family: real
     content_category: speech
+
+  # Released v24 holdouts — 34data mirrors only.
+  - name: nepali-lyrics
+    path: 34data/nepali-lyrics
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: nepali-music-source-seperation
+    path: 34data/nepali-music-source-seperation
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: newari-song
+    path: 34data/newari-song
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: traditional-nepali-instruments
+    path: 34data/traditional-nepali-instruments
+    modality: audio
+    media_type: real
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+  - name: synthetic-vocal-bursts
+    path: 34data/synthetic-vocal-bursts
+    modality: audio
+    media_type: real
+    source_format: flac
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v24 bmcore holdouts; exact local subset. Original label retained pending separate review.
+  - name: zinny-asr-ach-test
+    path: 34data/zinny-asr-ach-test
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 43e00e7e10e637e39716f5dca2ed872697d70774
+  - name: zinny-asr-aka-test
+    path: 34data/zinny-asr-aka-test
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: ac14f975be4cb1af4b8b679659c5c0284a10cc36
+  - name: zinny-asr-amh-test
+    path: 34data/zinny-asr-amh-test
+    modality: audio
+    media_type: real
+    source_format: mp3
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 0699bb1d85463a1cb5928db83bc61bdd127b4590

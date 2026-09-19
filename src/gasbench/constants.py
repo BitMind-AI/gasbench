@@ -3,7 +3,8 @@
 # Per-modality class indices. Class 0 is always real so binary collapse is 1 - p[0].
 #
 # Image is 3-class (no rendered): 0=real, 1=synthetic, 2=semisynthetic.
-# Video is 4-class:                0=real, 1=synthetic, 2=semisynthetic, 3=rendered.
+# Video is 3-class:                0=real, 1=synthetic, 2=semisynthetic.
+# Classical rendering is scored as real.
 # Audio stays binary:              0=real, 1=synthetic (semisynthetic collapsed).
 #
 # Semisynthetic media retains materially captured visual content alongside
@@ -21,7 +22,6 @@ VIDEO_MEDIA_TYPE_TO_LABEL = {
     "real": 0,
     "synthetic": 1,
     "semisynthetic": 2,
-    "rendered": 3,
 }
 AUDIO_MEDIA_TYPE_TO_LABEL = {
     "real": 0,
@@ -42,7 +42,7 @@ _MODALITY_LABELS = {
 }
 
 # Number of scored classes per modality, derived from the label maps above so
-# the two can never drift. image=3, video=4, audio=2 (semisynthetic collapses
+# the two can never drift. image=3, video=3, audio=2 (semisynthetic collapses
 # onto synthetic for audio). Used to size the multiclass confusion matrix and
 # to pick the random-guess baselines in Metrics.
 MODALITY_NUM_CLASSES = {

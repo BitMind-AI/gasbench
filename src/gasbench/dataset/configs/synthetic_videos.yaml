@@ -1,7 +1,7 @@
 # Video Dataset Configurations -- Synthetic, Rendered, Semisynthetic Videos
-# 4-class video taxonomy: real | synthetic | rendered | semisynthetic.
+# 3-class video taxonomy: real | synthetic | semisynthetic.
 # media_type: synthetic = fully neural-generated (t2v/i2v).
-# media_type: rendered = classical CGI / game engine / sim (not neural gen).
+# media_type: real = classical CGI / game engine / sim (not neural gen).
 # media_type: semisynthetic = materially captured visual content retained alongside
 #   spatially localized generated/replaced content. Fully synthesized output remains
 #   synthetic; modifying exclusively synthetic/rendered media does not change that.
@@ -18,7 +18,7 @@ datasets:
   - name: abot-world-explorer
     path: 34data/abot-world-explorer
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -29,7 +29,7 @@ datasets:
   - name: physicalai-autonomous-driving-pedestrian
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Autonomous-Driving-Scenarios
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: 2000
     archives_per_dataset: 1
@@ -42,7 +42,7 @@ datasets:
   - name: bedlam-closeup-suburb-a
     path: 34data/bedlam-closeup-suburb-a
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -53,7 +53,7 @@ datasets:
   - name: bedlam-closeup-suburb-b
     path: 34data/bedlam-closeup-suburb-b
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -64,7 +64,7 @@ datasets:
   - name: nvidia-sdg-synhuman-shard-7
     path: 34data/nvidia-sdg-synhuman-shard-7
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -75,7 +75,7 @@ datasets:
   - name: nvidia-sdg-synhuman-shard-8
     path: 34data/nvidia-sdg-synhuman-shard-8
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -86,7 +86,7 @@ datasets:
   - name: cs2-10k-data-ancient-part-01
     path: 34data/cs2-10k-data-ancient-part-01
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -223,7 +223,7 @@ datasets:
   - name: ByteDance_Synthetic_Videos
     path: kevinzzz8866/ByteDance_Synthetic_Videos
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: 1000
     archives_per_dataset: 1
@@ -1016,7 +1016,7 @@ datasets:
   - name: scene-decoupled-video-dataset
     path: 34data/scene-decoupled-video-dataset
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1026,7 +1026,7 @@ datasets:
   - name: synthetic-vstat-block-counting
     path: nyu-visionx/VSTAT
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1037,7 +1037,7 @@ datasets:
   - name: synthetic-vstat-shuffle-puzzle
     path: nyu-visionx/VSTAT
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1112,7 +1112,7 @@ datasets:
     hf_revision: 3c57d64f8603441b43f69dca9a123999776bc014
     hf_subfolders: [data/videos]
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1399,7 +1399,7 @@ datasets:
   - name: beat-rendered-videos-1
     path: 34data/beat-rendered-videos-1
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1408,7 +1408,7 @@ datasets:
   - name: gr1-isaacsim
     path: 34data/gr1-isaacsim
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1
@@ -1417,7 +1417,7 @@ datasets:
   - name: nano3d-rendered-v1-100k
     path: 34data/nano3d-rendered-v1-100k
     modality: video
-    media_type: rendered
+    media_type: real
     source_format: mp4
     media_per_archive: -1
     archives_per_dataset: -1

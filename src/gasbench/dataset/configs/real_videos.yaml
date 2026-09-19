@@ -1,6 +1,6 @@
 # Video Dataset Configurations -- Real Videos
-# 4-class video taxonomy: real | synthetic | rendered | semisynthetic.
-# This file: camera-captured video only. CGI/game-engine lives in synthetic_videos as rendered.
+# 3-class video taxonomy: real | synthetic | semisynthetic.
+# Camera-captured and other real-labeled video; some CGI sources remain grouped in synthetic_videos.
 
 # Some previously-active entries were moved to legacy_videos.yaml (not loaded by default).
 

@@ -860,3 +860,41 @@ datasets:
     data_columns: [audio_a]
     generator_family: mixed-generation
     content_category: speech
+
+  # Released v24 holdouts — 34data mirrors only.
+  - name: hausa-synthetic-asr-yourtts
+    path: 34data/hausa-synthetic-asr-yourtts
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 15f9b7d79bde66dc9f3616fb93a6d09e592c0efe
+  - name: multilingual-synthetic-tts-de
+    path: 34data/multilingual-synthetic-tts-de
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: be21aa035f0450e0f489ee5ad305ae3dda2c4ea7
+  - name: multilingual-synthetic-tts-en
+    path: 34data/multilingual-synthetic-tts-en
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 9f6f0377be64a5203575373edbc774138c646712
+  - name: multilingual-synthetic-tts-es
+    path: 34data/multilingual-synthetic-tts-es
+    modality: audio
+    media_type: synthetic
+    source_format: wav
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 04188209b3135617c0c682c432c2168e01b35011

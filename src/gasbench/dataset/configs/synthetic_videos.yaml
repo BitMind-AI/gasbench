@@ -1207,3 +1207,86 @@ datasets:
     include_paths: ['subset_videos_tar/i2vgenxl_videos_subset_1.tar']
     generator_family: i2vgenxl
     content_category: diverse
+
+  # Released v24 holdouts — 34data mirrors only.
+  - name: vidpair-halluc-merged-videos
+    path: 34data/vidpair-halluc-merged-videos
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: Released from v24 bmcore holdouts; exact local subset. Original label retained pending separate review.
+    hf_revision: 88658895b20cae68fc4ea2ba177733197d81aa39
+  - name: gfvc-vace-cogvideox-t2v
+    path: 34data/gfvc-vace-cogvideox-t2v
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: a1bd5c8eb3febd9a8e458fd7cfce8647c6838f94
+  - name: gfvc-vace-wan2-1-t2v
+    path: 34data/gfvc-vace-wan2-1-t2v
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 9b11002ef016d77faa9707ed1f3b0adb11f8bf40
+  - name: animatediff-v1-appearance-style
+    path: 34data/animatediff-v1-appearance-style
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: a4342d0269698df01cd916b2d6c20ff386abf8ba
+  - name: animatediff-v1-color
+    path: 34data/animatediff-v1-color
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: 53c8702bb733a9864e63811c28e228bfda2e449d
+  - name: ditto-1m-global-style2-3d
+    path: 34data/ditto-1m-global-style2-3d
+    modality: video
+    media_type: synthetic
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: d94716975c339f6d88bada58b80e56fa8ab86d24
+  - name: beat-rendered-videos-1
+    path: 34data/beat-rendered-videos-1
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: af1d8c3d217a0c5605801f9cbc00871932f6f909
+  - name: gr1-isaacsim
+    path: 34data/gr1-isaacsim
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: e6c8515b1e3af950db4b2d406ff43f800a92328b
+  - name: nano3d-rendered-v1-100k
+    path: 34data/nano3d-rendered-v1-100k
+    modality: video
+    media_type: real
+    source_format: mp4
+    media_per_archive: -1
+    archives_per_dataset: -1
+    notes: 'Released from v24 bmcore holdouts; exact local subset. '
+    hf_revision: fa7713f57249caf009200ab0f875c07cd3e20986

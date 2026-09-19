@@ -3,8 +3,8 @@
 # Per-modality class indices. Class 0 is always real so binary collapse is 1 - p[0].
 #
 # Image is 3-class (no rendered): 0=real, 1=synthetic, 2=semisynthetic.
-# Video is 3-class:                0=real, 1=synthetic, 2=semisynthetic.
-# Classical rendering is scored as real.
+# Video is 3-class:               0=real, 1=synthetic, 2=semisynthetic.
+# Classical rendered video is real; rendering provenance lives in dataset metadata.
 # Audio stays binary:              0=real, 1=synthetic (semisynthetic collapsed).
 #
 # Semisynthetic media retains materially captured visual content alongside

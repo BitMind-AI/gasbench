@@ -1,12 +1,12 @@
-# Video Dataset Configurations -- Synthetic, Rendered, Semisynthetic Videos
+# Video Dataset Configurations -- Synthetic, Semisynthetic Videos
 # 3-class video taxonomy: real | synthetic | semisynthetic.
 # media_type: synthetic = fully neural-generated (t2v/i2v).
-# media_type: real = classical CGI / game engine / sim (not neural gen).
+# Classical CGI / game engine / sim is real; see real_videos.yaml.
 # media_type: semisynthetic = materially captured visual content retained alongside
 #   spatially localized generated/replaced content. Fully synthesized output remains
 #   synthetic; modifying exclusively synthetic/rendered media does not change that.
 #
-# Excluded (cannot assign a correct 4-class label; no reliable split):
+# Excluded (cannot assign a correct 3-class label; no reliable split):
 #   artifact-bench — 34data dump is 1,350 rows = full Artifact-Bench mix
 #     (Task_1 250 real + 250 fake, Task_2 500 fake, Task_3 350 fake). HF copy
 #     is parquet-converted; include_paths cannot isolate real_*.mp4 vs fake.
@@ -14,85 +14,6 @@
 # Some previously-active entries were moved to legacy_videos.yaml (not loaded by default).
 
 datasets:
-
-  - name: abot-world-explorer
-    path: 34data/abot-world-explorer
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: scenes
-    notes: Released from v22 bmcore holdouts; game/simulation world-exploration footage
-
-  - name: physicalai-autonomous-driving-pedestrian
-    path: nvidia/PhysicalAI-WorldModel-Synthetic-Autonomous-Driving-Scenarios
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: 2000
-    archives_per_dataset: 1
-    hf_revision: c6fceba249770c5f8c61c7a6addab847003dca4f
-    hf_subfolders: [pedestrian]
-    generator_family: rendered
-    content_category: scenes
-    notes: NVIDIA Omniverse-rendered pedestrian driving scenarios; pinned upstream source replacing two 34data mirrors
-
-  - name: bedlam-closeup-suburb-a
-    path: 34data/bedlam-closeup-suburb-a
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
-  - name: bedlam-closeup-suburb-b
-    path: 34data/bedlam-closeup-suburb-b
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
-  - name: nvidia-sdg-synhuman-shard-7
-    path: 34data/nvidia-sdg-synhuman-shard-7
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
-  - name: nvidia-sdg-synhuman-shard-8
-    path: 34data/nvidia-sdg-synhuman-shard-8
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: humans
-    notes: Released from v22 bmcore holdouts
-
-  - name: cs2-10k-data-ancient-part-01
-    path: 34data/cs2-10k-data-ancient-part-01
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: action
-    notes: Released from v22 bmcore holdouts
 
   - name: deepaction-bdanimate
     path: faridlab/deepaction_v1
@@ -219,16 +140,6 @@ datasets:
     content_category: art
 
   # -- diverse --
-
-  - name: ByteDance_Synthetic_Videos
-    path: kevinzzz8866/ByteDance_Synthetic_Videos
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: 1000
-    archives_per_dataset: 1
-    generator_family: rendered
-    content_category: diverse
 
   - name: VideoDPO-10k
     path: chungimungi/VideoDPO-10k
@@ -1013,38 +924,6 @@ datasets:
     generator_variant: sora2
     content_category: diverse
 
-  - name: scene-decoupled-video-dataset
-    path: 34data/scene-decoupled-video-dataset
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: rendered
-    content_category: scenes
-
-  - name: synthetic-vstat-block-counting
-    path: nyu-visionx/VSTAT
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    include_paths: [videos/synthetic/block_counting/]
-    generator_family: rendered
-    content_category: diverse
-
-  - name: synthetic-vstat-shuffle-puzzle
-    path: nyu-visionx/VSTAT
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    include_paths: [videos/synthetic/shuffle_puzzle/]
-    generator_family: rendered
-    content_category: diverse
-
   - name: tonystark03-deepfake-fake
     path: 34data/tonystark03-deepfake-fake
     modality: video
@@ -1107,18 +986,6 @@ datasets:
     generator_family: seedance
     content_category: diverse
 
-  - name: synwts
-    path: mlcglab/synwts
-    hf_revision: 3c57d64f8603441b43f69dca9a123999776bc014
-    hf_subfolders: [data/videos]
-    modality: video
-    media_type: real
-    source_format: mp4
-    media_per_archive: -1
-    archives_per_dataset: -1
-    generator_family: mixed-generation
-    content_category: humans
-
   # ── Released v21 holdouts ─────────────────────────────────────────────────
 
   - name: pika
@@ -1160,7 +1027,6 @@ datasets:
     archives_per_dataset: -1
     generator_family: minimax
     content_category: diverse
-
 
   # ── Released v22 holdouts ─────────────────────────────────────────────────
 

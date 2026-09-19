@@ -47,7 +47,7 @@ class BenchmarkDatasetConfig:
     name: str
     path: str
     modality: str  # "image", "video", or "audio"
-    media_type: str  # image: real/synthetic/semisynthetic; video also allows rendered
+    media_type: str  # real/synthetic/semisynthetic
 
     # Download parameters
     media_per_archive: int = 100
@@ -781,9 +781,6 @@ def get_benchmark_dataset_summary() -> Dict:
             ),
             "semisynthetic": len(
                 [d for d in video_datasets if d.media_type == "semisynthetic"]
-            ),
-            "rendered": len(
-                [d for d in video_datasets if d.media_type == "rendered"]
             ),
             "real": len([d for d in video_datasets if d.media_type == "real"]),
             "datasets": [

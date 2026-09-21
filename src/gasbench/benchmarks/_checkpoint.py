@@ -3,7 +3,8 @@
 One coordinator must own a run directory at a time. This class does not provide
 distributed locking. The manifest must identify the run, model, evaluator,
 complete sample plan (including source revisions), seeds, and scoring settings.
-Each record has a stable ``work_id`` that distinguishes base/augmentation passes.
+Records use BenchmarkRunRecorder fields: run_id, dataset_name, iteration_index,
+sample_id, and aug_pass. No parallel prediction schema or identifier is introduced.
 
 Local durability uses fsync and atomic rename. Distributed filesystems require a
 ``persist(directory)`` callback that commits the mounted filesystem before a
@@ -24,9 +25,9 @@ class CheckpointError(RuntimeError):
     """Checkpoint is incompatible, corrupt, or cannot safely be persisted."""
 
 
-def _encode(value) -> bytes:
+def _encode(value, *, sort_keys: bool = True) -> bytes:
     return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), allow_nan=False
+        value, sort_keys=sort_keys, separators=(",", ":"), allow_nan=False
     ).encode("utf-8")
 
 
@@ -41,8 +42,22 @@ def _read(path: Path):
         raise CheckpointError(f"Cannot read checkpoint {path.name}") from exc
 
 
-class CheckpointStore:
-    """Persist completed prediction batches and restore them on process restart.
+def prediction_key(row: Mapping) -> tuple:
+    """Identity of one planned prediction, using the existing recorder schema."""
+    fields = ("run_id", "dataset_name", "sample_id")
+    if any(not isinstance(row.get(field), str) or not row[field] for field in fields):
+        raise CheckpointError("Prediction requires run_id, dataset_name, and sample_id")
+    index = row.get("iteration_index")
+    aug_pass = row.get("aug_pass", False)
+    if type(index) is not int or index < 1 or type(aug_pass) is not bool:
+        raise CheckpointError(
+            "Prediction requires a positive sample index and boolean aug_pass"
+        )
+    return (row["run_id"], row["dataset_name"], index, row["sample_id"], aug_pass)
+
+
+class RecorderCheckpoint:
+    """Internal persistence for BenchmarkRunRecorder rows.
 
     Reopening validates every committed batch. Temporary writes are ignored;
     corrupt or missing committed batches fail closed, including a missing tail.
@@ -65,7 +80,13 @@ class CheckpointStore:
         if not isinstance(manifest, Mapping) or not manifest:
             raise ValueError("A nonempty run manifest is required")
         # Normalize JSON types and detach mutable caller-owned objects.
-        expected = {"schema_version": 1, "manifest": json.loads(_encode(dict(manifest)))}
+        expected = {
+            "schema_version": 1,
+            "manifest": json.loads(_encode(dict(manifest))),
+        }
+        self.run_id = expected["manifest"].get("run_id")
+        if not isinstance(self.run_id, str) or not self.run_id:
+            raise ValueError("Checkpoint requires the benchmark run_id")
         self._manifest_digest = _digest(expected)
         # Provision the run directory before execution. Sync its parent as well
         # so a local crash cannot lose a newly created directory entry.
@@ -91,7 +112,9 @@ class CheckpointStore:
                 raise CheckpointError("Checkpoint batches exist without a commit head")
             self._write_head(-1, None)
         head_envelope = _read(head_path)
-        if not isinstance(head_envelope, dict) or not isinstance(head_envelope.get("payload"), dict):
+        if not isinstance(head_envelope, dict) or not isinstance(
+            head_envelope.get("payload"), dict
+        ):
             raise CheckpointError("Invalid checkpoint commit head")
         head = head_envelope["payload"]
         try:
@@ -110,7 +133,7 @@ class CheckpointStore:
             raise CheckpointError("Invalid or incomplete checkpoint commit head")
         # Files newer than the head were never acknowledged. They can be safely
         # replaced when the interrupted batch is replayed.
-        for path in batches[:head["last_batch"] + 1]:
+        for path in batches[: head["last_batch"] + 1]:
             if path.name != self._batch_name(self._next_batch):
                 raise CheckpointError("Checkpoint batch sequence is incomplete")
             envelope = _read(path)
@@ -129,34 +152,42 @@ class CheckpointStore:
             if not valid:
                 raise CheckpointError(f"Invalid checkpoint batch {path.name}")
             records = self._validate_records(payload.get("records"))
-            if any(row["work_id"] in self._records for row in records):
+            if any(prediction_key(row) in self._records for row in records):
                 raise CheckpointError("Duplicate work in committed checkpoint batches")
-            self._records.update((row["work_id"], row) for row in records)
+            self._records.update((prediction_key(row), row) for row in records)
             self._next_batch += 1
-        if batches and head["last_batch"] >= 0 and envelope["sha256"] != head.get("sha256"):
+        if (
+            batches
+            and head["last_batch"] >= 0
+            and envelope["sha256"] != head.get("sha256")
+        ):
             raise CheckpointError("Checkpoint tail differs from commit head")
 
     @staticmethod
     def _batch_name(index: int) -> str:
         return f"batch-{index:012d}.json"
 
-    @staticmethod
-    def _validate_records(records):
+    def _validate_records(self, records):
         if not isinstance(records, list) or not records:
             raise CheckpointError("Checkpoint batch must contain records")
         seen = set()
         for row in records:
             if not isinstance(row, dict):
                 raise CheckpointError("Checkpoint record must be an object")
-            work_id = row.get("work_id")
-            if not isinstance(work_id, str) or not work_id or work_id in seen:
-                raise CheckpointError("Checkpoint work IDs must be nonempty and unique")
-            seen.add(work_id)
+            key = prediction_key(row)
+            if row.get("run_id") != self.run_id:
+                raise CheckpointError("Prediction belongs to a different benchmark run")
+            if key in seen:
+                raise CheckpointError("Duplicate prediction in checkpoint batch")
+            seen.add(key)
         return records
 
     @property
-    def completed_ids(self) -> frozenset:
+    def completed_predictions(self) -> frozenset:
         return frozenset(self._records)
+
+    def contains_prediction(self, row: Mapping) -> bool:
+        return prediction_key(row) in self._records
 
     @property
     def records(self) -> list:
@@ -170,14 +201,18 @@ class CheckpointStore:
         """
         if not self._usable:
             raise CheckpointError("Persistence failed; reopen the durable checkpoint")
-        rows = self._validate_records(json.loads(_encode(list(records))))
+        rows = self._validate_records(
+            json.loads(_encode(list(records), sort_keys=False))
+        )
         new_rows = []
         for row in rows:
-            old = self._records.get(row["work_id"])
+            old = self._records.get(prediction_key(row))
             if old is None:
                 new_rows.append(row)
             elif _encode(old) != _encode(row):
-                raise CheckpointError(f"Conflicting completed work: {row['work_id']}")
+                raise CheckpointError(
+                    f"Conflicting completed work: {prediction_key(row)}"
+                )
         if not new_rows:
             return 0
         payload = {
@@ -191,7 +226,7 @@ class CheckpointStore:
             persist=False,
         )
         self._write_head(self._next_batch, _digest(payload))
-        self._records.update((row["work_id"], row) for row in new_rows)
+        self._records.update((prediction_key(row), row) for row in new_rows)
         self._next_batch += 1
         return len(new_rows)
 
@@ -203,7 +238,9 @@ class CheckpointStore:
         )
 
     def _write(self, destination: Path, value, *, persist: bool = True) -> None:
-        content = _encode(value)
+        # Preserve recorder column order in stored rows; checksums still use
+        # canonical key ordering so integrity does not depend on JSON layout.
+        content = _encode(value, sort_keys=False)
         temp_path = None
         try:
             with tempfile.NamedTemporaryFile(

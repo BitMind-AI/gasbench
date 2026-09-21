@@ -469,6 +469,8 @@ def _needs_download(
             dataset_path=dataset.path,
             source_format=dataset.source_format,
             modality=dataset.modality,
+            cache_dir=cache_dir,
+            dataset_name=dataset.name,
         )
         for week_str in target_weeks:
             week_dir = Path(cache_dir) / "datasets" / dataset.name / week_str

@@ -55,6 +55,8 @@ class DatasetIterator:
                 dataset_path=dataset_config.path,
                 source_format=dataset_config.source_format,
                 modality=dataset_config.modality,
+                cache_dir=cache_dir,
+                dataset_name=dataset_config.name,
             )
             self.week_dirs = gasstation_utils.get_week_directories(
                 dataset_config.name, cache_dir, self.target_weeks

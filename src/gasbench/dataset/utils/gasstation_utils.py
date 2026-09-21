@@ -23,17 +23,24 @@ def calculate_target_weeks(
     dataset_path: Optional[str] = None,
     source_format: Optional[str] = None,
     modality: Optional[str] = None,
+    cache_dir: Optional[str] = None,
+    dataset_name: Optional[str] = None,
 ) -> List[str]:
-    """Calculate target ISO weeks for download.
-    
-    If the current week has no data available on HuggingFace, automatically
-    falls back to include the previous week(s) until data is found.
+    """Calculate target ISO weeks for download or cache-only evaluation.
+
+    If the current week has no data on HuggingFace, automatically falls back
+    to previous week(s) until data is found. When HuggingFace is unreachable
+    (network-blocked eval sandboxes), the same fallback inspects the local
+    week cache instead of assuming the current week exists.
     
     Args:
         num_weeks: Number of recent weeks to include (None = auto-detect)
         dataset_path: HuggingFace dataset path (for checking data availability)
         source_format: Source file format (e.g., "parquet")
         modality: Dataset modality ("image" or "video")
+        cache_dir: Local cache root (e.g. /benchmark_data). Used when HF listing
+            fails or to treat an already-populated week as present.
+        dataset_name: Dataset directory name under cache_dir/datasets/.
         
     Returns:
         List of ISO week strings (e.g., ["2025W39", "2025W40"])
@@ -52,9 +59,18 @@ def calculate_target_weeks(
         current_week_str = f"{current_year}W{current_week:02d}"
         target_weeks = [current_week_str]
         
-        # Check if current week has data, if not fall back to previous weeks
-        if dataset_path and source_format and modality:
-            if not _week_has_data(dataset_path, current_week_str, source_format, modality):
+        can_check = (dataset_path and source_format and modality) or (
+            cache_dir and dataset_name
+        )
+        if can_check:
+            if not _week_has_data(
+                dataset_path,
+                current_week_str,
+                source_format,
+                modality,
+                cache_dir=cache_dir,
+                dataset_name=dataset_name,
+            ):
                 logger.info(
                     f"No data found for current week {current_week_str}, "
                     f"checking previous weeks..."
@@ -65,7 +81,14 @@ def calculate_target_weeks(
                     prev_year, prev_week, _ = prev_date.isocalendar()
                     prev_week_str = f"{prev_year}W{prev_week:02d}"
                     
-                    if _week_has_data(dataset_path, prev_week_str, source_format, modality):
+                    if _week_has_data(
+                        dataset_path,
+                        prev_week_str,
+                        source_format,
+                        modality,
+                        cache_dir=cache_dir,
+                        dataset_name=dataset_name,
+                    ):
                         target_weeks.append(prev_week_str)
                         logger.info(
                             f"Found data in week {prev_week_str}, "
@@ -79,27 +102,38 @@ def calculate_target_weeks(
     return target_weeks
 
 
+def _week_cache_dir(
+    cache_dir: Optional[str], dataset_name: Optional[str], week_str: str
+) -> Optional[str]:
+    if not cache_dir or not dataset_name:
+        return None
+    return os.path.join(cache_dir, "datasets", dataset_name, week_str)
+
+
 def _week_has_data(
     dataset_path: str,
     week_str: str,
     source_format: str,
     modality: str,
+    cache_dir: Optional[str] = None,
+    dataset_name: Optional[str] = None,
 ) -> bool:
-    """Check if a week has any data files available on HuggingFace.
-    
-    Args:
-        dataset_path: HuggingFace dataset path
-        week_str: ISO week string (e.g., "2025W40")
-        source_format: Source file format (e.g., "parquet")
-        modality: Dataset modality ("image" or "video")
-        
-    Returns:
-        True if files exist for this week, False otherwise
+    """Check if a week has data on HuggingFace or already cached locally.
+
+    Local cache is consulted first so a populated previous week is visible
+    even when the eval sandbox cannot list HuggingFace. If HuggingFace is
+    unreachable and the local week is empty, return False so the caller can
+    fall back instead of assuming the current week exists.
     """
+    week_dir = _week_cache_dir(cache_dir, dataset_name, week_str)
+    cached = get_week_sample_count(week_dir) > 0 if week_dir else None
+    if cached:
+        return True
+
     try:
         from ..download import list_hf_files
         
-        src_fmt = str(source_format).lower().lstrip(".")
+        src_fmt = str(source_format or "").lower().lstrip(".")
         if not src_fmt:
             src_fmt = ".parquet" if modality == "image" else ".zip"
         else:
@@ -112,7 +146,9 @@ def _week_has_data(
         
     except Exception as e:
         logger.debug(f"Failed to check week data availability: {e}")
-        # If we can't check, assume data exists to avoid blocking
+        if cached is not None:
+            return False
+        # No cache to inspect: keep the old "don't block downloads" behavior.
         return True
 
 

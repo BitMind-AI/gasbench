@@ -188,6 +188,51 @@ def test_changed_pending_sample_aborts_instead_of_returning_partial_score(benchm
         b.run(Session(b.model_dir))
 
 
+def test_checkpoint_startup_never_reads_media_or_augmentation_payloads(benchmark, tmp_path, monkeypatch):
+    """The old planner read every full video and augmentation before inference."""
+    b = benchmark
+    aug_dir = tmp_path / "augmentations"
+    aug_dir.mkdir()
+    original = common.create_tracker
+
+    def create_tracker(*args, **kwargs):
+        original_open = Path.open
+
+        def guarded_open(path, *open_args, **open_kwargs):
+            if b.samples_dir in path.parents or aug_dir in path.parents:
+                pytest.fail("Checkpoint startup opened a media payload")
+            return original_open(path, *open_args, **open_kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(Path, "open", guarded_open)
+            tracker = original(*args, **kwargs)
+        assert tracker.count == 0
+        raise Interrupted()
+
+    monkeypatch.setattr(b.module, "create_tracker", create_tracker)
+    extra = {} if b.modality == "audio" else {
+        "n_aug_per_dataset": 3, "aug_cache_dir": str(aug_dir),
+    }
+    with pytest.raises(Interrupted):
+        b.run(Session(b.model_dir), **extra)
+    manifest = RecorderCheckpoint.read_manifest(b.checkpoint)
+    samples = manifest["benchmark"]["samples"]["tiny"]["base"]
+    assert samples and all("file_metadata_sha256" in sample for sample in samples)
+
+
+def test_metadata_identity_detects_same_size_edit_with_restored_mtime(tmp_path):
+    import os
+
+    path = tmp_path / "media.bin"
+    path.write_bytes(b"before")
+    before = path.stat()
+    sample = {"video_path": str(path), "file_metadata_sha256": common.file_metadata_digest([path])}
+    path.write_bytes(b"after!")
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    with pytest.raises(CheckpointError, match="changed"):
+        common.verify_sample(sample)
+
+
 def test_changed_model_rejected_before_inference(benchmark):
     b = benchmark
     with pytest.raises(Interrupted):

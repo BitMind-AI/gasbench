@@ -65,6 +65,7 @@ def run_batch_and_record(
                 sample_index=sample_index,
                 sample=sample,
                 error_message=f"inference-failed: {str(e)[:160]}",
+                aug_pass=aug_pass,
             )
         return
 

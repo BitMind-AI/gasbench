@@ -30,7 +30,9 @@ jobs:
       # registry importable without the benchmark stack — bitmind-subnet
       # depends on this contract. This job fails if anyone adds an eager
       # heavy import to the registry path or a heavy dep to base deps.
-      - run: pip install .
+      - run: pip install . pytest
+      # Checkpoint recovery is CPU-only and must not require the ML extras.
+      - run: pytest tests/unit/test_checkpoint.py
       - run: |
           python - <<'EOF'
           from gasbench.dataset.config import load_benchmark_datasets_from_yaml

@@ -30,7 +30,9 @@ jobs:
       # registry importable without the benchmark stack — bitmind-subnet
       # depends on this contract. This job fails if anyone adds an eager
       # heavy import to the registry path or a heavy dep to base deps.
-      - run: pip install .
+      - run: pip install . pytest
+      # Checkpoint recovery is CPU-only and must not require the ML extras.
+      - run: pytest tests/unit/test_checkpoint.py
       - run: |
           python - <<'EOF'
           from gasbench.dataset.config import load_benchmark_datasets_from_yaml
@@ -52,6 +54,32 @@ jobs:
           assert not leaked, f"heavy deps in base install: {leaked}"
           print("base install contract holds:", dists)
           EOF
+      # Recorder recovery shares the existing metrics and parquet paths, without
+      # loading torch or the inference backends (same lazy-import policy).
+      - run: pip install numpy pandas pyarrow
+      - run: pytest tests/unit/test_recorder_checkpoint.py
+
+  benchmark-resume:
+    name: benchmark interruption recovery (CPU)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      # Use the project's versions, with CPU wheels for the inference test doubles.
+      - run: |
+          python - <<'EOF'
+          import subprocess, sys, tomllib
+          with open("pyproject.toml", "rb") as f:
+              requirements = tomllib.load(f)["project"]["optional-dependencies"]["gpu"]
+          cpu = [r for r in requirements if r.split("==")[0] in {"torch", "torchvision", "torchaudio"}]
+          subprocess.check_call([sys.executable, "-m", "pip", "install", *cpu,
+                                 "--index-url", "https://download.pytorch.org/whl/cpu"])
+          EOF
+      - run: pip install '.[gpu]' pytest
+      - run: pytest tests/unit/test_benchmark_resume.py tests/unit/test_cached_sample_labels.py
 
   typecheck:
     name: mypy (advisory)

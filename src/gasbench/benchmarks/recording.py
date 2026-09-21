@@ -2,12 +2,14 @@ import uuid
 import time
 import os
 import hashlib
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
 import numpy as np
 
-from .utils import Metrics
+from .utils.metrics import Metrics
+from ._checkpoint import RecorderCheckpoint
 from ..constants import MODALITY_NUM_CLASSES
 
 
@@ -22,7 +24,15 @@ class BenchmarkRunRecorder:
         model_name: Optional[str] = None,
         augment_level: Optional[int] = 0,
         crop_prob: float = 0.0,
+        checkpoint_dir: Optional[Path] = None,
+        checkpoint_context: Optional[Dict[str, Any]] = None,
+        checkpoint_persist: Optional[Callable[[Path], None]] = None,
     ):
+        # Identity must be supplied by the coordinator, never regenerated on resume.
+        if checkpoint_dir is not None and (not run_id or not checkpoint_context):
+            raise ValueError("Checkpointing requires run_id and benchmark context")
+        if checkpoint_dir is None and (checkpoint_context is not None or checkpoint_persist is not None):
+            raise ValueError("Checkpoint context/persistence requires checkpoint_dir")
         self.run_id = run_id or str(uuid.uuid4())
         self.run_started_at = int(time.time())
         self.mode = mode
@@ -39,6 +49,65 @@ class BenchmarkRunRecorder:
         # log_dataset_summary never has to materialise a full DataFrame.
         # Structure: {dataset_name: {"ok": int, "correct": int, "skipped": int}}
         self._dataset_counts: Dict[str, Dict[str, int]] = {}
+        self._checkpoint = None
+        self._checkpointed_count = 0
+        if checkpoint_dir is not None:
+            self._checkpoint = RecorderCheckpoint(
+                checkpoint_dir,
+                {
+                    "run_id": self.run_id,
+                    "recorder": {
+                        "mode": self.mode, "modality": self.modality,
+                        "target_height": self.target_height, "target_width": self.target_width,
+                        "input_name": self.model_input_name, "model_name": self.model_name,
+                        "augment_level": self.augment_level, "crop_prob": self.crop_prob,
+                    },
+                    "benchmark": checkpoint_context,
+                },
+                persist=checkpoint_persist,
+            )
+            for row in self._checkpoint.records:
+                self._append_row(row)
+            if self.rows:
+                self.run_started_at = self.rows[0]["run_started_at"]
+            self._checkpointed_count = len(self.rows)
+
+    def checkpoint(self) -> int:
+        """Commit pending recorder rows; distributed storage must supply persist.
+
+        checkpoint_context must include the model/evaluator identity, immutable
+        sample plan with source revisions, seed, and scoring settings. Recorder
+        settings and run_id are included automatically. One coordinator owns
+        this run directory; this method is not a distributed writer lock.
+        """
+        if self._checkpoint is None or self._checkpointed_count == len(self.rows):
+            return 0
+        count = self._checkpoint.commit_batch(self.rows[self._checkpointed_count:])
+        self._checkpointed_count = len(self.rows)
+        return count
+
+    def is_checkpointed(self, *, dataset_name: str, sample_index: int,
+                        sample: Dict[str, Any], aug_pass: bool = False) -> bool:
+        """Check durable progress before decoding or inferring a planned sample."""
+        if self._checkpoint is None:
+            return False
+        return self._checkpoint.contains_prediction({
+            "run_id": self.run_id, "dataset_name": dataset_name,
+            "iteration_index": sample_index, "sample_id": build_sample_id(sample),
+            "aug_pass": aug_pass,
+        })
+
+    def _append_row(self, row: Dict[str, Any]) -> None:
+        """Apply the same counters for live records and checkpoint restoration."""
+        self.rows.append(row)
+        if row.get("aug_pass", False) or row["status"] == "error":
+            return
+        ds = self._dataset_counts.setdefault(row["dataset_name"], {"ok": 0, "correct": 0, "skipped": 0})
+        if row["status"] == "ok":
+            ds["ok"] += 1
+            ds["correct"] += int(bool(row["correct"]))
+        elif row["status"] == "skipped":
+            ds["skipped"] += 1
 
     @property
     def count(self) -> int:
@@ -103,7 +172,7 @@ class BenchmarkRunRecorder:
                 "dataset_path": sample.get("dataset_path"),
                 "hf_resolved_revision": sample.get("hf_resolved_revision"),
                 "archive_filename": sample.get("archive_filename"),
-                "path_in_archive": sample.get("member_path"),
+                "path_in_archive": sample.get("path_in_archive") or sample.get("member_path"),
                 "source_file": sample.get("source_file"),
                 "iso_week": sample.get("iso_week"),
                 "cache_relpath": sample.get("cache_relpath"),
@@ -119,15 +188,7 @@ class BenchmarkRunRecorder:
         row["sample_compound_id"] = build_compound_id(row)
         row["sample_display_uri"] = build_display_uri(row)
 
-        self.rows.append(row)
-
-        # Maintain incremental counters so per-dataset logging is O(1).
-        # Aug-pass rows are not counted here — they are reported separately.
-        if not aug_pass:
-            ds = self._dataset_counts.setdefault(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
-            ds["ok"] += 1
-            if bool(predicted == label):
-                ds["correct"] += 1
+        self._append_row(row)
 
     def add_skip(
         self,
@@ -136,6 +197,7 @@ class BenchmarkRunRecorder:
         sample_index: int,
         sample: Dict[str, Any],
         reason: str,
+        aug_pass: bool = False,
     ):
         row = {
             "run_id": self.run_id,
@@ -152,6 +214,7 @@ class BenchmarkRunRecorder:
             "iteration_index": int(sample_index),
             "media_type": sample.get("media_type"),
             "status": "skipped",
+            "aug_pass": bool(aug_pass),
             "label": None,
             "predicted": None,
             "probs": None,
@@ -170,7 +233,7 @@ class BenchmarkRunRecorder:
                 "dataset_path": sample.get("dataset_path"),
                 "hf_resolved_revision": sample.get("hf_resolved_revision"),
                 "archive_filename": sample.get("archive_filename"),
-                "path_in_archive": sample.get("member_path"),
+                "path_in_archive": sample.get("path_in_archive") or sample.get("member_path"),
                 "source_file": sample.get("source_file"),
                 "iso_week": sample.get("iso_week"),
                 "cache_relpath": sample.get("cache_relpath"),
@@ -183,10 +246,7 @@ class BenchmarkRunRecorder:
         row["sample_id"] = build_sample_id(row)
         row["sample_compound_id"] = build_compound_id(row)
         row["sample_display_uri"] = build_display_uri(row)
-        self.rows.append(row)
-
-        ds = self._dataset_counts.setdefault(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
-        ds["skipped"] += 1
+        self._append_row(row)
 
     def add_error(
         self,
@@ -195,6 +255,7 @@ class BenchmarkRunRecorder:
         sample_index: int,
         sample: Dict[str, Any],
         error_message: str,
+        aug_pass: bool = False,
     ):
         row = {
             "run_id": self.run_id,
@@ -211,6 +272,7 @@ class BenchmarkRunRecorder:
             "iteration_index": int(sample_index),
             "media_type": sample.get("media_type"),
             "status": "error",
+            "aug_pass": bool(aug_pass),
             "label": None,
             "predicted": None,
             "probs": None,
@@ -229,7 +291,7 @@ class BenchmarkRunRecorder:
                 "dataset_path": sample.get("dataset_path"),
                 "hf_resolved_revision": sample.get("hf_resolved_revision"),
                 "archive_filename": sample.get("archive_filename"),
-                "path_in_archive": sample.get("member_path"),
+                "path_in_archive": sample.get("path_in_archive") or sample.get("member_path"),
                 "source_file": sample.get("source_file"),
                 "iso_week": sample.get("iso_week"),
                 "cache_relpath": sample.get("cache_relpath"),
@@ -242,7 +304,7 @@ class BenchmarkRunRecorder:
         row["sample_id"] = build_sample_id(row)
         row["sample_compound_id"] = build_compound_id(row)
         row["sample_display_uri"] = build_display_uri(row)
-        self.rows.append(row)
+        self._append_row(row)
 
     def get_dataset_summary(self, dataset_name: str, include_skipped: bool = False) -> Dict[str, Any]:
         """Return per-dataset accuracy from incremental counters — O(1), no DataFrame."""

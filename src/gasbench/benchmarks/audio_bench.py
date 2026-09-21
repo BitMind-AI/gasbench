@@ -182,8 +182,8 @@ async def run_audio_benchmark(
                     ):
                         continue
                     verify_sample(sample)
-                    audio_sample = load_audio_sample(sample)
                     try:
+                        audio_sample = load_audio_sample(sample)
                         # Check if sample is already preprocessed
                         if audio_sample.get("is_preprocessed", False):
                             audio_array = audio_sample.get("preprocessed_waveform")

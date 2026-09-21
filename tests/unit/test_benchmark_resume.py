@@ -116,6 +116,7 @@ def benchmark(request, tmp_path, monkeypatch):
         model_dir=model_dir,
         cache=cache,
         samples_dir=samples_dir,
+        dataset=dataset,
         decoded=decoded,
         modality=modality,
         module=module,
@@ -198,15 +199,42 @@ def test_changed_model_rejected_before_inference(benchmark):
     assert session.calls == []
 
 
-def test_persistence_failure_aborts_every_modality(benchmark):
+@pytest.mark.parametrize("model_error", [False, True])
+def test_persistence_failure_aborts_every_modality(benchmark, model_error):
     b = benchmark
+    session = Session(b.model_dir, error=model_error)
+    storage_error = OSError("storage unavailable")
 
     def persist(directory):
         if list(Path(directory).glob("batch-*.json")):
-            raise OSError("storage unavailable")
+            raise storage_error
 
-    with pytest.raises(CheckpointError):
-        b.run(Session(b.model_dir), checkpoint_persist=persist)
+    with pytest.raises(CheckpointError) as error:
+        b.run(session, checkpoint_persist=persist)
+    assert error.value.__cause__ is storage_error
+    assert len(session.calls) == 1
+
+
+@pytest.mark.parametrize("benchmark", ["audio-tensor"], indirect=True)
+def test_unreadable_audio_preserves_pending_batch_and_remaining_samples(benchmark):
+    b = benchmark
+    selected = list(common.DatasetIterator(
+        b.dataset, max_samples=5, cache_dir=str(b.cache), download=False,
+        seed=7, metadata_only=True,
+    ))
+    # Corrupt an input before freezing the plan, with a valid sample ahead of it
+    # waiting for its batch and more valid samples after it.
+    bad_sample = selected[1]
+    Path(bad_sample["audio_path"]).write_bytes(b"not a torch file")
+    expected = {sample["source_file"] for sample in selected} - {bad_sample["source_file"]}
+    session = Session(b.model_dir)
+    result = b.run(session, batch_size=2)
+    assert result["errors"]
+    assert len(session.calls) == len(expected)
+    assert {row["source_file"] for row in checkpoint_rows(b.checkpoint)} == expected
+    resumed_session = Session(b.model_dir)
+    b.run(resumed_session, batch_size=2)
+    assert resumed_session.calls == []
 
 
 def test_failed_inference_is_committed_and_not_retried(benchmark):

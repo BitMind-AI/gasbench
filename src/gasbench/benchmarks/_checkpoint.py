@@ -65,6 +65,21 @@ class RecorderCheckpoint:
     is rejected.
     """
 
+    @staticmethod
+    def read_manifest(directory: Path):
+        """Read a saved plan before opening the recorder, which validates its batches."""
+        path = Path(directory) / "manifest.json"
+        if not path.exists():
+            if any(Path(directory).glob("batch-*.json")) or (Path(directory) / "head.json").exists():
+                raise CheckpointError("Checkpoint progress exists without a manifest")
+            return None
+        value = _read(path)
+        if not isinstance(value, dict) or value.get("schema_version") != 2 or not isinstance(value.get("manifest"), dict):
+            raise CheckpointError("Invalid checkpoint manifest")
+        if value.get("sha256") != _digest(value["manifest"]):
+            raise CheckpointError("Invalid checkpoint manifest checksum")
+        return value["manifest"]
+
     def __init__(
         self,
         directory: Path,
@@ -81,9 +96,10 @@ class RecorderCheckpoint:
             raise ValueError("A nonempty run manifest is required")
         # Normalize JSON types and detach mutable caller-owned objects.
         expected = {
-            "schema_version": 1,
+            "schema_version": 2,
             "manifest": json.loads(_encode(dict(manifest))),
         }
+        expected["sha256"] = _digest(expected["manifest"])
         self.run_id = expected["manifest"].get("run_id")
         if not isinstance(self.run_id, str) or not self.run_id:
             raise ValueError("Checkpoint requires the benchmark run_id")
@@ -240,27 +256,34 @@ class RecorderCheckpoint:
     def _write(self, destination: Path, value, *, persist: bool = True) -> None:
         # Preserve recorder column order in stored rows; checksums still use
         # canonical key ordering so integrity does not depend on JSON layout.
-        content = _encode(value, sort_keys=False)
         temp_path = None
         try:
-            with tempfile.NamedTemporaryFile(
-                dir=self.directory, prefix=".pending-", delete=False
-            ) as handle:
-                temp_path = Path(handle.name)
-                handle.write(content)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temp_path, destination)
-            fd = os.open(self.directory, os.O_RDONLY)
+            content = _encode(value, sort_keys=False)
             try:
-                os.fsync(fd)
+                with tempfile.NamedTemporaryFile(
+                    dir=self.directory, prefix=".pending-", delete=False
+                ) as handle:
+                    temp_path = Path(handle.name)
+                    handle.write(content)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temp_path, destination)
+                fd = os.open(self.directory, os.O_RDONLY)
+                try:
+                    os.fsync(fd)
+                finally:
+                    os.close(fd)
+                if persist and self._persist is not None:
+                    self._persist(self.directory)
             finally:
-                os.close(fd)
-            if persist and self._persist is not None:
-                self._persist(self.directory)
-        except BaseException:
+                if temp_path is not None:
+                    temp_path.unlink(missing_ok=True)
+        except BaseException as exc:
             self._usable = False
+            # Sample/dataset handlers must never swallow a failed durable write.
+            # Preserve process interruptions while normalizing storage errors.
+            if isinstance(exc, Exception) and not isinstance(exc, CheckpointError):
+                raise CheckpointError(
+                    f"Cannot persist checkpoint {destination.name}: {exc}"
+                ) from exc
             raise
-        finally:
-            if temp_path is not None:
-                temp_path.unlink(missing_ok=True)

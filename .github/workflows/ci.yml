@@ -59,6 +59,28 @@ jobs:
       - run: pip install numpy pandas pyarrow
       - run: pytest tests/unit/test_recorder_checkpoint.py
 
+  benchmark-resume:
+    name: benchmark interruption recovery (CPU)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      # Use the project's versions, with CPU wheels for the inference test doubles.
+      - run: |
+          python - <<'EOF'
+          import subprocess, sys, tomllib
+          with open("pyproject.toml", "rb") as f:
+              requirements = tomllib.load(f)["project"]["optional-dependencies"]["gpu"]
+          cpu = [r for r in requirements if r.split("==")[0] in {"torch", "torchvision", "torchaudio"}]
+          subprocess.check_call([sys.executable, "-m", "pip", "install", *cpu,
+                                 "--index-url", "https://download.pytorch.org/whl/cpu"])
+          EOF
+      - run: pip install '.[gpu]' pytest
+      - run: pytest tests/unit/test_benchmark_resume.py tests/unit/test_cached_sample_labels.py
+
   typecheck:
     name: mypy (advisory)
     runs-on: ubuntu-latest

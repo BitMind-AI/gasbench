@@ -159,6 +159,7 @@ def command_run(args):
                 records_parquet_path=parquet_path,
                 skip_missing=getattr(args, "skip_missing", False),
                 run_id=getattr(args, "run_id", None),
+                checkpoint_dir=getattr(args, "checkpoint_dir", None),
                 holdout_weight=getattr(args, "holdout_weight", 1.0),
                 holdouts_only=holdouts_only,
                 score_composition=score_composition,
@@ -525,6 +526,10 @@ See docs/Safetensors.md for detailed requirements.
         "--skip-missing",
         action="store_true",
         help="Skip datasets that are not already cached (do not download missing datasets)",
+    )
+    run_parser.add_argument(
+        "--checkpoint-dir",
+        help="Checkpoint storage directory (default: <cache-dir>/runs/<run-id>/checkpoint). Reuse with --run-id to resume.",
     )
     run_parser.add_argument(
         "--run-id",

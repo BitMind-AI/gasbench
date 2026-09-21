@@ -170,17 +170,27 @@ os._exit(71)
     ]
 
 
-def test_failed_remote_commit_is_not_acknowledged(tmp_path, manifest):
+@pytest.mark.parametrize("failure", ["callback", "rename", "fsync"])
+def test_failed_commit_is_not_acknowledged(tmp_path, manifest, monkeypatch, failure):
     calls = []
+    storage_error = RuntimeError("remote storage unavailable") if failure == "callback" else OSError("local storage unavailable")
+
+    def fail(*args):
+        raise storage_error
 
     def persist(directory):
         calls.append(directory)
-        if len(calls) > 2:
-            raise OSError("remote storage unavailable")
+        if failure == "callback" and len(calls) > 2:
+            fail()
 
     store = RecorderCheckpoint(tmp_path, manifest, persist=persist)
-    with pytest.raises(OSError, match="remote storage"):
+    if failure == "rename":
+        monkeypatch.setattr(os, "replace", fail)
+    elif failure == "fsync":
+        monkeypatch.setattr(os, "fsync", fail)
+    with pytest.raises(CheckpointError, match="storage unavailable") as error:
         store.commit_batch([record("a")])
+    assert error.value.__cause__ is storage_error
     assert store.completed_predictions == set()
     with pytest.raises(CheckpointError, match="reopen"):
         store.commit_batch([record("b")])
@@ -215,3 +225,14 @@ def test_invalid_batch_never_changes_progress(tmp_path, manifest, rows):
     with pytest.raises(CheckpointError):
         store.commit_batch(rows)
     assert RecorderCheckpoint(tmp_path, manifest).records == []
+
+
+def test_saved_manifest_is_checked_before_any_predictions_exist(tmp_path, manifest):
+    RecorderCheckpoint(tmp_path, manifest)
+    assert RecorderCheckpoint.read_manifest(tmp_path) == manifest
+    path = tmp_path / "manifest.json"
+    saved = json.loads(path.read_text())
+    saved["manifest"]["seed"] = "corrupted"
+    path.write_text(json.dumps(saved))
+    with pytest.raises(CheckpointError, match="manifest checksum"):
+        RecorderCheckpoint.read_manifest(tmp_path)

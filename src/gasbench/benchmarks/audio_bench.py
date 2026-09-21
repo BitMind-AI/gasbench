@@ -4,13 +4,16 @@ from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.media import process_audio_sample
-from ..dataset.iterator import DatasetIterator
+from ..dataset.iterator import load_audio_sample
 
+from ._checkpoint import CheckpointError
 from .recording import BenchmarkRunRecorder, log_dataset_summary
 from .common import (
     BenchmarkRunConfig,
     build_plan,
     create_tracker,
+    create_dataset_iterator,
+    verify_sample,
     finalize_run,
     run_batch_and_record,
 )
@@ -45,6 +48,8 @@ def process_batch(
         batch_audio_np = [b.squeeze() if b.ndim > 1 else b for b in batch_audio_np]
 
         batch_array = np.stack(batch_audio_np)
+    except CheckpointError:
+        raise
     except Exception as e:
         logger.error(f"Failed to stack audio batch: {e}")
         for label, sample, sample_index, dataset_name, sample_seed in batch_metadata:
@@ -54,6 +59,7 @@ def process_batch(
                 sample=sample,
                 error_message=f"stack-failed: {str(e)[:160]}",
             )
+        tracker.checkpoint()
         return
 
     run_batch_and_record(
@@ -82,11 +88,15 @@ async def run_audio_benchmark(
     content_category: Optional[str] = None,
     score_composition: dict = None,
     multiclass_scoring: bool = False,
+    checkpoint_dir: Optional[str] = None,
+    checkpoint_persist=None,
 ) -> pd.DataFrame:
     """Test model on benchmark audio datasets for AI-generated content detection.
     
     Uses binary classification: 0=real, 1=synthetic (semisynthetic treated as synthetic).
     """
+
+    seed = 42 if seed is None else seed
 
     if batch_size is None:
         batch_size = DEFAULT_AUDIO_BATCH_SIZE
@@ -113,6 +123,8 @@ async def run_audio_benchmark(
             crop_prob=0.0,
             records_parquet_path=records_parquet_path,
             run_id=run_id,
+            checkpoint_dir=checkpoint_dir,
+            checkpoint_persist=checkpoint_persist,
             dataset_filters=dataset_filters,
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
@@ -127,7 +139,13 @@ async def run_audio_benchmark(
             benchmark_results["audio_results"] = {"error": "No datasets available"}
             return 0.0
 
-        tracker = create_tracker(run_config, plan, input_specs)
+        tracker = create_tracker(
+            run_config, plan, input_specs, session=session, seed=seed,
+            skip_missing=skip_missing,
+            download_latest_gasstation_data=download_latest_gasstation_data,
+        )
+        benchmark_results["run_id"] = run_config.run_id
+        benchmark_results["checkpoint_dir"] = run_config.checkpoint_dir
 
         # Target sample rate for audio processing
         target_sr = 16000
@@ -144,21 +162,8 @@ async def run_audio_benchmark(
             )
 
             try:
-                is_gasstation = "gasstation" in dataset_cfg.name.lower()
-                if skip_missing:
-                    should_download = False
-                else:
-                    should_download = (
-                        download_latest_gasstation_data if is_gasstation else True
-                    )
-
-                dataset_iterator = DatasetIterator(
-                    dataset_cfg,
-                    max_samples=dataset_cap,
-                    cache_dir=cache_dir,
-                    download=should_download,
-                    hf_token=hf_token,
-                    seed=seed,
+                dataset_iterator = create_dataset_iterator(
+                    run_config, plan, dataset_cfg, aug_pass=False,
                 )
 
                 if skip_missing and dataset_iterator.get_total_cached_count() == 0:
@@ -172,11 +177,17 @@ async def run_audio_benchmark(
 
                 for sample in dataset_iterator:
                     sample_index += 1
+                    if tracker.is_checkpointed(
+                        dataset_name=dataset_cfg.name, sample_index=sample_index, sample=sample,
+                    ):
+                        continue
+                    verify_sample(sample)
+                    audio_sample = load_audio_sample(sample)
                     try:
                         # Check if sample is already preprocessed
-                        if sample.get("is_preprocessed", False):
-                            audio_array = sample.get("preprocessed_waveform")
-                            label = sample.get("label")
+                        if audio_sample.get("is_preprocessed", False):
+                            audio_array = audio_sample.get("preprocessed_waveform")
+                            label = audio_sample.get("label")
 
                             if audio_array is None or label is None:
                                 continue
@@ -187,7 +198,7 @@ async def run_audio_benchmark(
                             # Process raw audio bytes
                             sample_seed_val = None if seed is None else (seed + sample_index)
                             audio_array, label = process_audio_sample(
-                                sample, 
+                                audio_sample,
                                 target_sr=target_sr,
                                 seed=sample_seed_val,
                             )
@@ -220,6 +231,8 @@ async def run_audio_benchmark(
                             if tracker.count % 500 == 0:
                                 logger.info(f"Progress: {tracker.count} samples")
 
+                    except CheckpointError:
+                        raise
                     except Exception as e:
                         logger.warning(
                             f"Failed to process audio sample from {dataset_cfg.name}: {e}"
@@ -244,6 +257,8 @@ async def run_audio_benchmark(
                     logger, tracker, dataset_cfg.name, include_skipped=False
                 )
 
+            except CheckpointError:
+                raise
             except Exception as e:
                 logger.error(f"Failed to process dataset {dataset_cfg.name}: {e}")
                 benchmark_results["errors"].append(
@@ -260,6 +275,8 @@ async def run_audio_benchmark(
         )
         return df
 
+    except CheckpointError:
+        raise
     except Exception as e:
         logger.error(f"Benchmark audio testing failed: {e}")
         benchmark_results["audio_results"] = {"error": str(e)}

@@ -16,13 +16,16 @@ from ..processing.transforms import (
 )
 from ..config import DEFAULT_VIDEO_BATCH_SIZE
 from ..constants import MAX_VIDEO_NUM_FRAMES
-from ..dataset.iterator import DatasetIterator
 
+from ._checkpoint import CheckpointError
 from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
 from .common import (
     BenchmarkRunConfig,
     build_plan,
     create_tracker,
+    create_dataset_iterator,
+    verify_sample,
+    use_augmentation_cache,
     finalize_run,
     stack_uniform_batch,
     run_batch_and_record,
@@ -58,7 +61,9 @@ class VideoPrefetchPipeline:
         robustness_pass=False,
         aug_cache_dir=None,
         aug_cache_readonly=False,
+        tracker=None,
     ):
+        self.tracker = tracker
         self.dataset_iterator = dataset_iterator
         self.target_size = target_size
         self.batch_size = batch_size
@@ -83,6 +88,7 @@ class VideoPrefetchPipeline:
 
     def _read_and_preprocess(self, sample, sample_index, dataset_name):
         """Read file from disk (if lazy), decode, and augment. Runs in worker thread."""
+        verify_sample(sample)
         try:
             video_path = sample.get("video_path")
             if video_path:
@@ -108,7 +114,7 @@ class VideoPrefetchPipeline:
                     if self.aug_cache_dir:
                         sid = build_sample_id(sample)
                         cache_path = vid_aug_cache_path(self.aug_cache_dir, sid, self.target_size)
-                        if os.path.exists(cache_path):
+                        if use_augmentation_cache(sample, cache_path):
                             aug_thwc = np.load(cache_path)
                         else:
                             aug_thwc, _, _, _ = apply_video_robustness_augmentations(
@@ -130,6 +136,8 @@ class VideoPrefetchPipeline:
                         level=self.augment_level,
                         crop_prob=self.crop_prob,
                     )
+            except CheckpointError:
+                raise
             except Exception as e:
                 logger.error(f"Video augmentation failed: {e}")
                 return None
@@ -146,6 +154,8 @@ class VideoPrefetchPipeline:
                 "dataset_name": dataset_name,
                 "sample_seed": sample_seed,
             }
+        except CheckpointError:
+            raise
         except Exception as e:
             logger.warning(f"Failed to preprocess video sample {sample_index}: {e}")
             return None
@@ -165,6 +175,11 @@ class VideoPrefetchPipeline:
                 while len(pending) < max_in_flight and not exhausted:
                     try:
                         idx, sample = next(sample_iter)
+                        if self.tracker is not None and self.tracker.is_checkpointed(
+                            dataset_name=dataset_name, sample_index=idx,
+                            sample=sample, aug_pass=self.robustness_pass,
+                        ):
+                            continue
                         future = self.executor.submit(
                             self._read_and_preprocess, sample, idx, dataset_name
                         )
@@ -183,6 +198,8 @@ class VideoPrefetchPipeline:
                         break
                     try:
                         result = future.result()
+                    except CheckpointError:
+                        raise
                     except Exception:
                         continue
                     if result is not None:
@@ -213,6 +230,8 @@ class VideoPrefetchPipeline:
         try:
             batch = self.batch_queue.get(timeout=300)
             if batch is None:
+                if self.error:
+                    raise self.error
                 raise StopIteration
             return batch
         except Empty:
@@ -276,8 +295,12 @@ async def run_video_benchmark(
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
     aug_cache_readonly: bool = False,
+    checkpoint_dir: Optional[str] = None,
+    checkpoint_persist=None,
 ) -> pd.DataFrame:
     """Test model on benchmark video datasets for AI-generated content detection."""
+
+    seed = 42 if seed is None else seed
 
     if batch_size is None:
         batch_size = DEFAULT_VIDEO_BATCH_SIZE
@@ -322,6 +345,8 @@ async def run_video_benchmark(
             crop_prob=crop_prob or 0.0,
             records_parquet_path=records_parquet_path,
             run_id=run_id,
+            checkpoint_dir=checkpoint_dir,
+            checkpoint_persist=checkpoint_persist,
             dataset_filters=dataset_filters,
             holdout_weight=holdout_weight,
             holdouts_only=holdouts_only,
@@ -330,6 +355,8 @@ async def run_video_benchmark(
             multiclass_scoring=multiclass_scoring,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
+            aug_cache_dir=aug_cache_dir,
+            aug_cache_readonly=aug_cache_readonly,
         )
         plan = build_plan(logger, run_config, input_specs)
         if not plan:
@@ -337,7 +364,13 @@ async def run_video_benchmark(
             benchmark_results["video_results"] = {"error": "No datasets available"}
             return 0.0
 
-        tracker = create_tracker(run_config, plan, input_specs)
+        tracker = create_tracker(
+            run_config, plan, input_specs, session=session, seed=seed,
+            skip_missing=skip_missing,
+            download_latest_gasstation_data=download_latest_gasstation_data,
+        )
+        benchmark_results["run_id"] = run_config.run_id
+        benchmark_results["checkpoint_dir"] = run_config.checkpoint_dir
 
         with video_archive_manager(cache_dir=cache_dir) as video_cache:
             skipped_samples = 0
@@ -354,22 +387,8 @@ async def run_video_benchmark(
                 )
 
                 try:
-                    is_gasstation = "gasstation" in dataset_config.name.lower()
-                    if skip_missing:
-                        should_download = False
-                    else:
-                        should_download = (
-                            download_latest_gasstation_data if is_gasstation else True
-                        )
-
-                    dataset_iterator = DatasetIterator(
-                        dataset_config,
-                        max_samples=dataset_cap,
-                        cache_dir=cache_dir,
-                        download=should_download,
-                        hf_token=hf_token,
-                        seed=seed,
-                        lazy_read=True,
+                    dataset_iterator = create_dataset_iterator(
+                        run_config, plan, dataset_config, aug_pass=False,
                     )
 
                     if skip_missing and dataset_iterator.get_total_cached_count() == 0:
@@ -378,6 +397,7 @@ async def run_video_benchmark(
 
                     pipeline = VideoPrefetchPipeline(
                         dataset_iterator=dataset_iterator,
+                        tracker=tracker,
                         target_size=plan.target_size,
                         batch_size=batch_size,
                         seed=seed,
@@ -423,6 +443,8 @@ async def run_video_benchmark(
                             logger, tracker, dataset_config.name, include_skipped=True
                         )
 
+                except CheckpointError:
+                    raise
                 except Exception as e:
                     logger.error(
                         f"Failed to process dataset {dataset_config.name}: {e}"
@@ -444,19 +466,8 @@ async def run_video_benchmark(
                         f"{dataset_config.name}"
                     )
                     try:
-                        is_gasstation = "gasstation" in dataset_config.name.lower()
-                        should_download = (
-                            download_latest_gasstation_data if is_gasstation else True
-                        ) if not skip_missing else False
-
-                        aug_iterator = DatasetIterator(
-                            dataset_config,
-                            max_samples=n_aug_per_dataset,
-                            cache_dir=cache_dir,
-                            download=should_download,
-                            hf_token=hf_token,
-                            seed=seed,
-                            lazy_read=True,
+                        aug_iterator = create_dataset_iterator(
+                            run_config, plan, dataset_config, aug_pass=True,
                         )
 
                         if skip_missing and aug_iterator.get_total_cached_count() == 0:
@@ -464,6 +475,7 @@ async def run_video_benchmark(
 
                         aug_pipeline = VideoPrefetchPipeline(
                             dataset_iterator=aug_iterator,
+                            tracker=tracker,
                             target_size=plan.target_size,
                             batch_size=batch_size,
                             seed=aug_seed,
@@ -503,6 +515,8 @@ async def run_video_benchmark(
                         finally:
                             aug_pipeline.close()
 
+                    except CheckpointError:
+                        raise
                     except Exception as e:
                         logger.error(
                             f"Video robustness pass failed for {dataset_config.name}: {e}"
@@ -528,6 +542,8 @@ async def run_video_benchmark(
 
             return df
 
+    except CheckpointError:
+        raise
     except Exception as e:
         logger.error(f"Benchmark video testing failed: {e}")
         benchmark_results["video_results"] = {"error": str(e)}

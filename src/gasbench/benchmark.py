@@ -41,9 +41,16 @@ async def run_benchmark(
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
     aug_cache_readonly: bool = False,
+    checkpoint_dir: Optional[str] = None,
+    checkpoint_persist=None,
 ) -> Dict:
     """
     Args:
+        checkpoint_dir: Storage directory; defaults to <cache_dir>/runs/<run_id>/checkpoint.
+            Every run checkpoints. Reuse run_id and the same inputs to resume.
+        checkpoint_persist: Optional filesystem commit callback, called after each
+            durable write. Required when a mounted filesystem needs an explicit
+            remote commit; failures abort the run.
         model_path: Path to a custom PyTorch model directory
         modality: Type of modality to test ("image" or "video")
         mode: Benchmark mode - "debug", "small", or "full" (default: "full")
@@ -127,6 +134,8 @@ async def run_benchmark(
             content_category,
             score_composition,
             multiclass_scoring,
+            checkpoint_dir=checkpoint_dir,
+            checkpoint_persist=checkpoint_persist,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -232,6 +241,8 @@ async def execute_benchmark(
     aug_weight: float = 0.2,
     aug_cache_dir: Optional[str] = None,
     aug_cache_readonly: bool = False,
+    checkpoint_dir: Optional[str] = None,
+    checkpoint_persist=None,
 ) -> float:
     """Execute the actual benchmark evaluation."""
 
@@ -260,6 +271,8 @@ async def execute_benchmark(
             content_category=content_category,
             score_composition=score_composition,
             multiclass_scoring=multiclass_scoring,
+            checkpoint_dir=checkpoint_dir,
+            checkpoint_persist=checkpoint_persist,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -288,6 +301,8 @@ async def execute_benchmark(
             content_category=content_category,
             score_composition=score_composition,
             multiclass_scoring=multiclass_scoring,
+            checkpoint_dir=checkpoint_dir,
+            checkpoint_persist=checkpoint_persist,
             n_aug_per_dataset=n_aug_per_dataset,
             aug_weight=aug_weight,
             aug_cache_dir=aug_cache_dir,
@@ -316,6 +331,8 @@ async def execute_benchmark(
             content_category=content_category,
             score_composition=score_composition,
             multiclass_scoring=multiclass_scoring,
+            checkpoint_dir=checkpoint_dir,
+            checkpoint_persist=checkpoint_persist,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

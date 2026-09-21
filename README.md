@@ -77,6 +77,24 @@ Model directory must contain: `model_config.yaml`, `model.py`, `*.safetensors`
 
 Results are automatically saved to a timestamped JSON file.
 
+Every benchmark run checkpoints through `BenchmarkRunRecorder` after each inference
+batch. Checkpoints default to `<cache-dir>/runs/<run-id>/checkpoint`; use
+`--checkpoint-dir` to choose another location. To resume, rerun the same command
+with the same `--run-id` and storage directory. Completed predictions are restored
+before decoding, and scores and parquet output are rebuilt through the normal
+recorder path. A new run ID starts a new evaluation.
+
+The checkpoint freezes sample selection (including the robustness pass), source
+content hashes, model/evaluator identity, seed (42 when omitted), and scoring
+settings. Changed inputs fail closed. Preparing a new run reads the selected files
+to fingerprint them; resumed runs validate only pending samples. Model setup and
+uncommitted work may repeat after interruption.
+
+Checkpoint storage must survive the process or container being replaced. The
+Python API accepts `checkpoint_persist(directory)` for filesystems requiring an
+explicit remote commit. One coordinator must own each run directory; automatic
+container replacement and distributed ownership are the caller's responsibility.
+
 ---
 
 ## Python API

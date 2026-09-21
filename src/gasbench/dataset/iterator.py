@@ -36,6 +36,8 @@ class DatasetIterator:
         hf_token: Optional[str] = None,
         seed: Optional[int] = None,
         lazy_read: bool = False,
+        metadata_only: bool = False,
+        frozen_samples: Optional[list] = None,
     ):
         self.config = dataset_config
         self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
@@ -46,10 +48,12 @@ class DatasetIterator:
         self.hf_token = hf_token
         self.seed = seed
         self.lazy_read = lazy_read
+        self.metadata_only = metadata_only
+        self.frozen_samples = frozen_samples
 
         self.is_gasstation = "gasstation" in dataset_config.name.lower()
 
-        if self.is_gasstation:
+        if self.is_gasstation and frozen_samples is None:
             self.target_weeks = gasstation_utils.calculate_target_weeks(
                 num_weeks,
                 dataset_path=dataset_config.path,
@@ -72,7 +76,7 @@ class DatasetIterator:
         self.source_kind = getattr(self.config, "source", "huggingface")
         self.hf_resolved_revision = None
 
-        if download:
+        if download and frozen_samples is None:
             self.ensure_cached()
 
     def __iter__(self):
@@ -118,6 +122,10 @@ class DatasetIterator:
         Note: This generator yields ALL available cached samples. The __next__() method
         is responsible for enforcing max_samples limit. This avoids double-counting issues.
         """
+        if self.frozen_samples is not None:
+            yield from self.frozen_samples
+            return
+
         try:
             if self.is_gasstation:
                 # Load from all week directories
@@ -148,6 +156,8 @@ class DatasetIterator:
                     yield sample
 
         except Exception as e:
+            if self.metadata_only:
+                raise
             logger.error(f"Failed to get samples from {self.config.name}: {e}")
             import traceback
 
@@ -564,6 +574,8 @@ class DatasetIterator:
 
         This reads metadata files directly without loading actual samples.
         """
+        if self.frozen_samples is not None:
+            return len(self.frozen_samples)
         try:
             if self.is_gasstation:
                 return gasstation_utils.get_total_cached_samples(self.week_dirs)
@@ -622,6 +634,29 @@ class DatasetIterator:
                 metadata = metadata_map.get(filename, {})
                 # The current registry owns labels; caches may predate a taxonomy change.
                 metadata = {**metadata, "media_type": self.config.media_type}
+
+                if self.metadata_only:
+                    sample = {
+                        **metadata,
+                        "dataset_name": self.config.name,
+                        "dataset_path": self.config.path,
+                        "source_kind": self.source_kind,
+                        "hf_resolved_revision": dataset_info.get(
+                            "hf_resolved_revision", self.hf_resolved_revision
+                        ),
+                        "cache_relpath": filename,
+                        f"{self.config.modality}_path": file_path,
+                    }
+                    if self.config.modality == "video" and os.path.isdir(file_path):
+                        from ..dataset.download import IMAGE_FILE_EXTENSIONS
+
+                        sample["video_frames"] = sorted(
+                            str(p) for p in Path(file_path).iterdir()
+                            if p.suffix.lower() in IMAGE_FILE_EXTENSIONS
+                        )
+                        del sample["video_path"]
+                    yield sample
+                    continue
 
                 if self.config.modality == "image":
                     try:
@@ -703,36 +738,15 @@ class DatasetIterator:
 
                 elif self.config.modality == "audio":
                     try:
-                        # Check if this is a preprocessed tensor (.pt file)
-                        if filename.endswith(".pt"):
-                            # Load preprocessed tensor directly (much faster!)
-                            import torch
-
-                            data = torch.load(file_path, map_location="cpu")
-                            sample = {
-                                "preprocessed_waveform": data["waveform"],
-                                "label": data["label"],
-                                "dataset_name": self.config.name,
-                                "media_type": self.config.media_type,
-                                "cached_filename": filename,
-                                "is_preprocessed": True,
-                                **data.get("metadata", {}),
-                                **metadata,
-                            }
-                            yield sample
-                        else:
-                            # Load raw audio bytes (legacy/fallback)
-                            with open(file_path, "rb") as f:
-                                audio_bytes = f.read()
-                            sample = {
-                                "audio_bytes": audio_bytes,
-                                "dataset_name": self.config.name,
-                                "media_type": self.config.media_type,
-                                "cached_filename": filename,  # Include filename for format detection
-                                "is_preprocessed": False,
-                                **metadata,
-                            }
-                            yield sample
+                        yield load_audio_sample({
+                            **metadata,
+                            "audio_path": file_path,
+                            "dataset_name": self.config.name,
+                            "dataset_path": self.config.path,
+                            "source_kind": self.source_kind,
+                            "hf_resolved_revision": dataset_info.get("hf_resolved_revision", self.hf_resolved_revision),
+                            "cache_relpath": filename,
+                        })
                     except Exception as e:
                         logger.warning(f"Failed to load cached audio {filename}: {e}")
                         continue
@@ -740,3 +754,21 @@ class DatasetIterator:
         except Exception as e:
             logger.error(f"Failed to load cached dataset from {cache_dir}: {e}")
             raise
+
+
+def load_audio_sample(sample):
+    """Materialize cached audio after resume filtering, preserving cache provenance."""
+    path = Path(sample["audio_path"])
+    if path.suffix == ".pt":
+        import torch
+
+        data = torch.load(path, map_location="cpu")
+        return {
+            **data.get("metadata", {}), **sample,
+            "preprocessed_waveform": data["waveform"], "label": data["label"],
+            "cached_filename": path.name, "is_preprocessed": True,
+        }
+    return {
+        **sample, "audio_bytes": path.read_bytes(),
+        "cached_filename": path.name, "is_preprocessed": False,
+    }

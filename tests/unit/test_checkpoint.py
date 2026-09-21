@@ -215,3 +215,14 @@ def test_invalid_batch_never_changes_progress(tmp_path, manifest, rows):
     with pytest.raises(CheckpointError):
         store.commit_batch(rows)
     assert RecorderCheckpoint(tmp_path, manifest).records == []
+
+
+def test_saved_manifest_is_checked_before_any_predictions_exist(tmp_path, manifest):
+    RecorderCheckpoint(tmp_path, manifest)
+    assert RecorderCheckpoint.read_manifest(tmp_path) == manifest
+    path = tmp_path / "manifest.json"
+    saved = json.loads(path.read_text())
+    saved["manifest"]["seed"] = "corrupted"
+    path.write_text(json.dumps(saved))
+    with pytest.raises(CheckpointError, match="manifest checksum"):
+        RecorderCheckpoint.read_manifest(tmp_path)

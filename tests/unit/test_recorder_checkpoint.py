@@ -205,3 +205,23 @@ def test_plain_recorder_still_records_without_checkpoint_configuration():
     assert recorder.count == 1
     assert recorder.checkpoint() == 0
     assert recorder.get_dataset_summary("dataset")["total"] == 1
+
+
+def test_archive_path_identity_matches_resume_lookup_for_every_status(tmp_path, context):
+    recorder = BenchmarkRunRecorder(
+        run_id="run", checkpoint_dir=tmp_path, checkpoint_context=context,
+    )
+    source = {**sample("a"), "path_in_archive": "canonical", "member_path": "legacy"}
+    recorder.add_ok(
+        dataset_name="dataset", sample_index=1, sample=source, label=0,
+        predicted=0, probs=[0.9, 0.1], inference_time_ms=1,
+        batch_inference_time_ms=1, batch_id=1, batch_size=1, sample_seed=42,
+    )
+    recorder.add_skip(dataset_name="dataset", sample_index=2, sample=source, reason="decode")
+    recorder.add_error(dataset_name="dataset", sample_index=3, sample=source, error_message="model")
+    recorder.checkpoint()
+    resumed = BenchmarkRunRecorder(
+        run_id="run", checkpoint_dir=tmp_path, checkpoint_context=context,
+    )
+    for index in (1, 2, 3):
+        assert resumed.is_checkpointed(dataset_name="dataset", sample_index=index, sample=source)

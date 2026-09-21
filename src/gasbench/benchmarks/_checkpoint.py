@@ -65,6 +65,21 @@ class RecorderCheckpoint:
     is rejected.
     """
 
+    @staticmethod
+    def read_manifest(directory: Path):
+        """Read a saved plan before opening the recorder, which validates its batches."""
+        path = Path(directory) / "manifest.json"
+        if not path.exists():
+            if any(Path(directory).glob("batch-*.json")) or (Path(directory) / "head.json").exists():
+                raise CheckpointError("Checkpoint progress exists without a manifest")
+            return None
+        value = _read(path)
+        if not isinstance(value, dict) or value.get("schema_version") != 2 or not isinstance(value.get("manifest"), dict):
+            raise CheckpointError("Invalid checkpoint manifest")
+        if value.get("sha256") != _digest(value["manifest"]):
+            raise CheckpointError("Invalid checkpoint manifest checksum")
+        return value["manifest"]
+
     def __init__(
         self,
         directory: Path,
@@ -81,9 +96,10 @@ class RecorderCheckpoint:
             raise ValueError("A nonempty run manifest is required")
         # Normalize JSON types and detach mutable caller-owned objects.
         expected = {
-            "schema_version": 1,
+            "schema_version": 2,
             "manifest": json.loads(_encode(dict(manifest))),
         }
+        expected["sha256"] = _digest(expected["manifest"])
         self.run_id = expected["manifest"].get("run_id")
         if not isinstance(self.run_id, str) or not self.run_id:
             raise ValueError("Checkpoint requires the benchmark run_id")

@@ -61,6 +61,8 @@ def _load_dataset_from_cache(dataset, cache_dir: str = "/.cache/gasbench"):
     for filename in sample_files:
         try:
             metadata = sample_metadata.get(filename, {})
+            # The current registry owns labels; caches may predate a taxonomy change.
+            metadata = {**metadata, "media_type": dataset.media_type}
             filepath = os.path.join(samples_dir, filename)
 
             if dataset.modality == "image":

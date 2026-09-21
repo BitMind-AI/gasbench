@@ -618,6 +618,8 @@ class DatasetIterator:
             for filename in sample_items:
                 file_path = os.path.join(samples_dir, filename)
                 metadata = metadata_map.get(filename, {})
+                # The current registry owns labels; caches may predate a taxonomy change.
+                metadata = {**metadata, "media_type": self.config.media_type}
 
                 if self.config.modality == "image":
                     try:

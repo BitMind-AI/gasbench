@@ -236,3 +236,100 @@ def test_saved_manifest_is_checked_before_any_predictions_exist(tmp_path, manife
     path.write_text(json.dumps(saved))
     with pytest.raises(CheckpointError, match="manifest checksum"):
         RecorderCheckpoint.read_manifest(tmp_path)
+
+
+def test_parallel_reads_restore_commit_order_and_ignore_uncommitted_tail(tmp_path, manifest, monkeypatch):
+    from threading import Event
+    from gasbench.benchmarks import _checkpoint as checkpoint
+
+    store = RecorderCheckpoint(tmp_path, manifest)
+    expected = [record(str(index)) for index in range(4)]
+    for row in expected:
+        store.commit_batch([row])
+    tail = tmp_path / store._batch_name(len(expected))
+    tail.write_text("uncommitted partial JSON")
+    second_finished = Event()
+    original = checkpoint._read
+    completed = []
+
+    def read(path):
+        assert path != tail
+        if path.name == store._batch_name(0):
+            assert second_finished.wait(5), "Reads were serialized behind the first batch"
+        result = original(path)
+        if path.name.startswith("batch-"):
+            completed.append(path.name)
+        if path.name == store._batch_name(1):
+            second_finished.set()
+        return result
+
+    monkeypatch.setattr(checkpoint, "_read", read)
+    monkeypatch.setattr(checkpoint, "_READ_WORKERS", 2)
+    assert RecorderCheckpoint(tmp_path, manifest).records == expected
+    assert completed.index(store._batch_name(1)) < completed.index(store._batch_name(0))
+
+
+@pytest.mark.parametrize("stop_early", [False, True])
+def test_prefetch_is_bounded_and_releases_executor_on_consumer_failure(monkeypatch, stop_early):
+    from pathlib import Path
+    from gasbench.benchmarks import _checkpoint as checkpoint
+
+    window = 3
+    submitted = consumed = 0
+    shutdown = []
+
+    class Future:
+        def __init__(self, fn, path):
+            self.fn, self.path = fn, path
+
+        def result(self):
+            nonlocal consumed
+            consumed += 1
+            return self.fn(self.path)
+
+    class Executor:
+        def __init__(self, **kwargs):
+            pass
+
+        def submit(self, fn, path):
+            nonlocal submitted
+            submitted += 1
+            assert submitted - consumed <= window
+            return Future(fn, path)
+
+        def shutdown(self, **kwargs):
+            shutdown.append(kwargs)
+
+    monkeypatch.setattr(checkpoint, "ThreadPoolExecutor", Executor)
+    monkeypatch.setattr(checkpoint, "_READ_AHEAD", window)
+    monkeypatch.setattr(checkpoint, "_read", lambda path: path.name)
+    paths = [Path(str(i)) for i in range(11)]
+    try:
+        with checkpoint._prefetch_batches(paths) as loaded:
+            for index, (path, value) in enumerate(loaded):
+                assert path == paths[index] and value == path.name
+                if stop_early:
+                    raise CheckpointError("validation rejected batch")
+    except CheckpointError:
+        assert stop_early
+    assert shutdown == [{"wait": True, "cancel_futures": True}]
+    if not stop_early:
+        assert submitted == consumed == len(paths)
+
+
+def test_prefetched_read_failure_fails_closed(tmp_path, manifest, monkeypatch):
+    from gasbench.benchmarks import _checkpoint as checkpoint
+
+    store = RecorderCheckpoint(tmp_path, manifest)
+    for index in range(5):
+        store.commit_batch([record(str(index))])
+    original = checkpoint._read
+
+    def read(path):
+        if path.name == store._batch_name(2):
+            raise CheckpointError("read failed")
+        return original(path)
+
+    monkeypatch.setattr(checkpoint, "_read", read)
+    with pytest.raises(CheckpointError, match="read failed"):
+        RecorderCheckpoint(tmp_path, manifest)

@@ -160,6 +160,7 @@ def download_and_extract(
                         max_files=None,  # need full list to shuffle and pick from
                         hf_revision=hf_revision,
                         hf_subfolders=hf_subfolders,
+                    s3_prefixes=getattr(dataset, "s3_prefixes", None),
                     )
                 except DatasetAccessError as e:
                     logger.warning(f"Skipping {dataset.name}: {e}")
@@ -206,6 +207,7 @@ def download_and_extract(
                     max_files=max_files_to_list,
                     hf_revision=hf_revision,
                     hf_subfolders=hf_subfolders,
+                    s3_prefixes=getattr(dataset, "s3_prefixes", None),
                 )
             except DatasetAccessError as e:
                 logger.warning(f"Skipping dataset {dataset.name}: {e}")

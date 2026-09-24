@@ -6,7 +6,7 @@ import random
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Union
 
 import pyarrow
 
@@ -40,22 +40,23 @@ logger = get_logger(__name__)
 
 def _calculate_files_to_download(
     dataset,
-    source_format: str,
+    source_format: Union[str, List[str]],
     media_per_archive: int,
     archives_per_dataset: int,
 ) -> int:
     """Calculate # files to download based on dataset modality and source format.
     Returns -1 to indicate "download all files", or a positive integer for the count.
     """
-    src_fmt = source_format.lower().lstrip(".")
+    formats = source_format if isinstance(source_format, list) else [source_format]
+    src_formats = {fmt.lower().lstrip(".") for fmt in formats}
 
     # Direct media files (jpg, png, mp4, etc.) - download equivalent to archive extraction
     if dataset.modality == "image":
-        is_direct_media = src_fmt in {ext.lstrip(".") for ext in IMAGE_FILE_EXTENSIONS}
+        is_direct_media = src_formats <= {ext.lstrip(".") for ext in IMAGE_FILE_EXTENSIONS}
     elif dataset.modality == "audio":
-        is_direct_media = src_fmt in {ext.lstrip(".") for ext in AUDIO_FILE_EXTENSIONS}
+        is_direct_media = src_formats <= {ext.lstrip(".") for ext in AUDIO_FILE_EXTENSIONS}
     else:
-        is_direct_media = src_fmt in {ext.lstrip(".") for ext in VIDEO_FILE_EXTENSIONS}
+        is_direct_media = src_formats <= {ext.lstrip(".") for ext in VIDEO_FILE_EXTENSIONS}
 
     if is_direct_media:
         if media_per_archive == -1 or archives_per_dataset == -1:
@@ -187,7 +188,10 @@ def download_and_extract(
 
             fallback_formats = [".parquet", ".zip", ".tar", ".tar.gz"]
             requested_format = dataset.source_format
-            listing_formats = list(dict.fromkeys([requested_format, *fallback_formats]))
+            requested_formats = (
+                requested_format if isinstance(requested_format, list) else [requested_format]
+            )
+            listing_formats = list(dict.fromkeys([*requested_formats, *fallback_formats]))
             try:
                 listed_filenames = _list_remote_dataset_files(
                     dataset.path,
@@ -222,7 +226,7 @@ def download_and_extract(
             filenames = [
                 name
                 for name in listed_filenames
-                if matches_format(name, requested_format)
+                if any(matches_format(name, fmt) for fmt in requested_formats)
             ]
             selected_format = requested_format
 

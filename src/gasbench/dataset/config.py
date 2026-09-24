@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from pathlib import Path
 import os
 import yaml
@@ -52,7 +52,7 @@ class BenchmarkDatasetConfig:
     # Download parameters
     media_per_archive: int = 100
     archives_per_dataset: int = 5
-    source_format: str = ""  # Auto-detected if empty
+    source_format: Union[str, List[str]] = ""  # Auto-detected if empty
     source: str = "huggingface"  # "huggingface", "modelscope", or "s3"
     hf_revision: Optional[str] = None
     hf_subfolders: Optional[List[str]] = None
@@ -353,6 +353,13 @@ def validate_dataset_config(
         "media_per_archive",
         "archives_per_dataset",
     ]
+    source_format = config_dict.get("source_format", "")
+    if not isinstance(source_format, str) and not (
+        isinstance(source_format, list)
+        and source_format
+        and all(isinstance(fmt, str) and fmt for fmt in source_format)
+    ):
+        errors.append(f"Dataset '{dataset_name}': source_format must be a string or a nonempty list of strings")
     for field in numeric_fields:
         if field in config_dict:
             value = config_dict[field]
@@ -482,7 +489,11 @@ def _obfuscate_holdout_names(
                 d.path or "",
                 d.modality or "",
                 d.media_type or "",
-                (d.source_format or ""),
+                (
+                    ",".join(sorted(set(d.source_format)))
+                    if isinstance(d.source_format, list)
+                    else (d.source_format or "")
+                ),
                 include_paths,
                 exclude_paths,
                 (d.source or ""),

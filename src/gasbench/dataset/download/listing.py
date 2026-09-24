@@ -66,6 +66,7 @@ def _list_remote_dataset_files(
     max_files: Optional[int] = None,
     hf_revision: Optional[str] = None,
     hf_subfolders: Optional[List[str]] = None,
+    s3_prefixes: Optional[List[str]] = None,
 ) -> List[str]:
     """List available files in a dataset, filtered by source_format and path patterns.
 
@@ -123,17 +124,11 @@ def _list_remote_dataset_files(
         if not needs_week_filter:
             files = files[:max_files]
     elif source == "s3":
-        files = list_s3_files(path=dataset_path, extension=source_format)
-        if include_paths:
-            files = [
-                f for f in files if any(path_seg in f for path_seg in include_paths)
-            ]
-        if exclude_paths:
-            files = [
-                f for f in files if not any(path_seg in f for path_seg in exclude_paths)
-            ]
-        if not needs_week_filter:
-            files = files[:max_files]
+        files = list_s3_files(
+            path=dataset_path, extension=source_format, prefixes=s3_prefixes,
+            include_paths=include_paths, exclude_paths=exclude_paths,
+            max_files=listing_max,
+        )
     else:  # hf - supports early termination natively
         files = list_hf_files(
             repo_id=dataset_path,

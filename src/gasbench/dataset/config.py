@@ -57,6 +57,7 @@ class BenchmarkDatasetConfig:
     hf_revision: Optional[str] = None
     hf_subfolders: Optional[List[str]] = None
 
+    s3_prefixes: Optional[List[str]] = None  # Bucket-relative literal key prefixes
     include_paths: Optional[List[str]] = None
     exclude_paths: Optional[List[str]] = None
     # Filter media entries inside ZIP/TAR archives. Unlike include_paths and
@@ -349,6 +350,12 @@ def validate_dataset_config(
                 f"Must be one of {valid_sources}"
             )
 
+    if config_dict.get("s3_prefixes") is not None:
+        prefixes = config_dict["s3_prefixes"]
+        if (config_dict.get("source") != "s3" or not isinstance(prefixes, list)
+                or not prefixes or any(not isinstance(p, str) or not p for p in prefixes)):
+            errors.append(f"Dataset '{dataset_name}': s3_prefixes requires S3 and nonempty key prefixes")
+
     numeric_fields = [
         "media_per_archive",
         "archives_per_dataset",
@@ -387,6 +394,7 @@ def _dataset_dict_to_config(d: dict, **overrides) -> BenchmarkDatasetConfig:
         "source": d.get("source", "huggingface"),
         "hf_revision": d.get("hf_revision"),
         "hf_subfolders": d.get("hf_subfolders"),
+        "s3_prefixes": d.get("s3_prefixes"),
         "media_per_archive": d.get("media_per_archive", 100),
         "archives_per_dataset": d.get("archives_per_dataset", 5),
         "include_paths": d.get("include_paths"),
@@ -501,6 +509,8 @@ def _obfuscate_holdout_names(
                 hf_subfolders,
             ]
         )
+        if d.s3_prefixes:
+            fingerprint += "|s3_prefixes=" + ",".join(sorted(set(d.s3_prefixes)))
         short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
         new_name = f"{d.media_type}-{d.modality}-holdout-{short_hash}"
         obfuscated.append(replace(d, name=new_name, original_name=orig_name))

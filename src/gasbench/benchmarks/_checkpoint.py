@@ -14,8 +14,13 @@ by reopening the directory from the durable filesystem, never by deleting it.
 
 import hashlib
 import json
+import logging
 import os
 import tempfile
+import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 from typing import Callable, Iterable, Mapping, Optional
@@ -40,6 +45,44 @@ def _read(path: Path):
         return json.loads(path.read_bytes())
     except (OSError, ValueError) as exc:
         raise CheckpointError(f"Cannot read checkpoint {path.name}") from exc
+
+
+# Limit both active I/O and queued decoded batches on remote filesystems.
+_READ_WORKERS = 16
+_READ_AHEAD = 32
+
+
+@contextmanager
+def _prefetch_batches(paths):
+    """Read ahead in parallel, but expose batches in commit order.
+
+    Keep only a bounded window of futures alive. The context owns the executor
+    so validation failure also cancels queued reads and joins active readers.
+    """
+    if not paths:
+        yield iter(())
+        return
+    executor = ThreadPoolExecutor(max_workers=min(_READ_WORKERS, len(paths)))
+    pending = deque()
+    remaining = iter(paths)
+
+    def submit_next():
+        path = next(remaining, None)
+        if path is not None:
+            pending.append((path, executor.submit(_read, path)))
+
+    def ordered():
+        while pending:
+            path, future = pending.popleft()
+            yield path, future.result()
+            submit_next()
+
+    try:
+        for _ in range(min(_READ_AHEAD, len(paths))):
+            submit_next()
+        yield ordered()
+    finally:
+        executor.shutdown(wait=True, cancel_futures=True)
 
 
 def prediction_key(row: Mapping) -> tuple:
@@ -149,35 +192,43 @@ class RecorderCheckpoint:
             raise CheckpointError("Invalid or incomplete checkpoint commit head")
         # Files newer than the head were never acknowledged. They can be safely
         # replaced when the interrupted batch is replayed.
-        for path in batches[: head["last_batch"] + 1]:
-            if path.name != self._batch_name(self._next_batch):
+        committed = batches[: head["last_batch"] + 1]
+        for index, path in enumerate(committed):
+            if path.name != self._batch_name(index):
                 raise CheckpointError("Checkpoint batch sequence is incomplete")
-            envelope = _read(path)
-            if not isinstance(envelope, dict):
-                raise CheckpointError(f"Invalid checkpoint batch {path.name}")
-            payload = envelope.get("payload")
-            try:
-                valid = (
-                    isinstance(payload, dict)
-                    and envelope.get("sha256") == _digest(payload)
-                    and payload.get("manifest_sha256") == self._manifest_digest
-                    and payload.get("batch_index") == self._next_batch
-                )
-            except (TypeError, ValueError):
-                valid = False
-            if not valid:
-                raise CheckpointError(f"Invalid checkpoint batch {path.name}")
-            records = self._validate_records(payload.get("records"))
-            if any(prediction_key(row) in self._records for row in records):
-                raise CheckpointError("Duplicate work in committed checkpoint batches")
-            self._records.update((prediction_key(row), row) for row in records)
-            self._next_batch += 1
+        started = time.monotonic()
+        with _prefetch_batches(committed) as loaded:
+            for path, envelope in loaded:
+                if not isinstance(envelope, dict):
+                    raise CheckpointError(f"Invalid checkpoint batch {path.name}")
+                payload = envelope.get("payload")
+                try:
+                    valid = (
+                        isinstance(payload, dict)
+                        and envelope.get("sha256") == _digest(payload)
+                        and payload.get("manifest_sha256") == self._manifest_digest
+                        and payload.get("batch_index") == self._next_batch
+                    )
+                except (TypeError, ValueError):
+                    valid = False
+                if not valid:
+                    raise CheckpointError(f"Invalid checkpoint batch {path.name}")
+                records = self._validate_records(payload.get("records"))
+                if any(prediction_key(row) in self._records for row in records):
+                    raise CheckpointError("Duplicate work in committed checkpoint batches")
+                self._records.update((prediction_key(row), row) for row in records)
+                self._next_batch += 1
         if (
             batches
             and head["last_batch"] >= 0
             and envelope["sha256"] != head.get("sha256")
         ):
             raise CheckpointError("Checkpoint tail differs from commit head")
+        if committed:
+            logging.getLogger(__name__).info(
+                "Validated %s checkpoint batches (%s rows) in %.2fs",
+                len(committed), len(self._records), time.monotonic() - started,
+            )
 
     @staticmethod
     def _batch_name(index: int) -> str:

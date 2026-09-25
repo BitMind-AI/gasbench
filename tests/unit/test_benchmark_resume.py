@@ -366,3 +366,34 @@ def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):
         path.write_bytes(b"changed")
     with pytest.raises(CheckpointError, match="augmentation cache"):
         b.run(Session(b.model_dir), n_aug_per_dataset=3, aug_cache_dir=str(aug_dir))
+
+
+@pytest.mark.parametrize("change", ["reader", "unapproved-evaluator", "model"])
+def test_audited_reader_upgrade_preserves_resume_guards(benchmark, monkeypatch, tmp_path, change):
+    b = benchmark
+    original_fingerprint = common.fingerprint_files
+    evaluator_root = Path(common.__file__).resolve().parents[1]
+    identity = ["old"]
+
+    def fingerprint(paths, root):
+        return identity[0] if root == evaluator_root else original_fingerprint(paths, root)
+
+    monkeypatch.setattr(common, "fingerprint_files", fingerprint)
+    (tmp_path / "checkpoint_compatibility.json").write_text(json.dumps({"new": ["old"]}))
+    compatible = common.compatible_evaluator_identity
+    monkeypatch.setattr(common, "compatible_evaluator_identity", lambda root, current, previous: compatible(tmp_path, current, previous))
+    with pytest.raises(Interrupted):
+        b.run(Session(b.model_dir, stop_after=2))
+    identity[0] = "unapproved" if change == "unapproved-evaluator" else "new"
+    if change == "model":
+        (b.model_dir / "model.py").write_text("changed inference implementation")
+    resumed = Session(b.model_dir)
+    if change != "reader":
+        with pytest.raises(CheckpointError, match="differs"):
+            b.run(resumed)
+        assert not resumed.calls
+    else:
+        b.run(resumed)
+        assert len(resumed.calls) == 3
+        assert RecorderCheckpoint.read_manifest(b.checkpoint)["benchmark"]["evaluator_sha256"] == "old"
+        assert not compatible(tmp_path, "new", "unrelated-old")

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, replace
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from pathlib import Path
 import os
 import yaml
@@ -52,11 +52,12 @@ class BenchmarkDatasetConfig:
     # Download parameters
     media_per_archive: int = 100
     archives_per_dataset: int = 5
-    source_format: str = ""  # Auto-detected if empty
+    source_format: Union[str, List[str]] = ""  # Auto-detected if empty
     source: str = "huggingface"  # "huggingface", "modelscope", or "s3"
     hf_revision: Optional[str] = None
     hf_subfolders: Optional[List[str]] = None
 
+    s3_prefixes: Optional[List[str]] = None  # Bucket-relative literal key prefixes
     include_paths: Optional[List[str]] = None
     exclude_paths: Optional[List[str]] = None
     # Filter media entries inside ZIP/TAR archives. Unlike include_paths and
@@ -349,10 +350,23 @@ def validate_dataset_config(
                 f"Must be one of {valid_sources}"
             )
 
+    if config_dict.get("s3_prefixes") is not None:
+        prefixes = config_dict["s3_prefixes"]
+        if (config_dict.get("source") != "s3" or not isinstance(prefixes, list)
+                or not prefixes or any(not isinstance(p, str) or not p for p in prefixes)):
+            errors.append(f"Dataset '{dataset_name}': s3_prefixes requires S3 and nonempty key prefixes")
+
     numeric_fields = [
         "media_per_archive",
         "archives_per_dataset",
     ]
+    source_format = config_dict.get("source_format", "")
+    if not isinstance(source_format, str) and not (
+        isinstance(source_format, list)
+        and source_format
+        and all(isinstance(fmt, str) and fmt for fmt in source_format)
+    ):
+        errors.append(f"Dataset '{dataset_name}': source_format must be a string or a nonempty list of strings")
     for field in numeric_fields:
         if field in config_dict:
             value = config_dict[field]
@@ -380,6 +394,7 @@ def _dataset_dict_to_config(d: dict, **overrides) -> BenchmarkDatasetConfig:
         "source": d.get("source", "huggingface"),
         "hf_revision": d.get("hf_revision"),
         "hf_subfolders": d.get("hf_subfolders"),
+        "s3_prefixes": d.get("s3_prefixes"),
         "media_per_archive": d.get("media_per_archive", 100),
         "archives_per_dataset": d.get("archives_per_dataset", 5),
         "include_paths": d.get("include_paths"),
@@ -482,7 +497,11 @@ def _obfuscate_holdout_names(
                 d.path or "",
                 d.modality or "",
                 d.media_type or "",
-                (d.source_format or ""),
+                (
+                    ",".join(sorted(set(d.source_format)))
+                    if isinstance(d.source_format, list)
+                    else (d.source_format or "")
+                ),
                 include_paths,
                 exclude_paths,
                 (d.source or ""),
@@ -490,6 +509,8 @@ def _obfuscate_holdout_names(
                 hf_subfolders,
             ]
         )
+        if d.s3_prefixes:
+            fingerprint += "|s3_prefixes=" + ",".join(sorted(set(d.s3_prefixes)))
         short_hash = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
         new_name = f"{d.media_type}-{d.modality}-holdout-{short_hash}"
         obfuscated.append(replace(d, name=new_name, original_name=orig_name))

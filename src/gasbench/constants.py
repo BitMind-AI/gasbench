@@ -4,7 +4,7 @@
 #
 # Image is 3-class (no rendered): 0=real, 1=synthetic, 2=semisynthetic.
 # Video is 3-class:               0=real, 1=synthetic, 2=semisynthetic.
-# Classical rendered video is real; rendering provenance lives in dataset metadata.
+# Non-AI rendered images and video are real; rendering provenance lives in metadata.
 # Audio stays binary:              0=real, 1=synthetic (semisynthetic collapsed).
 #
 # Semisynthetic media retains materially captured visual content alongside
@@ -12,7 +12,7 @@
 # output remains synthetic, even when captured media conditions its generation;
 # modifying exclusively synthetic or rendered media does not make it semisynthetic.
 #
-# Image has no rendered class: CGI/game-engine stills are excluded from image configs.
+# Image has no rendered class: non-AI CGI, charts, and rendered text map to real.
 IMAGE_MEDIA_TYPE_TO_LABEL = {
     "real": 0,
     "synthetic": 1,

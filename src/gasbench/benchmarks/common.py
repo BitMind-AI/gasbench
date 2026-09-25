@@ -3,6 +3,7 @@ import time
 import hashlib
 import uuid
 import platform
+import stat
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from typing import Callable
@@ -274,6 +275,20 @@ def fingerprint_files(paths, root):
     return digest.hexdigest()
 
 
+def compatible_evaluator_identity(evaluator_dir, current, previous):
+    """Allow only explicitly audited, exact-build checkpoint reader upgrades."""
+    if current == previous:
+        return True
+    registry = Path(evaluator_dir) / "checkpoint_compatibility.json"
+    if not registry.is_file():
+        return False
+    try:
+        pairs = json.loads(registry.read_text())
+    except (OSError, ValueError):
+        return False
+    return isinstance(pairs, dict) and isinstance(pairs.get(current), list) and previous in pairs[current]
+
+
 def runtime_versions():
     versions = {
         "python": platform.python_version(),
@@ -315,9 +330,36 @@ def sample_digest(sample):
     return fingerprint_files(paths, paths[0].parent)
 
 
+def file_metadata_digest(paths):
+    """Identify cached file generations without reading media payloads.
+
+    Inputs must be on a trusted filesystem that preserves modification/change
+    timestamps across mounts. This detects replacement and in-place edits,
+    including same-size edits with restored mtime (ctime still changes).
+    It is not a content hash or protection against a malicious storage owner.
+    Sandbox inputs are read-only; checkpoint batch checksums remain unchanged.
+    """
+    paths = sorted(paths)
+    if not paths:
+        raise CheckpointError("A selected sample is missing from the cache")
+    entries = []
+    for path in paths:
+        try:
+            info = path.stat()
+        except OSError as exc:
+            raise CheckpointError("Cannot stat a selected input") from exc
+        if not stat.S_ISREG(info.st_mode):
+            raise CheckpointError("A selected input is not a regular file")
+        entries.append((str(path), info.st_size, info.st_mtime_ns, info.st_ctime_ns))
+    return hashlib.sha256(json.dumps(entries, separators=(",", ":")).encode()).hexdigest()
+
+
 def verify_sample(sample):
     """Reject changed pending input before preprocessing; completed rows need no I/O."""
-    if "content_sha256" in sample:
+    if "file_metadata_sha256" in sample:
+        if file_metadata_digest(sample_files(sample)) != sample["file_metadata_sha256"]:
+            raise CheckpointError("A selected sample changed since this run started")
+    elif "content_sha256" in sample:
         try:
             if sample_digest(sample) != sample["content_sha256"]:
                 raise CheckpointError(
@@ -330,6 +372,16 @@ def verify_sample(sample):
 def use_augmentation_cache(sample, path):
     """Use only the derived artifact selected for this run, or regenerate it."""
     path = Path(path)
+    if "augmentation_cache_metadata_sha256" in sample:
+        expected = sample["augmentation_cache_metadata_sha256"]
+        if expected is None:
+            return False
+        try:
+            if file_metadata_digest([path]) != expected:
+                raise CheckpointError("Selected augmentation cache changed or disappeared")
+        except CheckpointError as exc:
+            raise CheckpointError("Selected augmentation cache changed or disappeared") from exc
+        return True
     if "augmentation_cache_sha256" not in sample:
         return path.is_file()
     expected = sample["augmentation_cache_sha256"]
@@ -399,6 +451,7 @@ def create_tracker(
         )
     }
     context = {
+        "input_identity": "file-metadata-v1",
         "settings": settings,
         "seed": seed,
         "runtime": runtime_versions(),
@@ -422,6 +475,12 @@ def create_tracker(
     context = json.loads(json.dumps(context))
     if saved is not None:
         previous = saved.get("benchmark", {})
+        if compatible_evaluator_identity(
+            evaluator_dir, context["evaluator_sha256"], previous.get("evaluator_sha256")
+        ):
+            # Preserve the original manifest identity for both restored and new batches.
+            # Every other context field is still compared below without exceptions.
+            context["evaluator_sha256"] = previous["evaluator_sha256"]
         if {k: v for k, v in previous.items() if k != "samples"} != context:
             raise CheckpointError(
                 "Checkpoint configuration or model differs from this run"
@@ -430,7 +489,10 @@ def create_tracker(
             raise CheckpointError("Checkpoint has no frozen sample selection")
         plan.samples = previous["samples"]
     else:
-        for dataset in plan.available_datasets:
+        logger = get_logger(__name__)
+        started = time.monotonic()
+        logger.info("Freezing sample selection using file metadata (no media payload scan)")
+        for index, dataset in enumerate(plan.available_datasets, 1):
             selections = {}
             for pass_name, cap in (
                 ("base", plan.sampling_plan[dataset.name]),
@@ -455,7 +517,7 @@ def create_tracker(
                 )
                 selections[pass_name] = list(iterator)
                 for sample in selections[pass_name]:
-                    sample["content_sha256"] = sample_digest(sample)
+                    sample["file_metadata_sha256"] = file_metadata_digest(sample_files(sample))
                     if pass_name == "aug" and config.aug_cache_dir:
                         from .aug_cache import img_aug_cache_path, vid_aug_cache_path
 
@@ -473,12 +535,17 @@ def create_tracker(
                         )
                         # Newly generated cache files are outputs of this attempt;
                         # only artifacts present in the frozen plan may be inputs.
-                        sample["augmentation_cache_sha256"] = (
-                            fingerprint_files([path], path.parent)
+                        sample["augmentation_cache_metadata_sha256"] = (
+                            file_metadata_digest([path])
                             if path.is_file()
                             else None
                         )
             plan.samples[dataset.name] = selections
+            if index == 1 or index % 10 == 0 or index == len(plan.available_datasets):
+                logger.info(
+                    "Frozen dataset %s/%s (%s) in %.1fs",
+                    index, len(plan.available_datasets), dataset.name, time.monotonic() - started,
+                )
     context["samples"] = plan.samples
     tracker = BenchmarkRunRecorder(
         run_id=config.run_id,

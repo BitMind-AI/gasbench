@@ -125,68 +125,66 @@ def _parse_s3_path(path: str) -> Tuple[str, str]:
     return bucket, prefix
 
 
-def list_s3_files(path: str, extension=None) -> List[str]:
-    """List files from an S3 bucket.
-    
-    Args:
-        path: Path in format 'bucket-name/prefix/path'
-        extension: Filter files by extension(s) (e.g., '.parquet' or ['.tar', '.tar.gz'])
-                  Special value 'frames' to detect frame directories
-        
-    Returns:
-        List of file keys (paths within the bucket) or directory paths if extension='frames'
+def list_s3_files(path: str, extension=None, *, prefixes=None,
+                  include_paths=None, exclude_paths=None, max_files=None) -> List[str]:
+    """List matching keys, using optional bucket-relative literal prefixes.
+
+    Prefixes may end mid-directory name (for sharded corpora). Substring filters
+    retain their existing semantics. Apply the cap only after all filters.
     """
+    bucket, base = _parse_s3_path(path)
+    base = base.rstrip("/") + "/" if base else ""
+    if prefixes is not None and (
+        not isinstance(prefixes, (list, tuple)) or not prefixes
+        or any(not isinstance(p, str) or not p or not p.startswith(base) for p in prefixes)
+    ):
+        raise ValueError("S3 prefixes must be nonempty keys within the dataset path")
+    # Remove overlaps so each object is enumerated once, in global key order.
+    selected = []
+    for prefix in sorted(set(prefixes or [base])):
+        if not any(prefix.startswith(parent) for parent in selected):
+            selected.append(prefix)
+    if max_files is not None and max_files < 0:
+        raise ValueError("max_files must be nonnegative")
+    if max_files == 0:
+        return []
+    frames = extension == "frames"
+    extensions = IMAGE_FILE_EXTENSIONS if frames else extension
+    if isinstance(extensions, str):
+        extensions = [extensions]
+    extensions = tuple(e.lower() for e in extensions) if extensions else ()
+    files, seen = [], set()
     try:
-        bucket, prefix = _parse_s3_path(path)
-        client = _get_s3_client()
-        
-        files = []
-        paginator = client.get_paginator("list_objects_v2")
-        
-        if prefix and not prefix.endswith("/"):
-            prefix = prefix + "/"
-        
-        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-            if "Contents" not in page:
-                continue
-                
-            for obj in page["Contents"]:
-                key = obj["Key"]
-                if key.endswith("/"):
-                    continue
-                files.append(key)
-        
-        if extension == "frames":
-            frame_dirs = set()
-            for f in files:
-                if any(f.lower().endswith(ext) for ext in IMAGE_FILE_EXTENSIONS):
-                    parent = os.path.dirname(f)
-                    if parent:
-                        frame_dirs.add(parent)
-            
-            logger.info(f"Found {len(frame_dirs)} frame directories in S3 bucket {bucket}/{prefix}")
-            return sorted(list(frame_dirs))
-        
-        if extension and files:
-            if isinstance(extension, (list, tuple, set)):
-                exts = tuple(e.lower() for e in extension)
-                files = [f for f in files if f.lower().endswith(exts)]
-            else:
-                ext_lower = extension.lower()
-                files = [f for f in files if f.lower().endswith(ext_lower)]
-        
-        logger.info(f"Found {len(files)} files in S3 bucket {bucket}/{prefix}")
-        return files
-        
+        paginator = _get_s3_client().get_paginator("list_objects_v2")
+        for prefix in selected:
+            for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+                for obj in page.get("Contents", []):
+                    key = obj["Key"]
+                    if key.endswith("/") or (extensions and not key.lower().endswith(extensions)):
+                        continue
+                    candidate = os.path.dirname(key) if frames else key
+                    if not candidate or candidate in seen:
+                        continue
+                    if include_paths and not any(p in candidate for p in include_paths):
+                        continue
+                    if exclude_paths and any(p in candidate for p in exclude_paths):
+                        continue
+                    seen.add(candidate)
+                    files.append(candidate)
+                    # Frame parents may interleave in key order; keep their historical
+                    # sorted selection instead of truncating before the sort.
+                    if not frames and max_files is not None and len(files) >= max_files:
+                        return files
+        if frames:
+            files.sort()
+        return files[:max_files] if max_files is not None else files
     except NoCredentialsError:
         logger.error("S3 credentials not found or invalid")
         return []
     except ClientError as e:
         logger.error(f"Failed to list S3 files from {path}: {e}")
         return []
-    except Exception as e:
-        logger.error(f"Error listing S3 files from {path}: {e}")
-        return []
+
 
 
 def _get_s3_urls(path: str, filenames: List[str]) -> List[str]:

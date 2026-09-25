@@ -85,10 +85,13 @@ before decoding, and scores and parquet output are rebuilt through the normal
 recorder path. A new run ID starts a new evaluation.
 
 The checkpoint freezes sample selection (including the robustness pass), source
-content hashes, model/evaluator identity, seed (42 when omitted), and scoring
-settings. Changed inputs fail closed. Preparing a new run reads the selected files
-to fingerprint them; resumed runs validate only pending samples. Model setup and
-uncommitted work may repeat after interruption.
+paths and file-generation metadata (size, nanosecond modification/change times),
+model/evaluator content hashes, seed (42 when omitted), and scoring settings.
+Startup does not read media or augmentation payloads. Pending inputs are checked
+against their frozen metadata before processing; changed inputs fail closed.
+Input storage must be trusted and preserve these timestamps across mounts, as
+Modal Volumes do. Metadata checks do not protect against a storage owner who can
+forge file timestamps. Model setup and uncommitted work may repeat after interruption.
 
 Checkpoint storage must survive the process or container being replaced. The
 Python API accepts `checkpoint_persist(directory)` for filesystems requiring an

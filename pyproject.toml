@@ -63,6 +63,7 @@ where = ["src"]
 "" = "src"
 
 [tool.setuptools.package-data]
+"gasbench" = ["checkpoint_compatibility.json"]
 "gasbench.dataset" = ["configs/*.yaml"]
 
 [tool.black]

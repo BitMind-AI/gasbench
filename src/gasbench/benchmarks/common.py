@@ -275,6 +275,20 @@ def fingerprint_files(paths, root):
     return digest.hexdigest()
 
 
+def compatible_evaluator_identity(evaluator_dir, current, previous):
+    """Allow only explicitly audited, exact-build checkpoint reader upgrades."""
+    if current == previous:
+        return True
+    registry = Path(evaluator_dir) / "checkpoint_compatibility.json"
+    if not registry.is_file():
+        return False
+    try:
+        pairs = json.loads(registry.read_text())
+    except (OSError, ValueError):
+        return False
+    return isinstance(pairs, dict) and isinstance(pairs.get(current), list) and previous in pairs[current]
+
+
 def runtime_versions():
     versions = {
         "python": platform.python_version(),
@@ -461,6 +475,12 @@ def create_tracker(
     context = json.loads(json.dumps(context))
     if saved is not None:
         previous = saved.get("benchmark", {})
+        if compatible_evaluator_identity(
+            evaluator_dir, context["evaluator_sha256"], previous.get("evaluator_sha256")
+        ):
+            # Preserve the original manifest identity for both restored and new batches.
+            # Every other context field is still compared below without exceptions.
+            context["evaluator_sha256"] = previous["evaluator_sha256"]
         if {k: v for k, v in previous.items() if k != "samples"} != context:
             raise CheckpointError(
                 "Checkpoint configuration or model differs from this run"

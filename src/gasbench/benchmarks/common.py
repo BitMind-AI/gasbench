@@ -183,14 +183,6 @@ def build_plan(
         except Exception as e:
             logger.error(f"Failed to load holdout {config.modality} datasets: {e}")
 
-    if config.dataset_filters:
-        original_count = len(available_datasets)
-        filters_lower = [f.lower() for f in config.dataset_filters]
-        available_datasets = [
-            d for d in available_datasets
-            if any(f in d.name.lower() for f in filters_lower)
-        ]
-        logger.info(f"Filtered {original_count} datasets to {len(available_datasets)} matching: {config.dataset_filters}")
 
     if not available_datasets:
         return None
@@ -210,6 +202,19 @@ def build_plan(
     sampling_plan = calculate_weighted_dataset_sampling(
         available_datasets, target_samples
     )
+    # A targeted evaluation keeps the same sample budget as a full run.
+    if config.dataset_filters:
+        original_count = len(available_datasets)
+        filters_lower = [f.lower() for f in config.dataset_filters]
+        available_datasets = [
+            d for d in available_datasets
+            if any(f in d.name.lower() for f in filters_lower)
+        ]
+        logger.info(f"Filtered {original_count} datasets to {len(available_datasets)} matching: {config.dataset_filters}")
+
+        sampling_plan = {d.name: sampling_plan[d.name] for d in available_datasets}
+        if not available_datasets:
+            return None
     actual_total_samples = sum(sampling_plan.values())
 
     gasstation_count = len(
@@ -516,23 +521,28 @@ def create_tracker(
                     metadata_only=True,
                 )
                 selections[pass_name] = list(iterator)
-                for sample in selections[pass_name]:
+                for sample_index, sample in enumerate(selections[pass_name], 1):
                     sample["file_metadata_sha256"] = file_metadata_digest(sample_files(sample))
                     if pass_name == "aug" and config.aug_cache_dir:
-                        from .aug_cache import img_aug_cache_path, vid_aug_cache_path
+                        from .aug_cache import aud_aug_cache_path, img_aug_cache_path, vid_aug_cache_path
 
-                        cache_path = (
-                            img_aug_cache_path
-                            if config.modality == "image"
-                            else vid_aug_cache_path
-                        )
-                        path = Path(
-                            cache_path(
+                        if config.modality == "audio":
+                            path = Path(aud_aug_cache_path(
+                                config.aug_cache_dir,
+                                build_sample_id(sample),
+                                seed + sample_index,
+                            ))
+                        else:
+                            cache_path = (
+                                img_aug_cache_path
+                                if config.modality == "image"
+                                else vid_aug_cache_path
+                            )
+                            path = Path(cache_path(
                                 config.aug_cache_dir,
                                 build_sample_id(sample),
                                 plan.target_size,
-                            )
-                        )
+                            ))
                         # Newly generated cache files are outputs of this attempt;
                         # only artifacts present in the frozen plan may be inputs.
                         sample["augmentation_cache_metadata_sha256"] = (

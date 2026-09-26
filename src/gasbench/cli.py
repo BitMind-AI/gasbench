@@ -600,7 +600,8 @@ See docs/Safetensors.md for detailed requirements.
         default=0,
         metavar="N",
         help="Number of samples per dataset to re-evaluate with a fixed robustness "
-             "augmentation suite (JPEG compression + downscale + blur). When > 0, "
+             "augmentation suite for image, video, or audio (audio: bandwidth "
+             "reduction, gain reduction, and white noise). When > 0, "
              "adds aug_sn34_score, augmentation_robustness, and per-sample degradation "
              "stats to the results. Default: 0 (disabled).",
     )

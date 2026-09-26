@@ -8,6 +8,8 @@ _logger = logging.getLogger(__name__)
 
 _IMG_AUG_VERSION = "img_v1"
 _VID_AUG_VERSION = "vid_v1"
+# Includes the fixed mono 16 kHz / six-second audio preprocessing contract.
+_AUD_AUG_VERSION = "aud_v1"
 
 
 def img_aug_cache_path(cache_dir: str, sample_id: str, target_size: Tuple[int, int]) -> str:
@@ -18,6 +20,11 @@ def img_aug_cache_path(cache_dir: str, sample_id: str, target_size: Tuple[int, i
 def vid_aug_cache_path(cache_dir: str, sample_id: str, target_size: Tuple[int, int]) -> str:
     H, W = target_size
     return os.path.join(cache_dir, "vid", sample_id[:2], f"{sample_id}_{_VID_AUG_VERSION}_{H}x{W}.npy")
+
+
+def aud_aug_cache_path(cache_dir: str, sample_id: str, seed: int) -> str:
+    # Noise depends on the sample seed, so a different run seed cannot reuse it.
+    return os.path.join(cache_dir, "aud", sample_id[:2], f"{sample_id}_{_AUD_AUG_VERSION}_seed{seed}.npy")
 
 
 def write_aug_cache(path: str, array: np.ndarray) -> None:

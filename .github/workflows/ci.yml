@@ -79,7 +79,7 @@ jobs:
                                  "--index-url", "https://download.pytorch.org/whl/cpu"])
           EOF
       - run: pip install '.[gpu]' pytest
-      - run: pytest tests/unit/test_benchmark_resume.py tests/unit/test_cached_sample_labels.py
+      - run: pytest tests/unit/test_benchmark_resume.py tests/unit/test_cached_sample_labels.py tests/unit/test_audio_augmentations.py tests/unit/test_video_prefetch.py
 
   typecheck:
     name: mypy (advisory)

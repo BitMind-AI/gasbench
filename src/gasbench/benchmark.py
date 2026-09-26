@@ -333,6 +333,10 @@ async def execute_benchmark(
             multiclass_scoring=multiclass_scoring,
             checkpoint_dir=checkpoint_dir,
             checkpoint_persist=checkpoint_persist,
+            n_aug_per_dataset=n_aug_per_dataset,
+            aug_weight=aug_weight,
+            aug_cache_dir=aug_cache_dir,
+            aug_cache_readonly=aug_cache_readonly,
         )
         benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
     else:

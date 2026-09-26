@@ -60,6 +60,9 @@ gasbench run --video-model ./my_video_model/ --debug
 # Run audio benchmark
 gasbench run --audio-model ./my_audio_model/ --debug
 
+# Add an audio robustness pass on 100 samples per dataset
+gasbench run --audio-model ./my_audio_model/ --n-aug-per-dataset 100 --aug-weight 0.2
+
 # Full benchmark (all datasets)
 gasbench run --image-model ./my_model/ --full
 
@@ -76,6 +79,15 @@ gasbench run --image-model ./my_model/ --gasstation-only
 Model directory must contain: `model_config.yaml`, `model.py`, `*.safetensors`
 
 Results are automatically saved to a timestamped JSON file.
+
+The optional audio robustness pass applies an 8 kHz downsample/upsample round
+trip, -6 dB gain, and white noise at 30 dB signal-to-noise ratio after normal
+mono/16 kHz/six-second preprocessing. It supports both raw audio and cached
+preprocessed tensors. The base pass stays unchanged; augmented predictions use
+the same scoring, sample pairing, and checkpoint path as image/video robustness
+passes. Use `--aug-cache-dir` to reuse versioned augmented arrays and
+`--aug-cache-readonly` to prevent writes (cache misses are computed in memory).
+Audio cache entries include the sample seed so different seeds use different noise.
 
 Every benchmark run checkpoints through `BenchmarkRunRecorder` after each inference
 batch. Checkpoints default to `<cache-dir>/runs/<run-id>/checkpoint`; use

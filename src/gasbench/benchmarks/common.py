@@ -521,23 +521,28 @@ def create_tracker(
                     metadata_only=True,
                 )
                 selections[pass_name] = list(iterator)
-                for sample in selections[pass_name]:
+                for sample_index, sample in enumerate(selections[pass_name], 1):
                     sample["file_metadata_sha256"] = file_metadata_digest(sample_files(sample))
                     if pass_name == "aug" and config.aug_cache_dir:
-                        from .aug_cache import img_aug_cache_path, vid_aug_cache_path
+                        from .aug_cache import aud_aug_cache_path, img_aug_cache_path, vid_aug_cache_path
 
-                        cache_path = (
-                            img_aug_cache_path
-                            if config.modality == "image"
-                            else vid_aug_cache_path
-                        )
-                        path = Path(
-                            cache_path(
+                        if config.modality == "audio":
+                            path = Path(aud_aug_cache_path(
+                                config.aug_cache_dir,
+                                build_sample_id(sample),
+                                seed + sample_index,
+                            ))
+                        else:
+                            cache_path = (
+                                img_aug_cache_path
+                                if config.modality == "image"
+                                else vid_aug_cache_path
+                            )
+                            path = Path(cache_path(
                                 config.aug_cache_dir,
                                 build_sample_id(sample),
                                 plan.target_size,
-                            )
-                        )
+                            ))
                         # Newly generated cache files are outputs of this attempt;
                         # only artifacts present in the frozen plan may be inputs.
                         sample["augmentation_cache_metadata_sha256"] = (

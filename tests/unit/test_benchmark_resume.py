@@ -24,12 +24,14 @@ class Session:
         self.model_dir = model_dir
         self.stop_after = stop_after
         self.calls = []
+        self.inputs = []
         self.error = error
 
     def run(self, _, inputs):
         if self.stop_after is not None and len(self.calls) >= self.stop_after:
             raise Interrupted()
         values = next(iter(inputs.values()))
+        self.inputs.extend(value.copy() for value in values)
         self.calls.extend(int(value.flat[0]) for value in values)
         if self.error:
             raise RuntimeError("model failed")
@@ -105,7 +107,7 @@ def benchmark(request, tmp_path, monkeypatch):
                 cache_dir=str(cache),
                 batch_size=extra.pop("batch_size", 1),
                 skip_missing=True,
-                seed=7,
+                seed=extra.pop("seed", 7),
                 **extra,
             )
         )
@@ -210,7 +212,7 @@ def test_checkpoint_startup_never_reads_media_or_augmentation_payloads(benchmark
         raise Interrupted()
 
     monkeypatch.setattr(b.module, "create_tracker", create_tracker)
-    extra = {} if b.modality == "audio" else {
+    extra = {
         "n_aug_per_dataset": 3, "aug_cache_dir": str(aug_dir),
     }
     with pytest.raises(Interrupted):
@@ -282,19 +284,21 @@ def test_unreadable_audio_preserves_pending_batch_and_remaining_samples(benchmar
     assert resumed_session.calls == []
 
 
-def test_failed_inference_is_committed_and_not_retried(benchmark):
+@pytest.mark.parametrize("n_aug", [0, 3])
+def test_failed_inference_is_committed_and_not_retried(benchmark, n_aug):
     b = benchmark
-    b.run(Session(b.model_dir, error=True))
-    assert all(row["status"] == "error" for row in checkpoint_rows(b.checkpoint))
+    b.run(Session(b.model_dir, error=True), n_aug_per_dataset=n_aug)
+    rows = checkpoint_rows(b.checkpoint)
+    assert len(rows) == 5 + n_aug
+    assert sum(row["aug_pass"] for row in rows) == n_aug
+    assert all(row["status"] == "error" for row in rows)
     session = Session(b.model_dir)
-    b.run(session)
+    b.run(session, n_aug_per_dataset=n_aug)
     assert session.calls == []
 
 
 def test_augmentation_resumes_separately_from_base_pass(benchmark):
     b = benchmark
-    if b.modality == "audio":
-        pytest.skip("Audio has no robustness pass")
     with pytest.raises(Interrupted):
         b.run(Session(b.model_dir, stop_after=6), n_aug_per_dataset=3)
     rows = checkpoint_rows(b.checkpoint)
@@ -307,7 +311,8 @@ def test_augmentation_resumes_separately_from_base_pass(benchmark):
     assert sum(not row["aug_pass"] for row in rows) == 5
 
 
-def test_top_level_api_checkpoints_by_default(benchmark, monkeypatch):
+@pytest.mark.parametrize("n_aug", [0, 3])
+def test_top_level_api_checkpoints_by_default(benchmark, monkeypatch, n_aug):
     import gasbench.benchmark as driver
 
     b = benchmark
@@ -328,34 +333,40 @@ def test_top_level_api_checkpoints_by_default(benchmark, monkeypatch):
                 run_id="api",
                 skip_missing=True,
                 batch_size=2,
+                n_aug_per_dataset=n_aug,
             )
         )
         assert result["benchmark_completed"]
-    assert len(session.calls) == 5
-    assert len(checkpoint_rows(Path(result["checkpoint_dir"]))) == 5
+        metrics = result[f"{b.modality}_results"]
+        assert metrics["total_samples"] == 5 + n_aug
+        if n_aug:
+            assert metrics["aug_total_samples"] == n_aug
+            assert metrics["aug_paired_samples"] == n_aug
+        else:
+            assert "aug_total_samples" not in metrics
+    assert len(session.calls) == 5 + n_aug
+    assert len(checkpoint_rows(Path(result["checkpoint_dir"]))) == 5 + n_aug
 
 
 def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):
-    from gasbench.benchmarks.aug_cache import img_aug_cache_path, vid_aug_cache_path
+    from gasbench.benchmarks.aug_cache import aud_aug_cache_path, img_aug_cache_path, vid_aug_cache_path
     from gasbench.benchmarks.recording import build_sample_id
 
     b = benchmark
-    if b.modality == "audio":
-        pytest.skip("Audio has no robustness pass")
     aug_dir = tmp_path / "augmentations"
     cache_path = img_aug_cache_path if b.modality == "image" else vid_aug_cache_path
-    for path in b.samples_dir.iterdir():
-        sample = {
-            "source_kind": "huggingface",
-            "dataset_path": "test/repo",
-            "source_file": path.name,
-            "member_path": path.name,
-        }
-        artifact = Path(cache_path(str(aug_dir), build_sample_id(sample), (2, 2)))
+    selected = common.DatasetIterator(
+        b.dataset, max_samples=3, cache_dir=str(b.cache), download=False,
+        seed=7, metadata_only=True,
+    )
+    for index, sample in enumerate(selected, 1):
+        if b.modality == "audio":
+            artifact = Path(aud_aug_cache_path(str(aug_dir), build_sample_id(sample), 7 + index))
+        else:
+            artifact = Path(cache_path(str(aug_dir), build_sample_id(sample), (2, 2)))
         artifact.parent.mkdir(parents=True, exist_ok=True)
-        np.save(
-            artifact, np.zeros((2, 2, 3) if b.modality == "image" else (2, 2, 2, 3))
-        )
+        shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (8,)}[b.modality]
+        np.save(artifact, np.zeros(shape))
     with pytest.raises(Interrupted):
         b.run(
             Session(b.model_dir, stop_after=5),
@@ -366,6 +377,77 @@ def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):
         path.write_bytes(b"changed")
     with pytest.raises(CheckpointError, match="augmentation cache"):
         b.run(Session(b.model_dir), n_aug_per_dataset=3, aug_cache_dir=str(aug_dir))
+
+
+@pytest.mark.parametrize("benchmark", ["audio", "audio-tensor"], indirect=True)
+def test_audio_cache_matches_uncached_pass_and_respects_seed_and_readonly(
+    benchmark, tmp_path, monkeypatch,
+):
+    b = benchmark
+    aug_dir = tmp_path / "augmentations"
+    augment = b.module.apply_audio_robustness_augmentations
+    augmented_seeds = []
+
+    def tracked_augment(*args, **kwargs):
+        augmented_seeds.append(kwargs["seed"])
+        return augment(*args, **kwargs)
+
+    monkeypatch.setattr(b.module, "apply_audio_robustness_augmentations", tracked_augment)
+    sessions = []
+    # Read-only misses compute without writing; writable misses populate the
+    # cache; subsequent runs load it without applying transforms a second time.
+    for run_id, readonly in [("readonly", True), ("populate", False), ("reuse", True)]:
+        session = Session(b.model_dir)
+        result = b.run(
+            session, run_id=run_id, n_aug_per_dataset=3,
+            aug_cache_dir=str(aug_dir), aug_cache_readonly=readonly,
+        )
+        assert result["audio_results"]["aug_total_samples"] == 3
+        assert not result["errors"]
+        sessions.append(session)
+        if run_id == "readonly":
+            assert not list(aug_dir.rglob("*.npy"))
+        else:
+            assert len(list(aug_dir.rglob("*.npy"))) == 3
+    assert len(augmented_seeds) == 6
+    np.testing.assert_array_equal(sessions[0].inputs, sessions[1].inputs)
+    np.testing.assert_array_equal(sessions[0].inputs, sessions[2].inputs)
+    # A cache with no seed in its key would silently load the previous noise.
+    b.run(
+        Session(b.model_dir), run_id="different-seed", seed=91, n_aug_per_dataset=3,
+        aug_cache_dir=str(aug_dir), aug_cache_readonly=True,
+    )
+    assert len(augmented_seeds) == 9
+    assert set(augmented_seeds[-3:]).isdisjoint(augmented_seeds[:3])
+
+
+@pytest.mark.parametrize("benchmark", ["audio", "audio-tensor"], indirect=True)
+def test_audio_augmented_predictions_use_shared_scoring(benchmark, monkeypatch):
+    b = benchmark
+    # A conspicuous transform exposes accidentally augmenting the base pass or
+    # bypassing augmentation for preprocessed tensors. The model then gives
+    # deliberately worse predictions on the augmented inputs.
+    monkeypatch.setattr(
+        b.module, "apply_audio_robustness_augmentations",
+        lambda waveform, **_: (waveform + 10, None, "test", {}),
+    )
+
+    class SensitiveSession(Session):
+        def run(self, _, inputs):
+            values = next(iter(inputs.values()))
+            augmented = values[:, 0] >= 10
+            return [np.column_stack((~augmented, augmented)).astype(np.float32)]
+
+    weight = 0.35
+    result = b.run(SensitiveSession(b.model_dir), n_aug_per_dataset=3, aug_weight=weight)
+    metrics = result["audio_results"]
+    assert metrics["total_samples"] == 8
+    assert metrics["correct_predictions"] == 5
+    assert metrics["aug_paired_samples"] == 3
+    assert metrics["base_sn34_score"] > metrics["aug_sn34_score"]
+    assert metrics["sn34_score"] == pytest.approx(
+        (1 - weight) * metrics["base_sn34_score"] + weight * metrics["aug_sn34_score"]
+    )
 
 
 @pytest.mark.parametrize("change", ["reader", "unapproved-evaluator", "model"])

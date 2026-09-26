@@ -4,16 +4,19 @@ from typing import Dict, Optional
 
 from ..logger import get_logger
 from ..processing.media import process_audio_sample
+from ..processing.transforms import apply_audio_robustness_augmentations
 from ..dataset.iterator import load_audio_sample
 
 from ._checkpoint import CheckpointError
-from .recording import BenchmarkRunRecorder, log_dataset_summary
+from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
+from .aug_cache import aud_aug_cache_path, write_aug_cache
 from .common import (
     BenchmarkRunConfig,
     build_plan,
     create_tracker,
     create_dataset_iterator,
     verify_sample,
+    use_augmentation_cache,
     finalize_run,
     run_batch_and_record,
 )
@@ -31,6 +34,7 @@ def process_batch(
     batch_metadata,
     tracker: BenchmarkRunRecorder,
     batch_id: int,
+    aug_pass: bool = False,
 ):
     """Push a batch of audio samples through the model and record rows in tracker."""
     if not batch_audio:
@@ -58,12 +62,13 @@ def process_batch(
                 sample_index=sample_index,
                 sample=sample,
                 error_message=f"stack-failed: {str(e)[:160]}",
+                aug_pass=aug_pass,
             )
         tracker.checkpoint()
         return
 
     run_batch_and_record(
-        session, input_specs, batch_array, batch_metadata, tracker, batch_id
+        session, input_specs, batch_array, batch_metadata, tracker, batch_id, aug_pass
     )
 
 
@@ -90,6 +95,10 @@ async def run_audio_benchmark(
     multiclass_scoring: bool = False,
     checkpoint_dir: Optional[str] = None,
     checkpoint_persist=None,
+    n_aug_per_dataset: int = 0,
+    aug_weight: float = 0.2,
+    aug_cache_dir: Optional[str] = None,
+    aug_cache_readonly: bool = False,
 ) -> pd.DataFrame:
     """Test model on benchmark audio datasets for AI-generated content detection.
     
@@ -109,7 +118,6 @@ async def run_audio_benchmark(
         else:
             logger.info("Loading benchmark audio datasets")
 
-        # Build run config - audio doesn't use augmentation or crop
         run_config = BenchmarkRunConfig(
             modality="audio",
             mode=mode,
@@ -131,6 +139,10 @@ async def run_audio_benchmark(
             content_category=content_category,
             score_composition=score_composition,
             multiclass_scoring=multiclass_scoring,
+            n_aug_per_dataset=n_aug_per_dataset,
+            aug_weight=aug_weight,
+            aug_cache_dir=aug_cache_dir,
+            aug_cache_readonly=aug_cache_readonly,
         )
 
         plan = build_plan(logger, run_config, input_specs)
@@ -154,116 +166,138 @@ async def run_audio_benchmark(
         logger.info(
             f"Sampling plan targets {plan.sampling_summary.actual_total_samples} samples across {plan.sampling_summary.num_datasets} datasets"
         )
-        for dataset_idx, dataset_cfg in enumerate(plan.available_datasets):
-            dataset_cap = plan.sampling_plan[dataset_cfg.name]
-            logger.info(
-                f"Processing dataset {dataset_idx + 1}/{len(plan.available_datasets)}: "
-                f"{dataset_cfg.name} ({dataset_cap} samples)"
-            )
-
-            try:
-                dataset_iterator = create_dataset_iterator(
-                    run_config, plan, dataset_cfg, aug_pass=False,
+        for aug_pass in ([False, True] if n_aug_per_dataset > 0 else [False]):
+            for dataset_idx, dataset_cfg in enumerate(plan.available_datasets):
+                dataset_cap = n_aug_per_dataset if aug_pass else plan.sampling_plan[dataset_cfg.name]
+                logger.info(
+                    f"{'Robustness pass' if aug_pass else 'Processing dataset'} "
+                    f"{dataset_idx + 1}/{len(plan.available_datasets)}: "
+                    f"{dataset_cfg.name} ({dataset_cap} samples)"
                 )
 
-                if skip_missing and dataset_iterator.get_total_cached_count() == 0:
-                    logger.warning(f"Skipping {dataset_cfg.name} (not cached, --skip-missing enabled)")
-                    continue
-
-                batch_audio = []
-                batch_metadata = []
-                batch_id = 0
-                sample_index = 0
-
-                for sample in dataset_iterator:
-                    sample_index += 1
-                    if tracker.is_checkpointed(
-                        dataset_name=dataset_cfg.name, sample_index=sample_index, sample=sample,
-                    ):
-                        continue
-                    verify_sample(sample)
-                    try:
-                        audio_sample = load_audio_sample(sample)
-                        # Check if sample is already preprocessed
-                        if audio_sample.get("is_preprocessed", False):
-                            audio_array = audio_sample.get("preprocessed_waveform")
-                            label = audio_sample.get("label")
-
-                            if audio_array is None or label is None:
-                                continue
-
-                            if hasattr(audio_array, "numpy"):
-                                audio_array = audio_array.numpy()
-                        else:
-                            # Process raw audio bytes
-                            sample_seed_val = None if seed is None else (seed + sample_index)
-                            audio_array, label = process_audio_sample(
-                                audio_sample,
-                                target_sr=target_sr,
-                                seed=sample_seed_val,
-                            )
-
-                            if audio_array is None or label is None:
-                                continue
-
-                            if hasattr(audio_array, "numpy"):
-                                audio_array = audio_array.numpy()
-
-                        sample_seed_val = None if seed is None else (seed + sample_index)
-                        batch_audio.append(audio_array)
-                        batch_metadata.append(
-                            (label, sample, sample_index, dataset_cfg.name, sample_seed_val)
-                        )
-
-                        if len(batch_audio) >= batch_size:
-                            batch_id += 1
-                            process_batch(
-                                session,
-                                input_specs,
-                                batch_audio,
-                                batch_metadata,
-                                tracker,
-                                batch_id,
-                            )
-                            batch_audio = []
-                            batch_metadata = []
-
-                            if tracker.count % 500 == 0:
-                                logger.info(f"Progress: {tracker.count} samples")
-
-                    except CheckpointError:
-                        raise
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to process audio sample from {dataset_cfg.name}: {e}"
-                        )
-                        benchmark_results["errors"].append(
-                            f"Audio processing error: {str(e)[:100]}"
-                        )
-
-                # Process remaining samples
-                if batch_audio:
-                    batch_id += 1
-                    process_batch(
-                        session,
-                        input_specs,
-                        batch_audio,
-                        batch_metadata,
-                        tracker,
-                        batch_id,
+                try:
+                    dataset_iterator = create_dataset_iterator(
+                        run_config, plan, dataset_cfg, aug_pass=aug_pass,
                     )
 
-                log_dataset_summary(
-                    logger, tracker, dataset_cfg.name, include_skipped=False
-                )
+                    if skip_missing and dataset_iterator.get_total_cached_count() == 0:
+                        logger.warning(f"Skipping {dataset_cfg.name} (not cached, --skip-missing enabled)")
+                        continue
 
-            except CheckpointError:
-                raise
-            except Exception as e:
-                logger.error(f"Failed to process dataset {dataset_cfg.name}: {e}")
-                benchmark_results["errors"].append(
-                    f"Dataset error for {dataset_cfg.name}: {str(e)[:100]}"
-                )
+                    batch_audio = []
+                    batch_metadata = []
+                    batch_id = 0
+                    sample_index = 0
+
+                    for sample in dataset_iterator:
+                        sample_index += 1
+                        if tracker.is_checkpointed(
+                            dataset_name=dataset_cfg.name, sample_index=sample_index, sample=sample,
+                            aug_pass=aug_pass,
+                        ):
+                            continue
+                        verify_sample(sample)
+                        try:
+                            audio_sample = load_audio_sample(sample)
+                            # Check if sample is already preprocessed
+                            if audio_sample.get("is_preprocessed", False):
+                                audio_array = audio_sample.get("preprocessed_waveform")
+                                label = audio_sample.get("label")
+
+                                if audio_array is None or label is None:
+                                    continue
+
+                                if hasattr(audio_array, "numpy"):
+                                    audio_array = audio_array.numpy()
+                            else:
+                                # Process raw audio bytes
+                                sample_seed_val = None if seed is None else (seed + sample_index)
+                                audio_array, label = process_audio_sample(
+                                    audio_sample,
+                                    target_sr=target_sr,
+                                    seed=sample_seed_val,
+                                )
+
+                                if audio_array is None or label is None:
+                                    continue
+
+                                if hasattr(audio_array, "numpy"):
+                                    audio_array = audio_array.numpy()
+
+                            sample_seed_val = None if seed is None else (seed + sample_index)
+                            if aug_pass:
+                                cache_path = (
+                                    aud_aug_cache_path(
+                                        aug_cache_dir, build_sample_id(sample), sample_seed_val
+                                    )
+                                    if aug_cache_dir else None
+                                )
+                                if cache_path and use_augmentation_cache(sample, cache_path):
+                                    audio_array = np.load(cache_path, allow_pickle=False)
+                                else:
+                                    audio_array, _, _, _ = apply_audio_robustness_augmentations(
+                                        np.asarray(audio_array).squeeze(),
+                                        target_sr=target_sr,
+                                        seed=sample_seed_val,
+                                    )
+                                    if cache_path and not aug_cache_readonly:
+                                        write_aug_cache(cache_path, audio_array)
+                            batch_audio.append(audio_array)
+                            batch_metadata.append(
+                                (label, sample, sample_index, dataset_cfg.name, sample_seed_val)
+                            )
+
+                            if len(batch_audio) >= batch_size:
+                                batch_id += 1
+                                process_batch(
+                                    session,
+                                    input_specs,
+                                    batch_audio,
+                                    batch_metadata,
+                                    tracker,
+                                    batch_id,
+                                    aug_pass=aug_pass,
+                                )
+                                batch_audio = []
+                                batch_metadata = []
+
+                                if tracker.count % 500 == 0:
+                                    logger.info(f"Progress: {tracker.count} samples")
+
+                        except CheckpointError:
+                            raise
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to process audio sample from {dataset_cfg.name}: {e}"
+                            )
+                            benchmark_results["errors"].append(
+                                f"Audio processing error: {str(e)[:100]}"
+                            )
+
+                    # Process remaining samples
+                    if batch_audio:
+                        batch_id += 1
+                        process_batch(
+                            session,
+                            input_specs,
+                            batch_audio,
+                            batch_metadata,
+                            tracker,
+                            batch_id,
+                            aug_pass=aug_pass,
+                        )
+
+                    log_dataset_summary(
+                        logger, tracker, dataset_cfg.name, include_skipped=False
+                    )
+
+                except CheckpointError:
+                    raise
+                except Exception as e:
+                    logger.error(f"Failed to process dataset {dataset_cfg.name}: {e}")
+                    benchmark_results["errors"].append(
+                        f"Dataset error for {dataset_cfg.name}: {str(e)[:100]}"
+                    )
 
         df = finalize_run(
             config=run_config,

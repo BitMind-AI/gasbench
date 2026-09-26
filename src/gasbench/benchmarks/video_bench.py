@@ -15,7 +15,7 @@ from ..processing.transforms import (
     extract_num_frames_from_input_specs,
 )
 from ..config import DEFAULT_VIDEO_BATCH_SIZE
-from ..constants import MAX_VIDEO_NUM_FRAMES
+from ..constants import MAX_VIDEO_NUM_FRAMES, media_type_to_label
 
 from ._checkpoint import CheckpointError
 from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
@@ -90,44 +90,45 @@ class VideoPrefetchPipeline:
         """Read file from disk (if lazy), decode, and augment. Runs in worker thread."""
         verify_sample(sample)
         try:
-            video_path = sample.get("video_path")
-            if video_path:
-                with open(video_path, "rb") as f:
-                    video_bytes = f.read()
-                sample = {**sample, "video_bytes": video_bytes}
+            sample_seed = None if self.seed is None else (self.seed + sample_index)
+            cache_path = None
+            if self.robustness_pass and self.aug_cache_dir:
+                cache_path = vid_aug_cache_path(
+                    self.aug_cache_dir, build_sample_id(sample), self.target_size
+                )
 
-            if "video_frames" in sample:
-                video_array, label = process_video_frames_sample(
-                    sample, num_frames=self.num_frames
+            # Validate the frozen source and cache before loading cached frames.
+            # A cache hit already contains the frames needed for inference.
+            if cache_path is not None and use_augmentation_cache(sample, cache_path):
+                aug_thwc = np.load(cache_path)
+                label = media_type_to_label(
+                    sample.get("media_type", "synthetic"), "video"
                 )
             else:
-                video_array, label = process_video_bytes_sample(
-                    sample, num_frames=self.num_frames, frame_rate=self.frame_rate
-                )
+                video_path = sample.get("video_path")
+                if video_path:
+                    with open(video_path, "rb") as f:
+                        video_bytes = f.read()
+                    sample = {**sample, "video_bytes": video_bytes}
 
-            if video_array is None or label is None:
-                return None
+                if "video_frames" in sample:
+                    video_array, label = process_video_frames_sample(
+                        sample, num_frames=self.num_frames
+                    )
+                else:
+                    video_array, label = process_video_bytes_sample(
+                        sample, num_frames=self.num_frames, frame_rate=self.frame_rate
+                    )
 
-            sample_seed = None if self.seed is None else (self.seed + sample_index)
-            try:
+                if video_array is None or label is None:
+                    return None
+
                 if self.robustness_pass:
-                    if self.aug_cache_dir:
-                        sid = build_sample_id(sample)
-                        cache_path = vid_aug_cache_path(self.aug_cache_dir, sid, self.target_size)
-                        if use_augmentation_cache(sample, cache_path):
-                            aug_thwc = np.load(cache_path)
-                        else:
-                            aug_thwc, _, _, _ = apply_video_robustness_augmentations(
-                                video_array, self.target_size, seed=sample_seed
-                            )
-                            if not self.aug_cache_readonly:
-                                write_aug_cache(cache_path, aug_thwc)
-                    else:
-                        aug_thwc, _, _, _ = apply_video_robustness_augmentations(
-                            video_array,
-                            self.target_size,
-                            seed=sample_seed,
-                        )
+                    aug_thwc, _, _, _ = apply_video_robustness_augmentations(
+                        video_array, self.target_size, seed=sample_seed
+                    )
+                    if cache_path is not None and not self.aug_cache_readonly:
+                        write_aug_cache(cache_path, aug_thwc)
                 else:
                     aug_thwc, _, _, _ = apply_random_augmentations(
                         video_array,
@@ -136,11 +137,6 @@ class VideoPrefetchPipeline:
                         level=self.augment_level,
                         crop_prob=self.crop_prob,
                     )
-            except CheckpointError:
-                raise
-            except Exception as e:
-                logger.error(f"Video augmentation failed: {e}")
-                return None
 
             aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
 

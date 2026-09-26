@@ -183,14 +183,6 @@ def build_plan(
         except Exception as e:
             logger.error(f"Failed to load holdout {config.modality} datasets: {e}")
 
-    if config.dataset_filters:
-        original_count = len(available_datasets)
-        filters_lower = [f.lower() for f in config.dataset_filters]
-        available_datasets = [
-            d for d in available_datasets
-            if any(f in d.name.lower() for f in filters_lower)
-        ]
-        logger.info(f"Filtered {original_count} datasets to {len(available_datasets)} matching: {config.dataset_filters}")
 
     if not available_datasets:
         return None
@@ -210,6 +202,19 @@ def build_plan(
     sampling_plan = calculate_weighted_dataset_sampling(
         available_datasets, target_samples
     )
+    # A targeted evaluation keeps the same sample budget as a full run.
+    if config.dataset_filters:
+        original_count = len(available_datasets)
+        filters_lower = [f.lower() for f in config.dataset_filters]
+        available_datasets = [
+            d for d in available_datasets
+            if any(f in d.name.lower() for f in filters_lower)
+        ]
+        logger.info(f"Filtered {original_count} datasets to {len(available_datasets)} matching: {config.dataset_filters}")
+
+        sampling_plan = {d.name: sampling_plan[d.name] for d in available_datasets}
+        if not available_datasets:
+            return None
     actual_total_samples = sum(sampling_plan.values())
 
     gasstation_count = len(

@@ -25,6 +25,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Callable, Iterable, Mapping, Optional
 
+from .timing import StageTimings
+
 
 class CheckpointError(RuntimeError):
     """Checkpoint is incompatible, corrupt, or cannot safely be persisted."""
@@ -129,12 +131,14 @@ class RecorderCheckpoint:
         manifest: Mapping,
         *,
         persist: Optional[Callable[[Path], None]] = None,
+        timings=None,
     ):
         self.directory = Path(directory)
         self._persist = persist
         self._usable = True
         self._records = {}
         self._next_batch = 0
+        timings = timings if timings is not None else StageTimings()
         if not isinstance(manifest, Mapping) or not manifest:
             raise ValueError("A nonempty run manifest is required")
         # Normalize JSON types and detach mutable caller-owned objects.
@@ -163,13 +167,13 @@ class RecorderCheckpoint:
         else:
             if batches:
                 raise CheckpointError("Checkpoint batches exist without a manifest")
-            self._write(manifest_path, expected)
+            self._write(manifest_path, expected, timings=timings)
 
         head_path = self.directory / "head.json"
         if not head_path.exists():
             if batches:
                 raise CheckpointError("Checkpoint batches exist without a commit head")
-            self._write_head(-1, None)
+            self._write_head(-1, None, timings=timings)
         head_envelope = _read(head_path)
         if not isinstance(head_envelope, dict) or not isinstance(
             head_envelope.get("payload"), dict
@@ -260,7 +264,7 @@ class RecorderCheckpoint:
     def records(self) -> list:
         return deepcopy(list(self._records.values()))
 
-    def commit_batch(self, records: Iterable[Mapping]) -> int:
+    def commit_batch(self, records: Iterable[Mapping], *, timings=None) -> int:
         """Commit new records; return their count after persistence succeeds.
 
         The caller may replay an overlapping batch on recovery. All previously
@@ -268,9 +272,11 @@ class RecorderCheckpoint:
         """
         if not self._usable:
             raise CheckpointError("Persistence failed; reopen the durable checkpoint")
-        rows = self._validate_records(
-            json.loads(_encode(list(records), sort_keys=False))
-        )
+        timings = timings if timings is not None else StageTimings()
+        with timings.measure("checkpoint_encode"):
+            rows = self._validate_records(
+                json.loads(_encode(list(records), sort_keys=False))
+            )
         new_rows = []
         for row in rows:
             old = self._records.get(prediction_key(row))
@@ -287,45 +293,54 @@ class RecorderCheckpoint:
             "batch_index": self._next_batch,
             "records": new_rows,
         }
+        with timings.measure("checkpoint_encode"):
+            checksum = _digest(payload)
         self._write(
             self.directory / self._batch_name(self._next_batch),
-            {"payload": payload, "sha256": _digest(payload)},
+            {"payload": payload, "sha256": checksum},
             persist=False,
+            timings=timings,
         )
-        self._write_head(self._next_batch, _digest(payload))
+        self._write_head(self._next_batch, checksum, timings=timings)
         self._records.update((prediction_key(row), row) for row in new_rows)
         self._next_batch += 1
         return len(new_rows)
 
-    def _write_head(self, index: int, checksum: Optional[str]) -> None:
+    def _write_head(self, index: int, checksum: Optional[str], *, timings=None) -> None:
         payload = {"last_batch": index, "sha256": checksum}
         self._write(
             self.directory / "head.json",
             {"payload": payload, "sha256": _digest(payload)},
+            timings=timings,
         )
 
-    def _write(self, destination: Path, value, *, persist: bool = True) -> None:
+    def _write(self, destination: Path, value, *, persist: bool = True, timings=None) -> None:
         # Preserve recorder column order in stored rows; checksums still use
         # canonical key ordering so integrity does not depend on JSON layout.
         temp_path = None
+        timings = timings if timings is not None else StageTimings()
         try:
-            content = _encode(value, sort_keys=False)
+            with timings.measure("checkpoint_encode"):
+                content = _encode(value, sort_keys=False)
             try:
-                with tempfile.NamedTemporaryFile(
-                    dir=self.directory, prefix=".pending-", delete=False
-                ) as handle:
-                    temp_path = Path(handle.name)
-                    handle.write(content)
-                    handle.flush()
-                    os.fsync(handle.fileno())
-                os.replace(temp_path, destination)
-                fd = os.open(self.directory, os.O_RDONLY)
-                try:
-                    os.fsync(fd)
-                finally:
-                    os.close(fd)
+                with timings.measure("checkpoint_local_write"):
+                    with tempfile.NamedTemporaryFile(
+                        dir=self.directory, prefix=".pending-", delete=False
+                    ) as handle:
+                        temp_path = Path(handle.name)
+                        handle.write(content)
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    os.replace(temp_path, destination)
+                    fd = os.open(self.directory, os.O_RDONLY)
+                    try:
+                        os.fsync(fd)
+                    finally:
+                        os.close(fd)
                 if persist and self._persist is not None:
-                    self._persist(self.directory)
+                    with timings.measure("checkpoint_persist"):
+                        self._persist(self.directory)
+                timings.count("checkpoint_bytes", len(content))
             finally:
                 if temp_path is not None:
                     temp_path.unlink(missing_ok=True)

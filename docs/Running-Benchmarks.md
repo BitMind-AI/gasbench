@@ -45,6 +45,27 @@ subdirectory under `results/`. Set `--results-dir` to change that location and
 The Python API returns a results dictionary. Call `save_results_to_json()` to
 save it, and pass `records_parquet_path` to `run_benchmark()` to export predictions.
 
+## Diagnose runtime
+
+The JSON report's `performance` field (Python: `results["metrics"]["performance"]`)
+contains stage totals, call counts, and maximum durations for the current attempt.
+Startup, base inference, augmentation, model loading, and finalization are separate
+groups. Per-dataset timing summaries also appear in the logs, including on errors.
+Resumed predictions are counted as restored work; their original timings are not
+added to the new attempt.
+
+Use `input_wait` to identify waits for prepared batches, and compare `checkpoint`
+with its `checkpoint_encode`, `checkpoint_local_write` (write, rename, fsync), and
+`checkpoint_persist` (filesystem commit callback) components. Source reads, decode,
+transforms, and augmentation-cache hits/misses are measured in preparation workers.
+Decode includes decoder-internal I/O, such as reading frame-image files or staging
+video bytes; preprocessed audio loading includes tensor deserialization.
+
+Durations are inclusive and can overlap: **do not sum worker stages into wall
+time**, or add checkpoint components to the checkpoint total. Pass `wall` is the
+sum of dataset execution times. `inference` includes transfers, model execution,
+and output conversion; it is not a GPU-kernel-only measurement.
+
 ## Resume an interrupted run
 
 Give the run an ID and keep its storage available:

@@ -14,7 +14,7 @@ from ..processing.transforms import (
 from .aug_cache import vid_aug_cache_path, write_aug_cache
 from .common import (
     BenchmarkRunConfig,
-    use_augmentation_cache,
+    load_augmentation_cache,
     verify_sample,
 )
 from .prefetch import PrefetchPipeline as BasePrefetchPipeline
@@ -32,7 +32,8 @@ class VideoPrefetchPipeline(BasePrefetchPipeline):
 
     def _read_and_preprocess(self, sample, sample_index, dataset_name):
         """Read file from disk (if lazy), decode, and augment. Runs in worker thread."""
-        verify_sample(sample)
+        with self.timings.measure("source_validation"):
+            verify_sample(sample)
         sample_seed = None if self.seed is None else (self.seed + sample_index)
         cache_path = None
         if self.robustness_pass and self.aug_cache_dir:
@@ -46,8 +47,8 @@ class VideoPrefetchPipeline(BasePrefetchPipeline):
 
         # Validate the frozen source and cache before loading cached frames.
         # A cache hit already contains the frames needed for inference.
-        if cache_path is not None and use_augmentation_cache(sample, cache_path):
-            aug_thwc = np.load(cache_path, allow_pickle=False)
+        aug_thwc = load_augmentation_cache(sample, cache_path, timings=self.timings)
+        if aug_thwc is not None:
             if aug_thwc.shape != (self.num_frames, *self.target_size, 3):
                 raise ValueError(
                     "Cached video shape differs from the model preprocessing contract"
@@ -56,36 +57,41 @@ class VideoPrefetchPipeline(BasePrefetchPipeline):
         else:
             video_path = sample.get("video_path")
             if video_path:
-                with open(video_path, "rb") as f:
-                    video_bytes = f.read()
-                sample = {**sample, "video_bytes": video_bytes}
+                with self.timings.measure("source_read"):
+                    with open(video_path, "rb") as f:
+                        video_bytes = f.read()
+                    sample = {**sample, "video_bytes": video_bytes}
 
-            if "video_frames" in sample:
-                video_array, label = process_video_frames_sample(
-                    sample, num_frames=self.num_frames
-                )
-            else:
-                video_array, label = process_video_bytes_sample(
-                    sample, num_frames=self.num_frames, frame_rate=self.frame_rate
-                )
+            with self.timings.measure("decode"):
+                if "video_frames" in sample:
+                    video_array, label = process_video_frames_sample(
+                        sample, num_frames=self.num_frames
+                    )
+                else:
+                    video_array, label = process_video_bytes_sample(
+                        sample, num_frames=self.num_frames, frame_rate=self.frame_rate
+                    )
 
             if video_array is None or label is None:
                 return None
 
             if self.robustness_pass:
-                aug_thwc, _, _, _ = apply_video_robustness_augmentations(
-                    video_array, self.target_size, seed=sample_seed
-                )
+                with self.timings.measure("transform"):
+                    aug_thwc, _, _, _ = apply_video_robustness_augmentations(
+                        video_array, self.target_size, seed=sample_seed
+                    )
                 if cache_path is not None and not self.aug_cache_readonly:
-                    write_aug_cache(cache_path, aug_thwc)
+                    with self.timings.measure("cache_write"):
+                        write_aug_cache(cache_path, aug_thwc)
             else:
-                aug_thwc, _, _, _ = apply_random_augmentations(
-                    video_array,
-                    self.target_size,
-                    seed=sample_seed,
-                    level=self.augment_level,
-                    crop_prob=self.crop_prob,
-                )
+                with self.timings.measure("transform"):
+                    aug_thwc, _, _, _ = apply_random_augmentations(
+                        video_array,
+                        self.target_size,
+                        seed=sample_seed,
+                        level=self.augment_level,
+                        crop_prob=self.crop_prob,
+                    )
 
         aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
 

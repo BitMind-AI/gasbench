@@ -11,6 +11,7 @@ import numpy as np
 from .utils.metrics import Metrics
 from ._checkpoint import RecorderCheckpoint
 from .errors import BenchmarkError
+from .timing import StageTimings
 from ..constants import MODALITY_NUM_CLASSES
 
 
@@ -28,6 +29,7 @@ class BenchmarkRunRecorder:
         checkpoint_dir: Optional[Path] = None,
         checkpoint_context: Optional[Dict[str, Any]] = None,
         checkpoint_persist: Optional[Callable[[Path], None]] = None,
+        timings=None,
     ):
         # Identity must be supplied by the coordinator, never regenerated on resume.
         if checkpoint_dir is not None and (not run_id or not checkpoint_context):
@@ -54,6 +56,7 @@ class BenchmarkRunRecorder:
         self._dataset_counts: Dict[str, Dict[str, int]] = {}
         self._checkpoint = None
         self._checkpointed_count = 0
+        timings = timings if timings is not None else StageTimings()
         if checkpoint_dir is not None:
             self._checkpoint = RecorderCheckpoint(
                 checkpoint_dir,
@@ -72,6 +75,7 @@ class BenchmarkRunRecorder:
                     "benchmark": checkpoint_context,
                 },
                 persist=checkpoint_persist,
+                timings=timings,
             )
             for row in self._checkpoint.records:
                 self._append_row(row)
@@ -79,7 +83,7 @@ class BenchmarkRunRecorder:
                 self.run_started_at = self.rows[0]["run_started_at"]
             self._checkpointed_count = len(self.rows)
 
-    def checkpoint(self) -> int:
+    def checkpoint(self, *, timings=None) -> int:
         """Commit pending recorder rows; distributed storage must supply persist.
 
         checkpoint_context must include the model/evaluator identity, immutable
@@ -89,8 +93,13 @@ class BenchmarkRunRecorder:
         """
         if self._checkpoint is None or self._checkpointed_count == len(self.rows):
             return 0
-        count = self._checkpoint.commit_batch(self.rows[self._checkpointed_count :])
+        timings = timings if timings is not None else StageTimings()
+        with timings.measure("checkpoint"):
+            count = self._checkpoint.commit_batch(
+                self.rows[self._checkpointed_count :], timings=timings
+            )
         self._checkpointed_count = len(self.rows)
+        timings.count("committed_samples", count)
         return count
 
     def is_checkpointed(

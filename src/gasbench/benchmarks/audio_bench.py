@@ -13,7 +13,7 @@ from ..dataset.cache import load_audio_sample
 from ..processing.media import process_audio_sample
 from ..processing.transforms import apply_audio_robustness_augmentations
 from .aug_cache import aud_aug_cache_path, write_aug_cache
-from .common import BenchmarkRunConfig, use_augmentation_cache, verify_sample
+from .common import BenchmarkRunConfig, load_augmentation_cache, verify_sample
 from .inputs import validate_audio_preprocessing
 from .prefetch import PrefetchPipeline
 from .recording import build_sample_id
@@ -41,7 +41,8 @@ class AudioPrefetchPipeline(PrefetchPipeline):
         )
 
     def _read_and_preprocess(self, sample, sample_index, dataset_name):
-        verify_sample(sample)
+        with self.timings.measure("source_validation"):
+            verify_sample(sample)
         sample_seed = self.seed + sample_index
         path = (
             aud_aug_cache_path(self.aug_cache_dir, build_sample_id(sample), sample_seed)
@@ -49,11 +50,11 @@ class AudioPrefetchPipeline(PrefetchPipeline):
             else None
         )
         label = media_type_to_label(sample["media_type"], "audio")
-        if path and use_augmentation_cache(sample, path):
-            array = np.load(path, allow_pickle=False)
-        else:
+        array = load_augmentation_cache(sample, path, timings=self.timings)
+        if array is None:
             try:
-                loaded = load_audio_sample(sample)
+                with self.timings.measure("source_read"):
+                    loaded = load_audio_sample(sample)
             except (
                 pickle.UnpicklingError,
                 EOFError,
@@ -65,21 +66,24 @@ class AudioPrefetchPipeline(PrefetchPipeline):
             if loaded["is_preprocessed"]:
                 array = loaded["preprocessed_waveform"]
             else:
-                array, label = process_audio_sample(
-                    loaded, target_sr=AUDIO_SAMPLE_RATE, seed=sample_seed
-                )
+                with self.timings.measure("decode"):
+                    array, label = process_audio_sample(
+                        loaded, target_sr=AUDIO_SAMPLE_RATE, seed=sample_seed
+                    )
                 if array is None or label is None:
                     return None
             array = np.asarray(array).squeeze()
             self._validate(array)
             if self.robustness_pass:
-                array, _, _, _ = apply_audio_robustness_augmentations(
-                    array,
-                    target_sr=AUDIO_SAMPLE_RATE,
-                    seed=sample_seed,
-                )
+                with self.timings.measure("transform"):
+                    array, _, _, _ = apply_audio_robustness_augmentations(
+                        array,
+                        target_sr=AUDIO_SAMPLE_RATE,
+                        seed=sample_seed,
+                    )
                 if path and not self.aug_cache_readonly:
-                    write_aug_cache(path, array)
+                    with self.timings.measure("cache_write"):
+                        write_aug_cache(path, array)
         array = np.asarray(array, dtype=np.float32)
         self._validate(array)
         return {

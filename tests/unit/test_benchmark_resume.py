@@ -99,8 +99,8 @@ def benchmark(request, tmp_path, monkeypatch):
     shape = {"image": [None, 3, 2, 2], "video": [None, 2, 3, 2, 2], "audio": [None, 96000]}[modality]
     specs = [SimpleNamespace(name="input", shape=shape, type="tensor(float)")]
 
-    def run(session, run_id="run", **extra):
-        results = {"errors": []}
+    def run(session, run_id="run", *, results=None, **extra):
+        results = {"errors": []} if results is None else results
         asyncio.run(
             getattr(module, f"run_{modality}_benchmark")(
                 session,
@@ -254,19 +254,32 @@ def test_changed_model_rejected_before_inference(benchmark):
 
 
 @pytest.mark.parametrize("model_error", [False, True])
-def test_persistence_failure_aborts_every_modality(benchmark, model_error):
+def test_persistence_failure_aborts_every_modality(benchmark, model_error, monkeypatch):
+    from gasbench.benchmarks import recording, timing
+
     b = benchmark
     session = Session(b.model_dir, error=model_error)
     storage_error = OSError("storage unavailable")
+    clock = 0
+    monkeypatch.setattr(timing, "perf_counter", lambda: clock)
+    # Fail a grouped commit before the remaining inputs/augmentation can run.
+    monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 2)
 
     def persist(directory):
+        nonlocal clock
         if list(Path(directory).glob("batch-*.json")):
+            clock += 7
             raise storage_error
 
+    results = {}
     with pytest.raises(CheckpointError) as error:
-        b.run(session, checkpoint_persist=persist)
+        b.run(session, checkpoint_persist=persist, results=results, n_aug_per_dataset=3)
     assert error.value.__cause__ is storage_error
-    assert len(session.calls) == 1
+    assert len(session.calls) == (1 if model_error else 2)
+    base = results["metrics"]["performance"]["groups"]["base"]
+    assert base["stages"]["checkpoint_persist"]["seconds"] == 7
+    assert base["stages"]["checkpoint"]["seconds"] == 7
+    assert base["counts"].get("committed_samples", 0) == 0
 
 
 @pytest.mark.parametrize("benchmark", ["audio-tensor"], indirect=True)
@@ -374,6 +387,45 @@ def populate_augmentation_cache(b, aug_dir):
         artifact.parent.mkdir(parents=True, exist_ok=True)
         shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (96000,)}[b.modality]
         np.save(artifact, np.zeros(shape))
+
+
+def test_performance_separates_passes_cache_hits_and_resumed_work(benchmark, tmp_path, monkeypatch):
+    from gasbench.benchmark import save_results_to_json
+    from gasbench.benchmarks import recording
+
+    # Neither threshold expires: only dataset/pass boundaries should flush.
+    monkeypatch.setattr(recording, "monotonic", lambda: 0)
+    monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 100)
+
+    b = benchmark
+    aug_dir = tmp_path / "augmentations"
+    populate_augmentation_cache(b, aug_dir)
+    options = dict(n_aug_per_dataset=3, aug_cache_dir=str(aug_dir), batch_size=2)
+    result = b.run(Session(b.model_dir), **options)
+    performance = result["metrics"]["performance"]
+    groups = performance["groups"]
+    rows = checkpoint_rows(b.checkpoint)
+    for pass_name, augmented in (("base", False), ("aug", True)):
+        count = sum(row["aug_pass"] == augmented for row in rows)
+        assert groups[pass_name]["counts"]["inferred_samples"] == count
+        assert groups[pass_name]["counts"]["committed_samples"] == count
+        assert groups[pass_name]["stages"]["checkpoint"]["calls"] == 1
+    assert groups["aug"]["counts"]["augmentation_cache_hits"] == options["n_aug_per_dataset"]
+    assert "decode" not in groups["aug"]["stages"]
+    assert "source_read" not in groups["aug"]["stages"]
+    assert groups["base"]["stages"]["source_read"]["calls"] == sum(not row["aug_pass"] for row in rows)
+    exported = Path(save_results_to_json(result, output_dir=str(tmp_path)))
+    assert json.loads(exported.read_text())["performance"] == performance
+
+    resumed = b.run(Session(b.model_dir), **options)["metrics"]["performance"]
+    assert resumed["scope"] == "current_attempt"
+    assert resumed["groups"]["startup"]["counts"]["restored_samples"] == len(rows)
+    for pass_name in ("base", "aug"):
+        group = resumed["groups"][pass_name]
+        assert "inference" not in group["stages"]
+        assert "prepare" not in group["stages"]
+        assert "checkpoint" not in group["stages"]
+        assert group["counts"]["restored_samples"] == groups[pass_name]["counts"]["inferred_samples"]
 
 
 def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):

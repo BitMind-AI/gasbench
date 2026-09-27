@@ -16,7 +16,7 @@ from ..processing.transforms import (
 from .aug_cache import img_aug_cache_path, write_aug_cache
 from .common import (
     BenchmarkRunConfig,
-    use_augmentation_cache,
+    load_augmentation_cache,
     verify_sample,
 )
 from .prefetch import PrefetchPipeline as BasePrefetchPipeline
@@ -34,15 +34,16 @@ class PrefetchPipeline(BasePrefetchPipeline):
 
     def _read_and_preprocess(self, sample, sample_index, dataset_name):
         """Read file from disk (if lazy), decode, and augment. Runs in worker thread."""
-        verify_sample(sample)
+        with self.timings.measure("source_validation"):
+            verify_sample(sample)
         sample_seed = None if self.seed is None else self.seed + sample_index
         cache_path = None
         if self.robustness_pass and self.aug_cache_dir:
             cache_path = img_aug_cache_path(
                 self.aug_cache_dir, build_sample_id(sample), self.target_size
             )
-        if cache_path is not None and use_augmentation_cache(sample, cache_path):
-            aug_hwc = np.load(cache_path, allow_pickle=False)
+        aug_hwc = load_augmentation_cache(sample, cache_path, timings=self.timings)
+        if aug_hwc is not None:
             if aug_hwc.shape != (*self.target_size, 3):
                 raise ValueError(
                     "Cached image shape differs from the model preprocessing contract"
@@ -51,25 +52,30 @@ class PrefetchPipeline(BasePrefetchPipeline):
         else:
             image_path = sample.get("image_path")
             if image_path:
-                with open(image_path, "rb") as stream:
-                    sample = {**sample, "image": stream.read()}
-            image_array, label = process_image_sample(sample)
+                with self.timings.measure("source_read"):
+                    with open(image_path, "rb") as stream:
+                        sample = {**sample, "image": stream.read()}
+            with self.timings.measure("decode"):
+                image_array, label = process_image_sample(sample)
             if image_array is None or label is None:
                 return None
             if self.robustness_pass:
-                aug_hwc, _, _, _ = apply_robustness_augmentations(
-                    image_array, self.target_size, seed=sample_seed
-                )
+                with self.timings.measure("transform"):
+                    aug_hwc, _, _, _ = apply_robustness_augmentations(
+                        image_array, self.target_size, seed=sample_seed
+                    )
                 if cache_path is not None and not self.aug_cache_readonly:
-                    write_aug_cache(cache_path, aug_hwc)
+                    with self.timings.measure("cache_write"):
+                        write_aug_cache(cache_path, aug_hwc)
             else:
-                aug_hwc, _, _, _ = apply_random_augmentations(
-                    image_array,
-                    self.target_size,
-                    seed=sample_seed,
-                    level=self.augment_level,
-                    crop_prob=self.crop_prob,
-                )
+                with self.timings.measure("transform"):
+                    aug_hwc, _, _, _ = apply_random_augmentations(
+                        image_array,
+                        self.target_size,
+                        seed=sample_seed,
+                        level=self.augment_level,
+                        crop_prob=self.crop_prob,
+                    )
         aug_chw = np.transpose(aug_hwc, (2, 0, 1))
 
         sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_SAMPLE_KEYS}

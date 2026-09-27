@@ -26,6 +26,7 @@ from ..dataset.iterator import DatasetIterator
 from ._checkpoint import CheckpointError, RecorderCheckpoint
 from .errors import BenchmarkError
 from .inputs import video_preprocessing
+from .timing import StageTimings
 from .recording import (
     BenchmarkRunRecorder,
     build_sample_id,
@@ -51,6 +52,7 @@ def run_batch_and_record(
     tracker: BenchmarkRunRecorder,
     batch_id: int,
     aug_pass: bool = False,
+    timings=None,
 ):
     """Run one batch through the model and record rows in the tracker.
 
@@ -60,13 +62,16 @@ def run_batch_and_record(
     if not batch_metadata:
         return
 
-    start = time.time()
+    timings = timings if timings is not None else StageTimings()
+    start = time.perf_counter()
     try:
-        outputs = session.run(None, {input_specs[0].name: batch_array})
-        if len(outputs[0]) != len(batch_metadata):
-            raise ValueError("Model output batch size differs from input")
-        predictions = [process_model_output(output) for output in outputs[0]]
+        with timings.measure("inference"):
+            outputs = session.run(None, {input_specs[0].name: batch_array})
+            if len(outputs[0]) != len(batch_metadata):
+                raise ValueError("Model output batch size differs from input")
+            predictions = [process_model_output(output) for output in outputs[0]]
     except Exception as e:
+        timings.count("inference_errors", len(batch_metadata))
         logger.error(f"Inference failed: {e} (batch shape: {batch_array.shape})")
         for label, sample, sample_index, dataset_name, sample_seed in batch_metadata:
             tracker.add_error(
@@ -76,10 +81,11 @@ def run_batch_and_record(
                 error_message=f"inference-failed: {str(e)[:160]}",
                 aug_pass=aug_pass,
             )
-        tracker.checkpoint()
+        tracker.checkpoint(timings=timings)
         raise BenchmarkError("Inference failed; the run cannot be scored") from e
 
-    batch_inference_time = (time.time() - start) * 1000
+    batch_inference_time = (time.perf_counter() - start) * 1000
+    timings.count("inferred_samples", len(batch_metadata))
     per_sample_time = batch_inference_time / len(batch_metadata)
 
     for i, (label, sample, sample_index, dataset_name, sample_seed) in enumerate(
@@ -101,7 +107,7 @@ def run_batch_and_record(
             aug_pass=aug_pass,
         )
 
-    tracker.checkpoint()
+    tracker.checkpoint_if_due(timings=timings)
 
 
 @dataclass
@@ -398,6 +404,19 @@ def use_augmentation_cache(sample, path):
     return True
 
 
+def load_augmentation_cache(sample, path, *, timings):
+    """Validate and measure a shared cache read; None means prepare from source."""
+    if path is None:
+        return None
+    with timings.measure("cache_validation"):
+        cache_hit = use_augmentation_cache(sample, path)
+    timings.count("augmentation_cache_hits" if cache_hit else "augmentation_cache_misses")
+    if not cache_hit:
+        return None
+    with timings.measure("cache_read"):
+        return np.load(path, allow_pickle=False)
+
+
 def create_dataset_iterator(config, plan, dataset_config, *, aug_pass=False):
     """Use the iterator's frozen selection for both normal and resumed execution."""
     samples = plan.samples[dataset_config.name]["aug" if aug_pass else "base"]
@@ -420,9 +439,11 @@ def create_tracker(
     seed,
     skip_missing=False,
     download_latest_gasstation_data=False,
+    timings=None,
 ) -> BenchmarkRunRecorder:
     """Freeze inputs once, then open the single recorder for this run."""
     config.run_id = config.run_id or str(uuid.uuid4())
+    timings = timings if timings is not None else StageTimings()
     # run_id is an external identifier, not a path supplied by the caller.
     if Path(config.run_id).name != config.run_id or config.run_id in (".", ".."):
         raise ValueError("run_id must be a single path component")
@@ -453,16 +474,17 @@ def create_tracker(
             "checkpoint_persist",
         )
     }
+    with timings.measure("fingerprint"):
+        model_sha256 = fingerprint_files(model_dir.rglob("*"), model_dir)
+        evaluator_sha256 = fingerprint_files(evaluator_dir.rglob("*.py"), evaluator_dir)
     context = {
         "input_identity": "file-metadata-v1",
         "settings": settings,
         "seed": seed,
         "runtime": runtime_versions(),
         "skip_missing": skip_missing,
-        "model_sha256": fingerprint_files(model_dir.rglob("*"), model_dir),
-        "evaluator_sha256": fingerprint_files(
-            evaluator_dir.rglob("*.py"), evaluator_dir
-        ),
+        "model_sha256": model_sha256,
+        "evaluator_sha256": evaluator_sha256,
         "input_specs": [
             {"name": spec.name, "shape": list(spec.shape), "type": spec.type}
             for spec in input_specs
@@ -492,83 +514,86 @@ def create_tracker(
             raise CheckpointError("Checkpoint has no frozen sample selection")
         plan.samples = previous["samples"]
     else:
-        logger = get_logger(__name__)
-        started = time.monotonic()
-        logger.info("Freezing sample selection using file metadata (no media payload scan)")
-        for index, dataset in enumerate(plan.available_datasets, 1):
-            selections = {}
-            for pass_name, cap in (
-                ("base", plan.sampling_plan[dataset.name]),
-                ("aug", config.n_aug_per_dataset),
-            ):
-                if cap <= 0:
-                    selections[pass_name] = []
-                    continue
-                iterator = DatasetIterator(
-                    dataset,
-                    max_samples=cap,
-                    cache_dir=config.cache_dir,
-                    download=not skip_missing
-                    and (
-                        download_latest_gasstation_data
-                        if "gasstation" in dataset.name.lower()
-                        else True
-                    ),
-                    hf_token=config.hf_token,
-                    seed=seed,
-                    metadata_only=True,
-                )
-                selections[pass_name] = list(iterator)
-                for sample_index, sample in enumerate(selections[pass_name], 1):
-                    sample["file_metadata_sha256"] = file_metadata_digest(sample_files(sample))
-                    if pass_name == "aug" and config.aug_cache_dir:
-                        from .aug_cache import aud_aug_cache_path, img_aug_cache_path, vid_aug_cache_path
+        with timings.measure("sample_selection"):
+            logger = get_logger(__name__)
+            started = time.monotonic()
+            logger.info("Freezing sample selection using file metadata (no media payload scan)")
+            for index, dataset in enumerate(plan.available_datasets, 1):
+                selections = {}
+                for pass_name, cap in (
+                    ("base", plan.sampling_plan[dataset.name]),
+                    ("aug", config.n_aug_per_dataset),
+                ):
+                    if cap <= 0:
+                        selections[pass_name] = []
+                        continue
+                    iterator = DatasetIterator(
+                        dataset,
+                        max_samples=cap,
+                        cache_dir=config.cache_dir,
+                        download=not skip_missing
+                        and (
+                            download_latest_gasstation_data
+                            if "gasstation" in dataset.name.lower()
+                            else True
+                        ),
+                        hf_token=config.hf_token,
+                        seed=seed,
+                        metadata_only=True,
+                    )
+                    selections[pass_name] = list(iterator)
+                    for sample_index, sample in enumerate(selections[pass_name], 1):
+                        sample["file_metadata_sha256"] = file_metadata_digest(sample_files(sample))
+                        if pass_name == "aug" and config.aug_cache_dir:
+                            from .aug_cache import aud_aug_cache_path, img_aug_cache_path, vid_aug_cache_path
 
-                        if config.modality == "audio":
-                            path = Path(aud_aug_cache_path(
-                                config.aug_cache_dir,
-                                build_sample_id(sample),
-                                seed + sample_index,
-                            ))
-                        else:
-                            cache_path = (
-                                img_aug_cache_path
-                                if config.modality == "image"
-                                else vid_aug_cache_path
+                            if config.modality == "audio":
+                                path = Path(aud_aug_cache_path(
+                                    config.aug_cache_dir,
+                                    build_sample_id(sample),
+                                    seed + sample_index,
+                                ))
+                            else:
+                                cache_path = (
+                                    img_aug_cache_path
+                                    if config.modality == "image"
+                                    else vid_aug_cache_path
+                                )
+                                path = Path(cache_path(
+                                    config.aug_cache_dir,
+                                    build_sample_id(sample),
+                                    plan.target_size,
+                                    **(video_preprocessing(session, input_specs)
+                                       if config.modality == "video" else {}),
+                                ))
+                            # Newly generated cache files are outputs of this attempt;
+                            # only artifacts present in the frozen plan may be inputs.
+                            sample["augmentation_cache_metadata_sha256"] = (
+                                file_metadata_digest([path])
+                                if path.is_file()
+                                else None
                             )
-                            path = Path(cache_path(
-                                config.aug_cache_dir,
-                                build_sample_id(sample),
-                                plan.target_size,
-                                **(video_preprocessing(session, input_specs)
-                                   if config.modality == "video" else {}),
-                            ))
-                        # Newly generated cache files are outputs of this attempt;
-                        # only artifacts present in the frozen plan may be inputs.
-                        sample["augmentation_cache_metadata_sha256"] = (
-                            file_metadata_digest([path])
-                            if path.is_file()
-                            else None
-                        )
-            plan.samples[dataset.name] = selections
-            if index == 1 or index % 10 == 0 or index == len(plan.available_datasets):
-                logger.info(
-                    "Frozen dataset %s/%s (%s) in %.1fs",
-                    index, len(plan.available_datasets), dataset.name, time.monotonic() - started,
-                )
+                plan.samples[dataset.name] = selections
+                if index == 1 or index % 10 == 0 or index == len(plan.available_datasets):
+                    logger.info(
+                        "Frozen dataset %s/%s (%s) in %.1fs",
+                        index, len(plan.available_datasets), dataset.name, time.monotonic() - started,
+                    )
     context["samples"] = plan.samples
-    tracker = BenchmarkRunRecorder(
-        run_id=config.run_id,
-        mode=config.mode,
-        modality=config.modality,
-        target_size=plan.target_size,
-        model_input_name=input_specs[0].name if input_specs else None,
-        augment_level=config.augment_level or 0,
-        crop_prob=config.crop_prob or 0.0,
-        checkpoint_dir=directory,
-        checkpoint_context=context,
-        checkpoint_persist=config.checkpoint_persist,
-    )
+    with timings.measure("checkpoint_open"):
+        tracker = BenchmarkRunRecorder(
+            run_id=config.run_id,
+            mode=config.mode,
+            modality=config.modality,
+            target_size=plan.target_size,
+            model_input_name=input_specs[0].name if input_specs else None,
+            augment_level=config.augment_level or 0,
+            crop_prob=config.crop_prob or 0.0,
+            checkpoint_dir=directory,
+            checkpoint_context=context,
+            checkpoint_persist=config.checkpoint_persist,
+            timings=timings,
+        )
     get_logger(__name__).info(
         f"Run {config.run_id}: restored {tracker.count} rows from {directory}"
     )

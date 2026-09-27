@@ -11,6 +11,7 @@ from .logger import get_logger
 from .processing.media import configure_huggingface_cache
 from .benchmarks.common import BenchmarkRunConfig
 from .benchmarks.runner import run_modality_benchmark
+from .benchmarks.timing import StageTimings
 from .config import DEFAULT_BATCH_SIZES
 from .benchmarks.utils import create_inference_session
 
@@ -97,16 +98,18 @@ async def run_benchmark(
         "gasstation_only": gasstation_only,
     }
 
-    start_time = time.time()
+    start_time = time.perf_counter()
+    model_timings = StageTimings()
 
     try:
         logger.info(
             f"BENCHMARK START: {modality.upper()} model - {model_path}"
         )
 
-        session, input_specs = await load_model_for_benchmark(
-            model_path, modality, benchmark_results
-        )
+        with model_timings.measure("wall"):
+            session, input_specs = await load_model_for_benchmark(
+                model_path, modality, benchmark_results
+            )
 
         if not session:
             return benchmark_results
@@ -154,8 +157,13 @@ async def run_benchmark(
 
     finally:
         benchmark_results["metrics"]["benchmark_duration_seconds"] = (
-            time.time() - start_time
+            time.perf_counter() - start_time
         )
+        performance = benchmark_results["metrics"].setdefault(
+            "performance", {"scope": "current_attempt", "groups": {}}
+        )
+        performance["groups"]["model_load"] = model_timings.snapshot()
+        logger.info("Performance benchmark: %s", json.dumps(performance, sort_keys=True))
 
     return benchmark_results
 
@@ -367,6 +375,7 @@ def save_results_to_json(
         "overall_score": benchmark_results.get("benchmark_score", 0.0),
         "validation": benchmark_results.get("validation", {}),
         "errors": benchmark_results.get("errors", []),
+        "performance": benchmark_results.get("metrics", {}).get("performance", {}),
     }
 
     # Add modality-specific results

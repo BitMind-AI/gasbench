@@ -169,6 +169,8 @@ os._exit(71)
 
 @pytest.mark.parametrize("failure", ["callback", "rename", "fsync"])
 def test_failed_commit_is_not_acknowledged(tmp_path, manifest, monkeypatch, failure):
+    from gasbench.benchmarks.timing import StageTimings
+
     calls = []
     storage_error = RuntimeError("remote storage unavailable") if failure == "callback" else OSError("local storage unavailable")
 
@@ -185,10 +187,13 @@ def test_failed_commit_is_not_acknowledged(tmp_path, manifest, monkeypatch, fail
         monkeypatch.setattr(os, "replace", fail)
     elif failure == "fsync":
         monkeypatch.setattr(os, "fsync", fail)
+    timings = StageTimings()
     with pytest.raises(CheckpointError, match="storage unavailable") as error:
-        store.commit_batch([record("a")])
+        store.commit_batch([record("a")], timings=timings)
     assert error.value.__cause__ is storage_error
     assert store.completed_predictions == set()
+    stage = "checkpoint_persist" if failure == "callback" else "checkpoint_local_write"
+    assert timings.snapshot()["stages"][stage]["calls"] >= 1
     with pytest.raises(CheckpointError, match="reopen"):
         store.commit_batch([record("b")])
 

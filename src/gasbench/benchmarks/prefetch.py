@@ -8,6 +8,8 @@ from typing import Optional, TypedDict, Union
 
 import numpy as np
 
+from .timing import StageTimings
+
 
 class SampleContext(TypedDict):
     sample: dict
@@ -41,6 +43,7 @@ class PrefetchPipeline:
         aug_cache_readonly=False,
         tracker=None,
         batch_timeout=300,
+        timings=None,
     ):
         if batch_size < 1 or num_workers < 1 or max_queue_size < 1:
             raise ValueError("Batch size, worker count and queue size must be positive")
@@ -56,6 +59,7 @@ class PrefetchPipeline:
         self.aug_cache_readonly = aug_cache_readonly
         self.tracker = tracker
         self.batch_timeout = batch_timeout
+        self.timings = timings if timings is not None else StageTimings()
         self.batch_queue = Queue(maxsize=max_queue_size)
         self.stop_event = threading.Event()
         self.error = None
@@ -79,7 +83,8 @@ class PrefetchPipeline:
     def _prepare(
         self, sample, index, dataset_name
     ) -> Union[PreparedSample, SkippedSample]:
-        result = self._read_and_preprocess(sample, index, dataset_name)
+        with self.timings.measure("prepare"):
+            result = self._read_and_preprocess(sample, index, dataset_name)
         if result is None:
             return {
                 "sample": sample,
@@ -113,6 +118,7 @@ class PrefetchPipeline:
                         sample=sample,
                         aug_pass=self.robustness_pass,
                     ):
+                        self.timings.count("restored_samples")
                         continue
                     pending.append(
                         self.executor.submit(self._prepare, sample, index, name)
@@ -143,7 +149,8 @@ class PrefetchPipeline:
         if self.error is not None:
             raise self.error
         try:
-            batch = self.batch_queue.get(timeout=self.batch_timeout)
+            with self.timings.measure("input_wait"):
+                batch = self.batch_queue.get(timeout=self.batch_timeout)
         except Empty as exc:
             self.error = TimeoutError("Timed out waiting for sample preparation")
             raise self.error from exc

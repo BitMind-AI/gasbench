@@ -2,6 +2,7 @@ import uuid
 import time
 import os
 import hashlib
+from time import monotonic
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -11,7 +12,14 @@ import numpy as np
 from .utils.metrics import Metrics
 from ._checkpoint import RecorderCheckpoint
 from .errors import BenchmarkError
+from .timing import StageTimings
 from ..constants import MODALITY_NUM_CLASSES
+
+
+# Checked between inference batches: replay is bounded by these thresholds plus
+# the current batch. Explicit checkpoint() calls always flush synchronously.
+_CHECKPOINT_INTERVAL_SECONDS = 15.0
+_CHECKPOINT_MAX_PENDING_ROWS = 256
 
 
 class BenchmarkRunRecorder:
@@ -28,6 +36,7 @@ class BenchmarkRunRecorder:
         checkpoint_dir: Optional[Path] = None,
         checkpoint_context: Optional[Dict[str, Any]] = None,
         checkpoint_persist: Optional[Callable[[Path], None]] = None,
+        timings=None,
     ):
         # Identity must be supplied by the coordinator, never regenerated on resume.
         if checkpoint_dir is not None and (not run_id or not checkpoint_context):
@@ -54,6 +63,7 @@ class BenchmarkRunRecorder:
         self._dataset_counts: Dict[str, Dict[str, int]] = {}
         self._checkpoint = None
         self._checkpointed_count = 0
+        timings = timings if timings is not None else StageTimings()
         if checkpoint_dir is not None:
             self._checkpoint = RecorderCheckpoint(
                 checkpoint_dir,
@@ -72,14 +82,28 @@ class BenchmarkRunRecorder:
                     "benchmark": checkpoint_context,
                 },
                 persist=checkpoint_persist,
+                timings=timings,
             )
             for row in self._checkpoint.records:
                 self._append_row(row)
             if self.rows:
                 self.run_started_at = self.rows[0]["run_started_at"]
             self._checkpointed_count = len(self.rows)
+        self._last_checkpoint_at = monotonic()
 
-    def checkpoint(self) -> int:
+    def checkpoint_if_due(self, *, timings=None) -> int:
+        """Group completed batches until the time or pending-record limit is met."""
+        pending = len(self.rows) - self._checkpointed_count
+        if self._checkpoint is None or not pending:
+            return 0
+        if (
+            pending < _CHECKPOINT_MAX_PENDING_ROWS
+            and monotonic() - self._last_checkpoint_at < _CHECKPOINT_INTERVAL_SECONDS
+        ):
+            return 0
+        return self.checkpoint(timings=timings)
+
+    def checkpoint(self, *, timings=None) -> int:
         """Commit pending recorder rows; distributed storage must supply persist.
 
         checkpoint_context must include the model/evaluator identity, immutable
@@ -89,8 +113,14 @@ class BenchmarkRunRecorder:
         """
         if self._checkpoint is None or self._checkpointed_count == len(self.rows):
             return 0
-        count = self._checkpoint.commit_batch(self.rows[self._checkpointed_count :])
+        timings = timings if timings is not None else StageTimings()
+        with timings.measure("checkpoint"):
+            count = self._checkpoint.commit_batch(
+                self.rows[self._checkpointed_count :], timings=timings
+            )
         self._checkpointed_count = len(self.rows)
+        self._last_checkpoint_at = monotonic()
+        timings.count("committed_samples", count)
         return count
 
     def is_checkpointed(

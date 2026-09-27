@@ -136,6 +136,8 @@ def process_video_bytes_sample(
     sample: Dict,
     num_frames: int = 16,
     frame_rate: Optional[float] = None,
+    frame_cache_dir: Optional[str] = None,
+    frame_cache_id: Optional[str] = None,
 ) -> Tuple[any, int]:
     """Process a video sample that contains raw video bytes.
 
@@ -153,12 +155,24 @@ def process_video_bytes_sample(
             take the first ``num_frames`` frames sequentially.
     """
     try:
+        media_type = sample.get("media_type", "synthetic")
+        label = media_type_to_label(media_type, "video")
+
+        if frame_cache_dir and frame_cache_id:
+            from ..benchmarks.frame_cache import load_frame_cache, select_cached_frames
+
+            loaded = load_frame_cache(frame_cache_dir, frame_cache_id)
+            if loaded is not None:
+                stored, total_frames, fps = loaded
+                selected = select_cached_frames(
+                    stored, total_frames, fps, num_frames, frame_rate
+                )
+                if selected is not None:
+                    return selected, label
+
         video_bytes = sample.get("video_bytes")
         if not video_bytes:
             return None, None
-
-        media_type = sample.get("media_type", "synthetic")
-        label = media_type_to_label(media_type, "video")
 
         src_name = str(sample.get("source_file", ""))
         ext = Path(src_name).suffix.lower() if src_name else ".mp4"
@@ -180,15 +194,13 @@ def process_video_bytes_sample(
                 logger.warning("No frames in video")
                 return None, None
 
-            if frame_rate is not None:
-                video_fps = vr.fps
-                if not video_fps or video_fps <= 0:
-                    logger.warning("Video has no fps metadata, assuming 30fps")
-                    video_fps = 30.0
-                frame_step = max(1, round(video_fps / frame_rate))
-                frame_indices = list(range(0, total_frames, frame_step))[:num_frames]
-            else:
-                frame_indices = list(range(min(num_frames, total_frames)))
+            from ..benchmarks.frame_cache import frame_indices as select_indices
+
+            video_fps = vr.fps
+            if frame_rate is not None and (not video_fps or video_fps <= 0):
+                logger.warning("Video has no fps metadata, assuming 30fps")
+                video_fps = 30.0
+            frame_indices = select_indices(total_frames, video_fps, num_frames, frame_rate)
 
             frames = vr.read_frames(frame_indices)
 
@@ -218,6 +230,52 @@ def process_video_bytes_sample(
     except Exception as e:
         logger.warning(f"Failed to process video bytes sample: {e}")
         return None, None
+
+
+def decode_video_prefix(video_bytes: bytes, source_file: str, max_frames: int):
+    """Decode the leading real frames of a clip.
+
+    Returns (frames, total_frames, fps). frames[i] is source frame i, with no
+    repeated-tail padding. fps is None when the file does not say.
+    """
+    if not video_bytes or max_frames <= 0:
+        return None
+    src_name = str(source_file or "")
+    ext = Path(src_name).suffix.lower() if src_name else ".mp4"
+    if ext not in (".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v", ".mpeg", ".mpg"):
+        ext = ".mp4"
+    temp_video = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
+    temp_video_path = temp_video.name
+    vr = None
+    try:
+        temp_video.write(video_bytes)
+        temp_video.flush()
+        temp_video.close()
+        vr = _VideoReader(temp_video_path)
+        total_frames = vr.total_frames
+        if total_frames <= 0:
+            return None
+        count = min(max_frames, total_frames)
+        frames = vr.read_frames(list(range(count)))
+        if not frames:
+            return None
+        fps = vr.fps
+        if not fps or fps <= 0:
+            fps = None
+        return np.stack(frames, axis=0).astype(np.uint8, copy=False), total_frames, fps
+    except Exception as e:
+        logger.warning(f"Failed to decode video prefix: {e}")
+        return None
+    finally:
+        try:
+            os.unlink(temp_video_path)
+        except Exception:
+            pass
+        if vr is not None:
+            try:
+                vr.close()
+            except Exception:
+                pass
 
 
 def process_video_frames_sample(

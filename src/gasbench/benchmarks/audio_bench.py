@@ -1,6 +1,11 @@
 import os
-import numpy as np
+import traceback
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from queue import Empty, Queue
+import threading
 from typing import Dict, Optional
+
+import numpy as np
 
 from ..logger import get_logger
 from ..processing.media import process_audio_sample
@@ -25,6 +30,185 @@ import pandas as pd
 logger = get_logger(__name__)
 
 DEFAULT_AUDIO_BATCH_SIZE = 16
+_AUDIO_WORKERS = 4
+_HEAVY_AUDIO_KEYS = ("audio", "audio_bytes", "audio_path", "preprocessed_waveform")
+
+
+class AudioPrefetchPipeline:
+    """Decode the next clips while the GPU scores the current batch.
+
+    Workers match the sandbox CPU count. Sample seeds stay seed + sample_index
+    from a serial walk, so a resumed run and a fresh run crop the same audio.
+    Checkpointed samples are skipped before decode.
+    """
+
+    def __init__(
+        self,
+        dataset_iterator,
+        *,
+        dataset_name,
+        tracker,
+        batch_size,
+        seed,
+        target_sr,
+        aug_pass,
+        aug_cache_dir,
+        aug_cache_readonly,
+        num_workers=_AUDIO_WORKERS,
+    ):
+        self.dataset_iterator = dataset_iterator
+        self.dataset_name = dataset_name
+        self.tracker = tracker
+        self.batch_size = batch_size
+        self.seed = seed
+        self.target_sr = target_sr
+        self.aug_pass = aug_pass
+        self.aug_cache_dir = aug_cache_dir
+        self.aug_cache_readonly = aug_cache_readonly
+        self.num_workers = num_workers
+        self.batch_queue = Queue(maxsize=num_workers)
+        self.stop_event = threading.Event()
+        self.error = None
+        self.errors = []
+        self.executor = ThreadPoolExecutor(max_workers=num_workers)
+        self.producer_thread = threading.Thread(target=self._producer_loop, daemon=True)
+        self.producer_thread.start()
+
+    def _prepare(self, sample, sample_index, dataset_name):
+        verify_sample(sample)
+        try:
+            audio_sample = load_audio_sample(sample)
+            sample_seed = None if self.seed is None else (self.seed + sample_index)
+            if audio_sample.get("is_preprocessed", False):
+                audio_array = audio_sample.get("preprocessed_waveform")
+                label = audio_sample.get("label")
+                if audio_array is None or label is None:
+                    return None
+                if hasattr(audio_array, "numpy"):
+                    audio_array = audio_array.numpy()
+            else:
+                audio_array, label = process_audio_sample(
+                    audio_sample,
+                    target_sr=self.target_sr,
+                    seed=sample_seed,
+                )
+                if audio_array is None or label is None:
+                    return None
+                if hasattr(audio_array, "numpy"):
+                    audio_array = audio_array.numpy()
+
+            if self.aug_pass:
+                cache_path = (
+                    aud_aug_cache_path(
+                        self.aug_cache_dir, build_sample_id(sample), sample_seed
+                    )
+                    if self.aug_cache_dir else None
+                )
+                if cache_path and use_augmentation_cache(sample, cache_path):
+                    audio_array = np.load(cache_path, allow_pickle=False)
+                else:
+                    audio_array, _, _, _ = apply_audio_robustness_augmentations(
+                        np.asarray(audio_array).squeeze(),
+                        target_sr=self.target_sr,
+                        seed=sample_seed,
+                    )
+                    if cache_path and not self.aug_cache_readonly:
+                        write_aug_cache(cache_path, audio_array)
+
+            sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_AUDIO_KEYS}
+            return {
+                "audio": audio_array,
+                "label": label,
+                "sample": sample_meta,
+                "sample_index": sample_index,
+                "dataset_name": dataset_name,
+                "sample_seed": sample_seed,
+            }
+        except CheckpointError:
+            raise
+        except Exception as exc:
+            message = f"Audio processing error: {exc}"
+            logger.warning(f"Failed to preprocess audio sample {sample_index}: {exc}")
+            self.errors.append(message[:120])
+            return None
+
+    def _producer_loop(self):
+        try:
+            dataset_name = self.dataset_name
+            max_in_flight = self.num_workers * 4
+            sample_iter = enumerate(self.dataset_iterator, 1)
+            pending = set()
+            exhausted = False
+            batch = []
+
+            while not self.stop_event.is_set():
+                while len(pending) < max_in_flight and not exhausted:
+                    try:
+                        idx, sample = next(sample_iter)
+                        if self.tracker is not None and self.tracker.is_checkpointed(
+                            dataset_name=dataset_name,
+                            sample_index=idx,
+                            sample=sample,
+                            aug_pass=self.aug_pass,
+                        ):
+                            continue
+                        future = self.executor.submit(self._prepare, sample, idx, dataset_name)
+                        pending.add(future)
+                    except StopIteration:
+                        exhausted = True
+                        break
+
+                if not pending:
+                    break
+
+                done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                for future in done:
+                    if self.stop_event.is_set():
+                        break
+                    try:
+                        result = future.result()
+                    except CheckpointError:
+                        raise
+                    except Exception:
+                        continue
+                    if result is not None:
+                        batch.append(result)
+                        if len(batch) >= self.batch_size:
+                            self.batch_queue.put(batch)
+                            batch = []
+
+            if batch and not self.stop_event.is_set():
+                self.batch_queue.put(batch)
+            self.batch_queue.put(None)
+        except Exception as exc:
+            self.error = exc
+            logger.error(f"Error in audio prefetch pipeline: {exc}\n{traceback.format_exc()}")
+            self.batch_queue.put(None)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.error:
+            raise self.error
+        try:
+            batch = self.batch_queue.get(timeout=300)
+        except Empty:
+            raise RuntimeError("Audio prefetch queue stalled for 300s") from None
+        if batch is None:
+            if self.error:
+                raise self.error
+            raise StopIteration
+        return batch
+
+    def close(self):
+        self.stop_event.set()
+        self.executor.shutdown(wait=False, cancel_futures=True)
+        while not self.batch_queue.empty():
+            try:
+                self.batch_queue.get_nowait()
+            except Empty:
+                break
 
 
 def process_batch(
@@ -184,108 +368,46 @@ async def run_audio_benchmark(
                         logger.warning(f"Skipping {dataset_cfg.name} (not cached, --skip-missing enabled)")
                         continue
 
-                    batch_audio = []
-                    batch_metadata = []
+                    pipeline = AudioPrefetchPipeline(
+                        dataset_iterator,
+                        dataset_name=dataset_cfg.name,
+                        tracker=tracker,
+                        batch_size=batch_size,
+                        seed=seed,
+                        target_sr=target_sr,
+                        aug_pass=aug_pass,
+                        aug_cache_dir=aug_cache_dir,
+                        aug_cache_readonly=aug_cache_readonly,
+                    )
                     batch_id = 0
-                    sample_index = 0
-
-                    for sample in dataset_iterator:
-                        sample_index += 1
-                        if tracker.is_checkpointed(
-                            dataset_name=dataset_cfg.name, sample_index=sample_index, sample=sample,
-                            aug_pass=aug_pass,
-                        ):
-                            continue
-                        verify_sample(sample)
-                        try:
-                            audio_sample = load_audio_sample(sample)
-                            # Check if sample is already preprocessed
-                            if audio_sample.get("is_preprocessed", False):
-                                audio_array = audio_sample.get("preprocessed_waveform")
-                                label = audio_sample.get("label")
-
-                                if audio_array is None or label is None:
-                                    continue
-
-                                if hasattr(audio_array, "numpy"):
-                                    audio_array = audio_array.numpy()
-                            else:
-                                # Process raw audio bytes
-                                sample_seed_val = None if seed is None else (seed + sample_index)
-                                audio_array, label = process_audio_sample(
-                                    audio_sample,
-                                    target_sr=target_sr,
-                                    seed=sample_seed_val,
+                    try:
+                        for batch_data in pipeline:
+                            batch_id += 1
+                            batch_audio = [item["audio"] for item in batch_data]
+                            batch_metadata = [
+                                (
+                                    item["label"],
+                                    item["sample"],
+                                    item["sample_index"],
+                                    item["dataset_name"],
+                                    item["sample_seed"],
                                 )
-
-                                if audio_array is None or label is None:
-                                    continue
-
-                                if hasattr(audio_array, "numpy"):
-                                    audio_array = audio_array.numpy()
-
-                            sample_seed_val = None if seed is None else (seed + sample_index)
-                            if aug_pass:
-                                cache_path = (
-                                    aud_aug_cache_path(
-                                        aug_cache_dir, build_sample_id(sample), sample_seed_val
-                                    )
-                                    if aug_cache_dir else None
-                                )
-                                if cache_path and use_augmentation_cache(sample, cache_path):
-                                    audio_array = np.load(cache_path, allow_pickle=False)
-                                else:
-                                    audio_array, _, _, _ = apply_audio_robustness_augmentations(
-                                        np.asarray(audio_array).squeeze(),
-                                        target_sr=target_sr,
-                                        seed=sample_seed_val,
-                                    )
-                                    if cache_path and not aug_cache_readonly:
-                                        write_aug_cache(cache_path, audio_array)
-                            batch_audio.append(audio_array)
-                            batch_metadata.append(
-                                (label, sample, sample_index, dataset_cfg.name, sample_seed_val)
+                                for item in batch_data
+                            ]
+                            process_batch(
+                                session,
+                                input_specs,
+                                batch_audio,
+                                batch_metadata,
+                                tracker,
+                                batch_id,
+                                aug_pass=aug_pass,
                             )
-
-                            if len(batch_audio) >= batch_size:
-                                batch_id += 1
-                                process_batch(
-                                    session,
-                                    input_specs,
-                                    batch_audio,
-                                    batch_metadata,
-                                    tracker,
-                                    batch_id,
-                                    aug_pass=aug_pass,
-                                )
-                                batch_audio = []
-                                batch_metadata = []
-
-                                if tracker.count % 500 == 0:
-                                    logger.info(f"Progress: {tracker.count} samples")
-
-                        except CheckpointError:
-                            raise
-                        except Exception as e:
-                            logger.warning(
-                                f"Failed to process audio sample from {dataset_cfg.name}: {e}"
-                            )
-                            benchmark_results["errors"].append(
-                                f"Audio processing error: {str(e)[:100]}"
-                            )
-
-                    # Process remaining samples
-                    if batch_audio:
-                        batch_id += 1
-                        process_batch(
-                            session,
-                            input_specs,
-                            batch_audio,
-                            batch_metadata,
-                            tracker,
-                            batch_id,
-                            aug_pass=aug_pass,
-                        )
+                            if tracker.count % 500 == 0:
+                                logger.info(f"Progress: {tracker.count} samples")
+                    finally:
+                        benchmark_results["errors"].extend(pipeline.errors[:20])
+                        pipeline.close()
 
                     log_dataset_summary(
                         logger, tracker, dataset_cfg.name, include_skipped=False

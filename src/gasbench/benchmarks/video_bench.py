@@ -105,20 +105,34 @@ class VideoPrefetchPipeline:
                     sample.get("media_type", "synthetic"), "video"
                 )
             else:
-                video_path = sample.get("video_path")
-                if video_path:
-                    with open(video_path, "rb") as f:
-                        video_bytes = f.read()
-                    sample = {**sample, "video_bytes": video_bytes}
-
+                frame_cache_dir = os.environ.get("GASBENCH_FRAME_CACHE_DIR") or None
+                frame_cache_id = build_sample_id(sample)
                 if "video_frames" in sample:
                     video_array, label = process_video_frames_sample(
                         sample, num_frames=self.num_frames
                     )
                 else:
                     video_array, label = process_video_bytes_sample(
-                        sample, num_frames=self.num_frames, frame_rate=self.frame_rate
+                        sample,
+                        num_frames=self.num_frames,
+                        frame_rate=self.frame_rate,
+                        frame_cache_dir=frame_cache_dir,
+                        frame_cache_id=frame_cache_id,
                     )
+                    if (
+                        (video_array is None or label is None)
+                        and sample.get("video_path")
+                        and not sample.get("video_bytes")
+                    ):
+                        with open(sample["video_path"], "rb") as handle:
+                            sample = {**sample, "video_bytes": handle.read()}
+                        video_array, label = process_video_bytes_sample(
+                            sample,
+                            num_frames=self.num_frames,
+                            frame_rate=self.frame_rate,
+                            frame_cache_dir=frame_cache_dir,
+                            frame_cache_id=frame_cache_id,
+                        )
 
                 if video_array is None or label is None:
                     return None

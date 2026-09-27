@@ -137,9 +137,24 @@ class AudioPrefetchPipeline:
             dataset_name = self.dataset_name
             max_in_flight = self.num_workers * 4
             sample_iter = enumerate(self.dataset_iterator, 1)
-            pending = set()
+            pending = {}
+            order = []
+            ready = {}
+            emitted = 0
             exhausted = False
             batch = []
+
+            def emit_ready():
+                nonlocal emitted, batch
+                while emitted < len(order) and order[emitted] in ready:
+                    result = ready.pop(order[emitted])
+                    emitted += 1
+                    if result is None:
+                        continue
+                    batch.append(result)
+                    if len(batch) >= self.batch_size:
+                        self.batch_queue.put(batch)
+                        batch = []
 
             while not self.stop_event.is_set():
                 while len(pending) < max_in_flight and not exhausted:
@@ -153,7 +168,8 @@ class AudioPrefetchPipeline:
                         ):
                             continue
                         future = self.executor.submit(self._prepare, sample, idx, dataset_name)
-                        pending.add(future)
+                        pending[future] = idx
+                        order.append(idx)
                     except StopIteration:
                         exhausted = True
                         break
@@ -161,21 +177,18 @@ class AudioPrefetchPipeline:
                 if not pending:
                     break
 
-                done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                done, _ = wait(set(pending), return_when=FIRST_COMPLETED)
                 for future in done:
+                    idx = pending.pop(future)
                     if self.stop_event.is_set():
-                        break
+                        continue
                     try:
-                        result = future.result()
+                        ready[idx] = future.result()
                     except CheckpointError:
                         raise
                     except Exception:
-                        continue
-                    if result is not None:
-                        batch.append(result)
-                        if len(batch) >= self.batch_size:
-                            self.batch_queue.put(batch)
-                            batch = []
+                        ready[idx] = None
+                emit_ready()
 
             if batch and not self.stop_event.is_set():
                 self.batch_queue.put(batch)

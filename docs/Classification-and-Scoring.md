@@ -1,107 +1,110 @@
-# Classification Taxonomy and Scoring
+# Classification and scoring
 
-GASBench evaluates the provenance of image, video, and audio media. The visual
-taxonomy introduced in v0.9.0 is experimental: it makes a finer distinction
-than the historical `real` versus `synthetic` task, and may evolve as the
-benchmark is evaluated in practice.
+GASBench reports both classification accuracy and a combined score that rewards
+correct predictions and accurate probabilities. This page explains the labels,
+the result fields, and how the final score is calculated.
 
-## Classification contract
+## Class labels
 
-Class indices are part of the model interface and must use this order:
+Models must use this output order:
 
-| Modality | Classes (`num_classes`) |
+| Modality | Class 0 | Class 1 | Class 2 |
+| --- | --- | --- | --- |
+| Image and video | `real` | `synthetic` | `semisynthetic` |
+| Audio | `real` | `synthetic` | — |
+
+- **Real:** captured media without substantial generated or replaced content. This
+  class also includes non-AI rendering, such as CGI, charts, and game footage.
+- **Synthetic:** fully synthesized output. Generation conditioned on a captured
+  image is still synthetic if the model synthesizes the complete output.
+- **Semisynthetic:** captured visual content with localized generated or replaced
+  regions, such as a face swap. Editing exclusively synthetic or rendered media
+  does not make it semisynthetic.
+
+The visual taxonomy is experimental. Audio is binary; audio metadata labeled
+`semisynthetic` maps to class 1.
+
+Models return logits. GASBench applies softmax and takes the class with the
+highest probability as the prediction. See [model outputs](Safetensors.md#4-inputoutput-specifications)
+for the interface.
+
+## Read the results
+
+| Field | Meaning |
 | --- | --- |
-| Image | `0=real`, `1=synthetic`, `2=semisynthetic` (`3`) |
-| Video | `0=real`, `1=synthetic`, `2=semisynthetic` (`3`) |
-| Audio | `0=real`, `1=synthetic` (`2`) |
+| `sn34_score` | Final score, including the robustness blend when enabled. Higher is better. |
+| `benchmark_score` | Accuracy: the fraction of correct class predictions, with any configured weights. |
+| `binary_sn34_score` | Base-pass score for real versus all non-real classes combined. |
+| `multiclass_sn34_score` | Base-pass score that distinguishes every class in the table above. |
 
-The classes mean:
+By default, `sn34_score` uses binary scoring. Set `--multiclass-scoring` (Python:
+`multiclass_scoring=True`) to reward distinguishing synthetic from semisynthetic
+media. Both variants are reported. For two-class audio, their normalized
+calculations are equivalent.
 
-- **Real**: captured from the physical world without material generated or
-  replaced visual content. Video also includes classical CGI, game-engine,
-  animation, and simulation output; rendered provenance is retained in dataset
-  metadata rather than scored as a separate class.
-- **Synthetic**: fully synthesized output, including generative-model output.
-  It remains synthetic when captured media conditions generation, because the
-  output pixels are still synthesized.
-- **Semisynthetic**: retains materially captured visual content alongside
-  spatially localized generated or replaced visual content.
+Binary scoring uses `p_not_real = 1 - p_real` and predicts non-real when that
+probability exceeds `0.5`. For example, probabilities `[0.4, 0.3, 0.3]` predict
+`real` in the three-class task but `not real` in the binary task.
 
-Modifying exclusively synthetic or rendered media does not make it
-semisynthetic. Image-to-video generation, for example, is synthetic when the
-model synthesizes the complete output, even if a captured image conditions it.
+Metrics use successful predictions; skipped samples and inference errors are
+excluded. The fields above describe the base pass unless explicitly blended.
 
-Audio remains a binary task. Any audio dataset metadata using
-`semisynthetic` is collapsed onto the synthetic label.
+## How SN34 is calculated
 
-## Probabilities and predictions
+Each pass combines **MCC** (Matthews correlation coefficient), which measures
+classification performance, with **Brier error**, which measures squared
+probability error. Higher MCC and lower Brier error improve the score.
 
-Models return one logit per class in the order above. GASBench applies softmax,
-uses the argmax as the multiclass prediction, and retains the probabilities for
-calibration metrics.
+| Mode | MCC (`M`) | Brier error (`B`) | Baseline (`B0`) |
+| --- | --- | --- | --- |
+| Binary | `binary_mcc` | `binary_brier` | `0.25` |
+| Multiclass | `gorodkin_mcc` | `multiclass_brier` | `(K - 1) / K` for `K` classes |
 
-For compatibility metrics, all non-real classes collapse into one class:
+Binary Brier error compares `p_not_real` with the 0/1 label. Multiclass Brier
+error sums squared errors across all class probabilities. Both are averaged
+over samples; the baseline is the error from uniform probabilities.
 
-$$
-p_{\text{not real}} = 1 - p_{\text{real}}.
-$$
+The default calculation is:
 
-This binary view is always reported, but it does not reward a visual model for
-distinguishing synthetic and semisynthetic media.
+```text
+mcc_component   = max(0, min((M + 1) / 2, 1)) ** 1.2
+brier_component = max(0, (B0 - B) / B0) ** 1.8
+pass_score      = sqrt(max(1e-12, mcc_component * brier_component))
+```
 
-## Metrics
+A perfect predictor scores approximately `1`. Brier error at or above its
+baseline gives the numerical floor, `0.000001`. A run with no successful base
+predictions returns `sn34_score = 0`.
 
-GASBench reports both binary and multiclass variants on every run:
+`binary_cross_entropy` (log loss) and `per_class_recall` are additional
+diagnostics; they do not enter this formula.
 
-- `binary_mcc`: MCC after collapsing every non-real class into synthetic.
-- `binary_brier`: mean squared error of `p_not real`; `0.25` is the constant
-  `p=0.5` baseline.
-- `binary_cross_entropy`: binary log loss for the same collapsed probabilities.
-- `gorodkin_mcc`: Gorodkin's $R_K$, the multiclass generalization of MCC.
-- `multiclass_brier`: mean of $\sum_k (p_k-y_k)^2$. Its uniform-prediction
-  baseline for $K$ classes is $(K-1)/K$.
-- `per_class_recall`: recall indexed by the class numbers above.
-- `binary_sn34_score` and `multiclass_sn34_score`: the two comparable SN34
-  score variants.
+## Dataset weighting
 
-For either scoring mode, let $M$ be the relevant MCC, $B$ the relevant Brier
-score, and $B_0$ its random baseline (`0.25` for binary or $(K-1)/K$ for
-multiclass):
+Samples have equal weight by default. `score_composition` can give public,
+private holdout, and GAS-Station samples different shares of the total weight.
+For example, a 50/50 public/holdout target gives each group equal total weight
+even if their sample counts differ. Missing groups are dropped and the remaining
+target shares are renormalized.
 
-$$
-M_{norm} = \operatorname{clip}\left(\frac{M+1}{2},0,1\right)^{1.2}
-$$
+These weights apply to accuracy, MCC, Brier error, and cross-entropy. The legacy
+`holdout_weight` option affects accuracy only; `score_composition` supersedes it.
 
-$$
-B_{norm} = \max\left(0,\frac{B_0-B}{B_0}\right)^{1.8}
-$$
+## Robustness scoring
 
-$$
-SN34 = \sqrt{M_{norm} B_{norm}}.
-$$
+An augmentation pass scores a transformed subset of the inputs separately,
+using the same scoring mode and the base pass's provenance weights. When it
+produces successful predictions and `aug_weight` is positive:
 
-`sn34_score` is the variant selected by the benchmark configuration. Subnet 34
-currently selects multiclass scoring for image and video. Audio uses binary
-scoring; for two classes, the normalized multiclass calculation is
-mathematically identical.
+```text
+sn34_score = (1 - aug_weight) * base_sn34_score + aug_weight * aug_sn34_score
+```
 
-## Dataset composition and robustness
+`base_sn34_score` preserves the score before blending. `augmentation_robustness`
+is the augmented score divided by the base score: `1` means equal scores and
+values below `1` indicate degradation. With blending disabled, `sn34_score`
+stays at the base score.
 
-A benchmark may assign target score shares to public, private holdout, and
-GAS-Station samples. GASBench converts those shares into per-sample weights and
-uses them consistently for accuracy, MCC, Brier, cross-entropy, and the derived
-SN34 scores. If a configured provenance group is absent, the remaining shares
-are renormalized.
-
-When an augmentation pass is enabled, GASBench reports:
-
-- `base_sn34_score`: score on the normal evaluation pass;
-- `aug_sn34_score`: score on the augmentation pass;
-- `augmentation_robustness`: robustness diagnostics; and
-- `sn34_score`: the configured blend
-  $(1-w)\,\mathrm{base} + w\,\mathrm{aug}$.
-
-The Subnet 34 round configuration, rather than the GASBench library, is the
-source of truth for the current provenance shares, augmentation sample count,
-and blend weight. Local GASBench runs can select multiclass scoring with
-`--multiclass-scoring`.
+See [running robustness evaluations](Running-Benchmarks.md#evaluate-robustness)
+for transforms and CLI options. For a Subnet 34 round, use that round's
+configuration for the scoring mode, dataset shares, and augmentation settings.

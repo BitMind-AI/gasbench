@@ -86,7 +86,7 @@ The suite depends on the modality:
 
 Robustness evaluation is disabled by default. `--aug-weight` controls the
 augmented score's contribution to `sn34_score`; see [robustness
-scoring](Classification-and-Scoring.md#dataset-composition-and-robustness).
+scoring](Classification-and-Scoring.md#robustness-scoring).
 
 Use `--aug-cache-dir` to reuse augmented inputs across evaluations. Add
 `--aug-cache-readonly` to load existing entries without writing new ones; cache

@@ -24,6 +24,8 @@ from ..dataset.config import (
 from ..processing.transforms import extract_target_size_from_input_specs
 from ..dataset.iterator import DatasetIterator
 from ._checkpoint import CheckpointError, RecorderCheckpoint
+from .errors import BenchmarkError
+from .inputs import video_preprocessing
 from .recording import (
     BenchmarkRunRecorder,
     build_sample_id,
@@ -38,11 +40,7 @@ from ..logger import get_logger
 
 def stack_uniform_batch(items: List[np.ndarray]) -> np.ndarray:
     """Stack a list of same-shaped arrays into a single batched array."""
-    first = items[0]
-    batch_array = np.empty((len(items),) + first.shape, dtype=first.dtype)
-    for i, item in enumerate(items):
-        batch_array[i] = item
-    return batch_array
+    return np.stack(items)
 
 
 def run_batch_and_record(
@@ -56,9 +54,7 @@ def run_batch_and_record(
 ):
     """Run one batch through the model and record rows in the tracker.
 
-    On inference failure every sample in the batch is recorded as an error
-    (rather than propagating and aborting the whole dataset), so a model that
-    crashes on hard samples cannot silently drop them from its score.
+    A failed batch is durably recorded and invalidates the run.
     """
     logger = get_logger(__name__)
     if not batch_metadata:
@@ -81,7 +77,7 @@ def run_batch_and_record(
                 aug_pass=aug_pass,
             )
         tracker.checkpoint()
-        return
+        raise BenchmarkError("Inference failed; the run cannot be scored") from e
 
     batch_inference_time = (time.time() - start) * 1000
     per_sample_time = batch_inference_time / len(batch_metadata)
@@ -135,6 +131,12 @@ class BenchmarkRunConfig:
     aug_cache_readonly: bool = False
     aug_weight: float = 0.2  # Weight of aug_sn34_score in blended final score (when n_aug_per_dataset > 0)
 
+    def __post_init__(self):
+        if self.batch_size < 1 or self.n_aug_per_dataset < 0:
+            raise ValueError("Batch size must be positive and augmentation count nonnegative")
+        if not 0 <= self.aug_weight <= 1:
+            raise ValueError("Augmentation weight must be between zero and one")
+
 
 @dataclass
 class SamplingSummary:
@@ -173,15 +175,11 @@ def build_plan(
         )
 
     if config.holdout_config_path and not config.gasstation_only:
-        try:
-            holdouts = load_holdout_datasets_from_yaml(
-                config.holdout_config_path,
-                cache_dir=config.cache_dir
-            ).get(config.modality, [])
-            holdouts = apply_mode_to_datasets(holdouts, config.mode)
-            available_datasets.extend(holdouts)
-        except Exception as e:
-            logger.error(f"Failed to load holdout {config.modality} datasets: {e}")
+        holdouts = load_holdout_datasets_from_yaml(
+            config.holdout_config_path,
+            cache_dir=config.cache_dir
+        ).get(config.modality, [])
+        available_datasets.extend(apply_mode_to_datasets(holdouts, config.mode))
 
 
     if not available_datasets:
@@ -542,6 +540,8 @@ def create_tracker(
                                 config.aug_cache_dir,
                                 build_sample_id(sample),
                                 plan.target_size,
+                                **(video_preprocessing(session, input_specs)
+                                   if config.modality == "video" else {}),
                             ))
                         # Newly generated cache files are outputs of this attempt;
                         # only artifacts present in the frozen plan may be inputs.
@@ -636,6 +636,7 @@ def finalize_run(
         "per_dataset_results": per_dataset_results,
         "dataset_info": plan.dataset_info,
         "records_count": int(len(df)),
+        "skipped_samples": int((df["status"] == "skipped").sum()) if not df.empty else 0,
         "sampling_summary": plan.sampling_summary.__dict__,
     }
     if generator_stats:

@@ -1,5 +1,10 @@
 """Constants used throughout the gasbench package."""
 
+# Fixed input contract shared by raw decoding, tensor caches and model specs.
+AUDIO_SAMPLE_RATE = 16000
+AUDIO_DURATION_SECONDS = 6.0
+AUDIO_NUM_SAMPLES = int(AUDIO_SAMPLE_RATE * AUDIO_DURATION_SECONDS)
+
 # Per-modality class indices. Class 0 is always real so binary collapse is 1 - p[0].
 #
 # Image is 3-class (no rendered): 0=real, 1=synthetic, 2=semisynthetic.

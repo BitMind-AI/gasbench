@@ -57,7 +57,7 @@ def benchmark(request, tmp_path, monkeypatch):
 
             name = f"sample_{i}.pt"
             torch.save({
-                "waveform": torch.full((8,), float(i)), "label": 0,
+                "waveform": torch.full((96000,), float(i)), "label": 0,
                 # Embedded legacy metadata must not change the frozen sample ID.
                 "metadata": {"path_in_archive": "different-embedded-path"},
             }, samples_dir / name)
@@ -80,7 +80,7 @@ def benchmark(request, tmp_path, monkeypatch):
     def decode(sample, **kwargs):
         decoded.append(sample["source_file"])
         data = sample.get("image", sample.get("video_bytes", sample.get("audio_bytes")))
-        shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (8,)}[modality]
+        shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (96000,)}[modality]
         return np.full(shape, data[0], dtype=np.float32), 0
 
     def augment(array, *args, **kwargs):
@@ -96,7 +96,7 @@ def benchmark(request, tmp_path, monkeypatch):
         monkeypatch.setattr(module, "apply_video_robustness_augmentations", augment)
     else:
         monkeypatch.setattr(module, "process_audio_sample", decode)
-    shape = {"image": [None, 3, 2, 2], "video": [None, 2, 3, 2, 2], "audio": [None, 8]}[modality]
+    shape = {"image": [None, 3, 2, 2], "video": [None, 2, 3, 2, 2], "audio": [None, 96000]}[modality]
     specs = [SimpleNamespace(name="input", shape=shape, type="tensor(float)")]
 
     def run(session, run_id="run", **extra):
@@ -218,7 +218,7 @@ def test_checkpoint_startup_never_reads_media_or_augmentation_payloads(benchmark
         assert tracker.count == 0
         raise Interrupted()
 
-    monkeypatch.setattr(b.module, "create_tracker", create_tracker)
+    monkeypatch.setattr("gasbench.benchmarks.runner.create_tracker", create_tracker)
     extra = {
         "n_aug_per_dataset": 3, "aug_cache_dir": str(aug_dir),
     }
@@ -283,25 +283,27 @@ def test_unreadable_audio_preserves_pending_batch_and_remaining_samples(benchmar
     expected = {sample["source_file"] for sample in selected} - {bad_sample["source_file"]}
     session = Session(b.model_dir)
     result = b.run(session, batch_size=2)
-    assert result["errors"]
+    assert result["audio_results"]["skipped_samples"] == 1
     assert len(session.calls) == len(expected)
-    assert {row["source_file"] for row in checkpoint_rows(b.checkpoint)} == expected
+    assert {row["source_file"] for row in checkpoint_rows(b.checkpoint) if row["status"] == "ok"} == expected
     resumed_session = Session(b.model_dir)
     b.run(resumed_session, batch_size=2)
     assert resumed_session.calls == []
 
 
 def test_failed_inference_is_committed_and_not_retried(benchmark):
-    # One run exercises failures in both base and augmented passes.
+    # A failed base batch must stop the run before augmentation can begin.
     n_aug = 3
     b = benchmark
-    b.run(Session(b.model_dir, error=True), n_aug_per_dataset=n_aug)
+    from gasbench.benchmarks.errors import BenchmarkError
+
+    with pytest.raises(BenchmarkError, match="Inference failed"):
+        b.run(Session(b.model_dir, error=True), n_aug_per_dataset=n_aug)
     rows = checkpoint_rows(b.checkpoint)
-    assert len(rows) == 5 + n_aug
-    assert sum(row["aug_pass"] for row in rows) == n_aug
-    assert all(row["status"] == "error" for row in rows)
+    assert len(rows) == 1 and rows[0]["status"] == "error"
     session = Session(b.model_dir)
-    b.run(session, n_aug_per_dataset=n_aug)
+    with pytest.raises(BenchmarkError, match="Checkpoint contains failed inference"):
+        b.run(session, n_aug_per_dataset=n_aug)
     assert session.calls == []
 
 
@@ -367,9 +369,10 @@ def populate_augmentation_cache(b, aug_dir):
         if b.modality == "audio":
             artifact = Path(aud_aug_cache_path(str(aug_dir), build_sample_id(sample), 7 + index))
         else:
-            artifact = Path(cache_path(str(aug_dir), build_sample_id(sample), (2, 2)))
+            artifact = Path(cache_path(str(aug_dir), build_sample_id(sample), (2, 2),
+                                      **({"num_frames": 2} if b.modality == "video" else {})))
         artifact.parent.mkdir(parents=True, exist_ok=True)
-        shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (8,)}[b.modality]
+        shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (96000,)}[b.modality]
         np.save(artifact, np.zeros(shape))
 
 
@@ -491,3 +494,77 @@ def test_audited_reader_upgrade_preserves_resume_guards(benchmark, monkeypatch, 
         assert len(resumed.calls) == 3
         assert RecorderCheckpoint.read_manifest(b.checkpoint)["benchmark"]["evaluator_sha256"] == "old"
         assert not compatible(tmp_path, "new", "unrelated-old")
+
+
+@pytest.mark.parametrize("benchmark", ["image", "video", "audio"], indirect=True)
+def test_all_corrupt_sources_record_skips_but_cannot_produce_score(benchmark, monkeypatch):
+    from gasbench.benchmarks.errors import BenchmarkError
+
+    b = benchmark
+    monkeypatch.setattr(b.module.PIPELINE, "_read_and_preprocess", lambda *_: None)
+    session = Session(b.model_dir)
+    with pytest.raises(BenchmarkError, match="No successful predictions"):
+        b.run(session)
+    assert not session.calls
+    assert len(checkpoint_rows(b.checkpoint)) == 5
+    assert all(row["status"] == "skipped" for row in checkpoint_rows(b.checkpoint))
+
+
+@pytest.mark.parametrize("benchmark", ["image"], indirect=True)
+def test_requested_holdouts_cannot_silently_disappear(benchmark, tmp_path):
+    with pytest.raises(FileNotFoundError, match="Holdout config"):
+        benchmark.run(Session(benchmark.model_dir), holdout_config=str(tmp_path / "missing.yaml"))
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_public_driver_reports_completion_only_for_executed_plan(benchmark, monkeypatch, empty):
+    from gasbench import benchmark as driver
+    from gasbench.benchmarks.errors import BenchmarkError
+
+    b = benchmark
+    session = Session(b.model_dir)
+
+    async def load_model(*_):
+        return session, b.specs
+
+    monkeypatch.setattr(driver, "load_model_for_benchmark", load_model)
+    monkeypatch.setattr(driver, "configure_huggingface_cache", lambda *_: None)
+    if empty:
+        monkeypatch.setattr(common, "discover_benchmark_datasets", lambda **_: [])
+    run = driver.run_benchmark(
+        str(b.model_dir), b.modality, cache_dir=str(b.cache), skip_missing=True,
+        batch_size=2, seed=7, n_aug_per_dataset=2,
+    )
+    if empty:
+        with pytest.raises(BenchmarkError):
+            asyncio.run(run)
+        assert not session.calls
+    else:
+        result = asyncio.run(run)
+        assert result["benchmark_completed"]
+        assert result[f"{b.modality}_results"]["total_samples"] == 7
+        assert result[f"{b.modality}_results"]["aug_total_samples"] == 2
+        assert len(session.calls) == 7
+
+
+@pytest.mark.parametrize("benchmark", ["image"], indirect=True)
+def test_image_augmentation_cache_bypasses_source_decoder(benchmark, tmp_path):
+    b = benchmark
+    aug_dir = tmp_path / "aug"
+    populate_augmentation_cache(b, aug_dir)
+    result = b.run(Session(b.model_dir), n_aug_per_dataset=3, aug_cache_dir=str(aug_dir))
+    assert result["image_results"]["aug_total_samples"] == 3
+    assert len(b.decoded) == len(list(b.samples_dir.iterdir()))
+
+
+@pytest.mark.parametrize("benchmark", ["image"], indirect=True)
+@pytest.mark.parametrize("n_aug", [0, 3])
+def test_augmentation_cannot_complete_run_without_selected_base_samples(benchmark, monkeypatch, n_aug):
+    from gasbench.benchmarks.errors import BenchmarkError
+
+    b = benchmark
+    monkeypatch.setattr(common, "calculate_weighted_dataset_sampling", lambda *_: {b.dataset.name: 0})
+    session = Session(b.model_dir)
+    with pytest.raises(BenchmarkError, match="No cached base samples"):
+        b.run(session, n_aug_per_dataset=n_aug)
+    assert not session.calls

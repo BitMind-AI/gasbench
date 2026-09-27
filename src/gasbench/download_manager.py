@@ -21,7 +21,7 @@ from .dataset.config import (
     load_holdout_datasets_from_yaml,
     apply_mode_to_datasets,
 )
-from .dataset.iterator import CACHE_MAX_SAMPLES, DatasetIterator
+from .dataset.iterator import DatasetIterator
 
 logger = get_logger(__name__)
 
@@ -490,29 +490,7 @@ def _needs_download(
         return not _is_dataset_cached_for_mode(dataset_dir, dataset)
 
 
-def _is_dataset_cached_for_mode(
-    dataset_dir: Path, dataset: BenchmarkDatasetConfig
-) -> bool:
-    """Return whether the iterator would treat this cache as complete."""
-    if not dataset_dir.exists():
-        return False
+def _is_dataset_cached_for_mode(dataset_dir: Path, dataset: BenchmarkDatasetConfig) -> bool:
+    from .dataset.cache import cache_state
 
-    metadata_file = dataset_dir / "sample_metadata.json"
-
-    if not metadata_file.exists():
-        return False
-
-    # The iterator writes this when the source is exhausted, including when it
-    # contains fewer samples than the normal cache cap.
-    if (dataset_dir / ".download_complete").exists():
-        return True
-
-    try:
-        import json
-
-        with open(metadata_file, "r") as f:
-            metadata = json.load(f)
-            cached_count = len(metadata)
-            return cached_count >= CACHE_MAX_SAMPLES
-    except Exception:
-        return False
+    return cache_state(dataset_dir)["complete"]

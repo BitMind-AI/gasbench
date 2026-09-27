@@ -163,8 +163,8 @@ def download_and_extract(
                     s3_prefixes=getattr(dataset, "s3_prefixes", None),
                     )
                 except DatasetAccessError as e:
-                    logger.warning(f"Skipping {dataset.name}: {e}")
-                    return
+                    logger.error(f"Cannot access {dataset.name}: {e}")
+                    raise
 
                 if not all_filenames:
                     logger.warning(f"No parquet files found for {dataset.path}")
@@ -210,8 +210,8 @@ def download_and_extract(
                     s3_prefixes=getattr(dataset, "s3_prefixes", None),
                 )
             except DatasetAccessError as e:
-                logger.warning(f"Skipping dataset {dataset.name}: {e}")
-                return
+                logger.error(f"Cannot access {dataset.name}: {e}")
+                raise
 
             def matches_format(filename, source_format):
                 if source_format == "frames":
@@ -372,6 +372,7 @@ def download_and_extract(
 
     except Exception as e:
         logger.error(f"Error processing {dataset.path}: {e}")
+        raise
 
 
 def _process_gasstation(

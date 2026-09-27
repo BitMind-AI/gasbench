@@ -9,9 +9,9 @@ from typing import Dict, Optional
 
 from .logger import get_logger
 from .processing.media import configure_huggingface_cache
-from .benchmarks.image_bench import run_image_benchmark
-from .benchmarks.video_bench import run_video_benchmark
-from .benchmarks.audio_bench import run_audio_benchmark
+from .benchmarks.common import BenchmarkRunConfig
+from .benchmarks.runner import run_modality_benchmark
+from .config import DEFAULT_BATCH_SIZES
 from .benchmarks.utils import create_inference_session
 
 logger = get_logger(__name__)
@@ -111,36 +111,26 @@ async def run_benchmark(
         if not session:
             return benchmark_results
 
-        # Run benchmark for the specified modality
-        benchmark_score = await execute_benchmark(
-            session,
-            input_specs,
-            modality,
-            benchmark_results,
-            mode,
-            gasstation_only,
-            cache_dir,
-            download_latest_gasstation_data,
-            seed,
-            batch_size,
-            dataset_config,
-            holdout_config,
-            records_parquet_path,
-            run_id,
-            dataset_filters,
-            skip_missing,
-            holdout_weight,
-            holdouts_only,
-            content_category,
-            score_composition,
-            multiclass_scoring,
-            checkpoint_dir=checkpoint_dir,
+        config = BenchmarkRunConfig(
+            modality=modality, mode=mode, gasstation_only=gasstation_only,
+            dataset_config_path=dataset_config, holdout_config_path=holdout_config,
+            cache_dir=cache_dir, hf_token=os.environ.get("HF_TOKEN"),
+            batch_size=DEFAULT_BATCH_SIZES[modality] if batch_size is None else batch_size,
+            augment_level=0, crop_prob=0.0, records_parquet_path=records_parquet_path,
+            run_id=run_id, dataset_filters=dataset_filters,
+            holdout_weight=holdout_weight, holdouts_only=holdouts_only,
+            content_category=content_category, score_composition=score_composition,
+            multiclass_scoring=multiclass_scoring, n_aug_per_dataset=n_aug_per_dataset,
+            aug_weight=aug_weight, aug_cache_dir=aug_cache_dir,
+            aug_cache_readonly=aug_cache_readonly, checkpoint_dir=checkpoint_dir,
             checkpoint_persist=checkpoint_persist,
-            n_aug_per_dataset=n_aug_per_dataset,
-            aug_weight=aug_weight,
-            aug_cache_dir=aug_cache_dir,
-            aug_cache_readonly=aug_cache_readonly,
         )
+        await run_modality_benchmark(
+            session, input_specs, benchmark_results, config=config, seed=seed,
+            skip_missing=skip_missing,
+            download_latest_gasstation_data=download_latest_gasstation_data,
+        )
+        benchmark_score = benchmark_results[f"{modality}_results"]["benchmark_score"]
 
         benchmark_results["benchmark_score"] = benchmark_score
 
@@ -160,7 +150,7 @@ async def run_benchmark(
         elif modality == "audio" and "audio_results" not in benchmark_results:
             benchmark_results["audio_results"] = {"error": str(e)}
 
-        raise e
+        raise
 
     finally:
         benchmark_results["metrics"]["benchmark_duration_seconds"] = (
@@ -213,136 +203,6 @@ async def load_model_for_benchmark(
         benchmark_results["errors"].append(f"Model loading error: {str(e)}")
         benchmark_results["benchmark_completed"] = False
         return None, None
-
-
-async def execute_benchmark(
-    session,
-    input_specs,
-    modality: str,
-    benchmark_results: Dict,
-    mode: str,
-    gasstation_only: bool = False,
-    cache_dir: str = "/.cache/gasbench",
-    download_latest_gasstation_data: bool = False,
-    seed: Optional[int] = None,
-    batch_size: Optional[int] = None,
-    dataset_config: Optional[str] = None,
-    holdout_config: Optional[str] = None,
-    records_parquet_path: Optional[str] = None,
-    run_id: Optional[str] = None,
-    dataset_filters: Optional[list] = None,
-    skip_missing: bool = False,
-    holdout_weight: float = 1.0,
-    holdouts_only: bool = False,
-    content_category: Optional[str] = None,
-    score_composition: Optional[Dict[str, float]] = None,
-    multiclass_scoring: bool = False,
-    n_aug_per_dataset: int = 0,
-    aug_weight: float = 0.2,
-    aug_cache_dir: Optional[str] = None,
-    aug_cache_readonly: bool = False,
-    checkpoint_dir: Optional[str] = None,
-    checkpoint_persist=None,
-) -> float:
-    """Execute the actual benchmark evaluation."""
-
-    logger.info(f"Running {modality} benchmark (mode={mode}, gasstation_only={gasstation_only}, download_latest_gasstation_data={download_latest_gasstation_data}, skip_missing={skip_missing}, holdout_weight={holdout_weight}, holdouts_only={holdouts_only}, content_category={content_category}, score_composition={score_composition}, multiclass_scoring={multiclass_scoring})")
-    if dataset_filters:
-        logger.info(f"Dataset filters: {dataset_filters}")
-    if modality == "image":
-        await run_image_benchmark(
-            session,
-            input_specs,
-            benchmark_results,
-            mode,
-            gasstation_only,
-            cache_dir,
-            download_latest_gasstation_data,
-            seed,
-            batch_size,
-            dataset_config,
-            holdout_config,
-            records_parquet_path=records_parquet_path,
-            run_id=run_id,
-            dataset_filters=dataset_filters,
-            skip_missing=skip_missing,
-            holdout_weight=holdout_weight,
-            holdouts_only=holdouts_only,
-            content_category=content_category,
-            score_composition=score_composition,
-            multiclass_scoring=multiclass_scoring,
-            checkpoint_dir=checkpoint_dir,
-            checkpoint_persist=checkpoint_persist,
-            n_aug_per_dataset=n_aug_per_dataset,
-            aug_weight=aug_weight,
-            aug_cache_dir=aug_cache_dir,
-            aug_cache_readonly=aug_cache_readonly,
-        )
-        benchmark_score = benchmark_results.get("image_results", {}).get("benchmark_score", 0.0)
-    elif modality == "video":
-        await run_video_benchmark(
-            session,
-            input_specs,
-            benchmark_results,
-            mode,
-            gasstation_only,
-            cache_dir,
-            download_latest_gasstation_data,
-            seed,
-            batch_size,
-            dataset_config,
-            holdout_config,
-            records_parquet_path=records_parquet_path,
-            run_id=run_id,
-            dataset_filters=dataset_filters,
-            skip_missing=skip_missing,
-            holdout_weight=holdout_weight,
-            holdouts_only=holdouts_only,
-            content_category=content_category,
-            score_composition=score_composition,
-            multiclass_scoring=multiclass_scoring,
-            checkpoint_dir=checkpoint_dir,
-            checkpoint_persist=checkpoint_persist,
-            n_aug_per_dataset=n_aug_per_dataset,
-            aug_weight=aug_weight,
-            aug_cache_dir=aug_cache_dir,
-            aug_cache_readonly=aug_cache_readonly,
-        )
-        benchmark_score = benchmark_results.get("video_results", {}).get("benchmark_score", 0.0)
-    elif modality == "audio":
-        await run_audio_benchmark(
-            session,
-            input_specs,
-            benchmark_results,
-            mode,
-            gasstation_only,
-            cache_dir,
-            download_latest_gasstation_data,
-            seed,
-            batch_size,
-            dataset_config,
-            holdout_config,
-            records_parquet_path=records_parquet_path,
-            run_id=run_id,
-            dataset_filters=dataset_filters,
-            skip_missing=skip_missing,
-            holdout_weight=holdout_weight,
-            holdouts_only=holdouts_only,
-            content_category=content_category,
-            score_composition=score_composition,
-            multiclass_scoring=multiclass_scoring,
-            checkpoint_dir=checkpoint_dir,
-            checkpoint_persist=checkpoint_persist,
-            n_aug_per_dataset=n_aug_per_dataset,
-            aug_weight=aug_weight,
-            aug_cache_dir=aug_cache_dir,
-            aug_cache_readonly=aug_cache_readonly,
-        )
-        benchmark_score = benchmark_results.get("audio_results", {}).get("benchmark_score", 0.0)
-    else:
-        raise ValueError(f"Invalid modality: {modality}. Must be 'image', 'video' or 'audio'")
-
-    return benchmark_score
 
 
 def format_benchmark_summary(benchmark_results: Dict) -> str:
@@ -518,6 +378,7 @@ def save_results_to_json(
 
             output_data["results"] = {
                 "total_samples": results.get("total_samples", 0),
+                "skipped_samples": results.get("skipped_samples", 0),
                 "correct_predictions": results.get("correct_predictions", 0),
                 "accuracy": results.get("benchmark_score", 0.0),
                 "avg_inference_time_ms": results.get("avg_inference_time_ms", 0),

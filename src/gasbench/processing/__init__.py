@@ -3,7 +3,6 @@
 This package contains modules for:
 - Media sample processing (images and videos)
 - Data transformations and augmentations
-- Archive management and caching
 - HuggingFace integration
 """
 
@@ -17,7 +16,6 @@ from .transforms import (
     compress_image_jpeg_pil,
     compress_video_frames_jpeg_torchvision,
 )
-from .archive import video_archive_manager
 
 __all__ = [
     "configure_huggingface_cache",
@@ -26,5 +24,4 @@ __all__ = [
     "apply_random_augmentations",
     "compress_image_jpeg_pil",
     "compress_video_frames_jpeg_torchvision",
-    "video_archive_manager",
 ]

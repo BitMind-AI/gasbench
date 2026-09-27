@@ -1,7 +1,7 @@
 import os
 import subprocess
 import tempfile
-import concurrent.futures
+from .audio_decode import AUDIO_DECODE_TIMEOUT, decode_audio as _decode_audio_with_timeout
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 
@@ -12,7 +12,7 @@ from PIL import Image
 import torch
 
 from ..logger import get_logger
-from ..constants import media_type_to_label
+from ..constants import AUDIO_DURATION_SECONDS, AUDIO_SAMPLE_RATE, media_type_to_label
 
 # decord is the primary video decoder (fast, frame-accurate random access).
 # It has no macOS ARM wheel, so on Darwin we fall back to OpenCV —
@@ -24,11 +24,6 @@ try:
 except ImportError:
     _HAS_DECORD = False
     logger = None  # placeholder, will be reassigned below
-
-try:
-    from torchcodec.decoders import AudioDecoder
-except Exception:
-    AudioDecoder = None
 
 logger = get_logger(__name__)
 
@@ -315,9 +310,6 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
         return None, None
 
 
-AUDIO_DECODE_TIMEOUT = 30  # seconds -- prevents ffmpeg deadlocks on malformed files
-
-
 def _decode_audio_waveform_ffmpeg_cli(audio_bytes: bytes, target_sr: int) -> torch.Tensor:
     """Decode arbitrary audio bytes to mono float32 PCM using the ffmpeg CLI.
 
@@ -374,48 +366,10 @@ def _decode_audio_waveform_ffmpeg_cli(audio_bytes: bytes, target_sr: int) -> tor
             pass
 
 
-def _decode_audio_with_timeout(audio_bytes: bytes, target_sr: int, timeout: int = AUDIO_DECODE_TIMEOUT):
-    """Decode audio bytes with a timeout.
-
-    Tries TorchCodec first (in-process, resamples to ``target_sr``, mono). If TorchCodec
-    cannot load or fails, falls back to the ``ffmpeg`` CLI (same sample rate / channel layout).
-
-    A thread pool enforces ``timeout`` so a stuck decoder cannot block indefinitely.
-
-    Args:
-        audio_bytes: Raw audio file bytes
-        target_sr: Target sample rate
-        timeout: Maximum seconds to wait for decode
-
-    Returns:
-        ``torch.Tensor`` of shape ``(num_samples,)``, float32 in roughly [-1, 1]
-
-    Raises:
-        concurrent.futures.TimeoutError: If decode hangs beyond timeout
-    """
-    def _decode() -> torch.Tensor:
-        try:
-            if AudioDecoder is None:
-                raise RuntimeError("torchcodec AudioDecoder not importable")
-            decoder = AudioDecoder(audio_bytes, sample_rate=target_sr, num_channels=1)
-            samples = decoder.get_all_samples()
-            return samples.data.squeeze(0)
-        except Exception as e:
-            logger.debug(
-                "TorchCodec audio decode unavailable (%s); using ffmpeg CLI fallback",
-                e,
-            )
-            return _decode_audio_waveform_ffmpeg_cli(audio_bytes, target_sr)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_decode)
-        return future.result(timeout=timeout)
-
-
 def process_audio_sample(
     sample: Dict,
-    target_sr: int = 16000,
-    target_duration_seconds: float = 6.0,
+    target_sr: int = AUDIO_SAMPLE_RATE,
+    target_duration_seconds: float = AUDIO_DURATION_SECONDS,
     use_random_crop: bool = False,
     seed: Optional[int] = 42,
     device: Optional[str] = None,
@@ -479,7 +433,7 @@ def process_audio_sample(
 
         return waveform.float(), label
 
-    except concurrent.futures.TimeoutError:
+    except TimeoutError:
         logger.warning(
             f"Audio decode timed out after {AUDIO_DECODE_TIMEOUT}s, skipping sample"
         )

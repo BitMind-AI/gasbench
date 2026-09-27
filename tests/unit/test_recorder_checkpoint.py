@@ -9,6 +9,7 @@ from gasbench.benchmarks.recording import (
     compute_per_dataset_from_df,
 )
 from gasbench.benchmarks._checkpoint import CheckpointError
+from gasbench.benchmarks.errors import BenchmarkError
 
 
 @pytest.fixture
@@ -92,9 +93,9 @@ def test_resumed_recorder_uses_existing_metrics_summaries_and_parquet(
     assert resumed.get_dataset_summary("dataset", True) == original.get_dataset_summary(
         "dataset", True
     )
-    assert compute_metrics_from_df(resumed.to_dataframe()) == compute_metrics_from_df(
-        original.to_dataframe()
-    )
+    for recorder in (original, resumed):
+        with pytest.raises(BenchmarkError, match="Cannot score"):
+            compute_metrics_from_df(recorder.to_dataframe())
     assert compute_per_dataset_from_df(
         resumed.to_dataframe()
     ) == compute_per_dataset_from_df(original.to_dataframe())

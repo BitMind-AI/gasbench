@@ -2,6 +2,7 @@ import uuid
 import time
 import os
 import hashlib
+from time import monotonic
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -13,6 +14,12 @@ from ._checkpoint import RecorderCheckpoint
 from .errors import BenchmarkError
 from .timing import StageTimings
 from ..constants import MODALITY_NUM_CLASSES
+
+
+# Checked between inference batches: replay is bounded by these thresholds plus
+# the current batch. Explicit checkpoint() calls always flush synchronously.
+_CHECKPOINT_INTERVAL_SECONDS = 15.0
+_CHECKPOINT_MAX_PENDING_ROWS = 256
 
 
 class BenchmarkRunRecorder:
@@ -82,6 +89,19 @@ class BenchmarkRunRecorder:
             if self.rows:
                 self.run_started_at = self.rows[0]["run_started_at"]
             self._checkpointed_count = len(self.rows)
+        self._last_checkpoint_at = monotonic()
+
+    def checkpoint_if_due(self, *, timings=None) -> int:
+        """Group completed batches until the time or pending-record limit is met."""
+        pending = len(self.rows) - self._checkpointed_count
+        if self._checkpoint is None or not pending:
+            return 0
+        if (
+            pending < _CHECKPOINT_MAX_PENDING_ROWS
+            and monotonic() - self._last_checkpoint_at < _CHECKPOINT_INTERVAL_SECONDS
+        ):
+            return 0
+        return self.checkpoint(timings=timings)
 
     def checkpoint(self, *, timings=None) -> int:
         """Commit pending recorder rows; distributed storage must supply persist.
@@ -99,6 +119,7 @@ class BenchmarkRunRecorder:
                 self.rows[self._checkpointed_count :], timings=timings
             )
         self._checkpointed_count = len(self.rows)
+        self._last_checkpoint_at = monotonic()
         timings.count("committed_samples", count)
         return count
 

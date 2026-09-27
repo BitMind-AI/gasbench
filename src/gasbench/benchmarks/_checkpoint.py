@@ -324,19 +324,25 @@ class RecorderCheckpoint:
                 content = _encode(value, sort_keys=False)
             try:
                 with timings.measure("checkpoint_local_write"):
-                    with tempfile.NamedTemporaryFile(
-                        dir=self.directory, prefix=".pending-", delete=False
-                    ) as handle:
+                    with timings.measure("checkpoint_create"):
+                        handle = tempfile.NamedTemporaryFile(
+                            dir=self.directory, prefix=".pending-", delete=False
+                        )
+                    with handle:
                         temp_path = Path(handle.name)
-                        handle.write(content)
-                        handle.flush()
-                        os.fsync(handle.fileno())
-                    os.replace(temp_path, destination)
-                    fd = os.open(self.directory, os.O_RDONLY)
-                    try:
-                        os.fsync(fd)
-                    finally:
-                        os.close(fd)
+                        with timings.measure("checkpoint_write"):
+                            handle.write(content)
+                            handle.flush()
+                        with timings.measure("checkpoint_file_sync"):
+                            os.fsync(handle.fileno())
+                    with timings.measure("checkpoint_rename"):
+                        os.replace(temp_path, destination)
+                    with timings.measure("checkpoint_directory_sync"):
+                        fd = os.open(self.directory, os.O_RDONLY)
+                        try:
+                            os.fsync(fd)
+                        finally:
+                            os.close(fd)
                 if persist and self._persist is not None:
                     with timings.measure("checkpoint_persist"):
                         self._persist(self.directory)

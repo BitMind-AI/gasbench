@@ -6,6 +6,7 @@ from importlib import import_module
 import numpy as np
 
 from ..logger import get_logger
+from ._checkpoint import CheckpointError
 from .common import (
     build_plan,
     create_dataset_iterator,
@@ -99,10 +100,22 @@ async def run_modality_benchmark(
                 timings = StageTimings()
                 try:
                     with timings.measure("wall"):
-                        _run_dataset(
-                            session, input_specs, config, plan, tracker, dataset,
-                            module.PIPELINE, preparation, seed, augmented, timings,
-                        )
+                        try:
+                            _run_dataset(
+                                session, input_specs, config, plan, tracker, dataset,
+                                module.PIPELINE, preparation, seed, augmented, timings,
+                            )
+                        except CheckpointError:
+                            # A failed durable write poisons the writer; never retry
+                            # it or mask the original storage error while unwinding.
+                            raise
+                        except BaseException:
+                            # Preserve pending outcomes on handled errors/cancellation.
+                            # Abrupt process death instead replays the uncommitted tail.
+                            tracker.checkpoint(timings=timings)
+                            raise
+                        else:
+                            tracker.checkpoint(timings=timings)
                 finally:
                     snapshot = timings.snapshot()
                     scopes[pass_name].merge(snapshot)
@@ -181,5 +194,5 @@ def _run_dataset(
                     batch_id, augmented, timings=timings,
                 )
             else:
-                tracker.checkpoint(timings=timings)
+                tracker.checkpoint_if_due(timings=timings)
     log_dataset_summary(logger, tracker, dataset.name, include_skipped=True)

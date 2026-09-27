@@ -107,7 +107,7 @@ def run_batch_and_record(
             aug_pass=aug_pass,
         )
 
-    tracker.checkpoint(timings=timings)
+    tracker.checkpoint_if_due(timings=timings)
 
 
 @dataclass

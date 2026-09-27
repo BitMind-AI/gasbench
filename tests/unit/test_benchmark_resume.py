@@ -255,13 +255,15 @@ def test_changed_model_rejected_before_inference(benchmark):
 
 @pytest.mark.parametrize("model_error", [False, True])
 def test_persistence_failure_aborts_every_modality(benchmark, model_error, monkeypatch):
-    from gasbench.benchmarks import timing
+    from gasbench.benchmarks import recording, timing
 
     b = benchmark
     session = Session(b.model_dir, error=model_error)
     storage_error = OSError("storage unavailable")
     clock = 0
     monkeypatch.setattr(timing, "perf_counter", lambda: clock)
+    # Fail a grouped commit before the remaining inputs/augmentation can run.
+    monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 2)
 
     def persist(directory):
         nonlocal clock
@@ -271,9 +273,9 @@ def test_persistence_failure_aborts_every_modality(benchmark, model_error, monke
 
     results = {}
     with pytest.raises(CheckpointError) as error:
-        b.run(session, checkpoint_persist=persist, results=results)
+        b.run(session, checkpoint_persist=persist, results=results, n_aug_per_dataset=3)
     assert error.value.__cause__ is storage_error
-    assert len(session.calls) == 1
+    assert len(session.calls) == (1 if model_error else 2)
     base = results["metrics"]["performance"]["groups"]["base"]
     assert base["stages"]["checkpoint_persist"]["seconds"] == 7
     assert base["stages"]["checkpoint"]["seconds"] == 7
@@ -387,8 +389,13 @@ def populate_augmentation_cache(b, aug_dir):
         np.save(artifact, np.zeros(shape))
 
 
-def test_performance_separates_passes_cache_hits_and_resumed_work(benchmark, tmp_path):
+def test_performance_separates_passes_cache_hits_and_resumed_work(benchmark, tmp_path, monkeypatch):
     from gasbench.benchmark import save_results_to_json
+    from gasbench.benchmarks import recording
+
+    # Neither threshold expires: only dataset/pass boundaries should flush.
+    monkeypatch.setattr(recording, "monotonic", lambda: 0)
+    monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 100)
 
     b = benchmark
     aug_dir = tmp_path / "augmentations"
@@ -402,6 +409,7 @@ def test_performance_separates_passes_cache_hits_and_resumed_work(benchmark, tmp
         count = sum(row["aug_pass"] == augmented for row in rows)
         assert groups[pass_name]["counts"]["inferred_samples"] == count
         assert groups[pass_name]["counts"]["committed_samples"] == count
+        assert groups[pass_name]["stages"]["checkpoint"]["calls"] == 1
     assert groups["aug"]["counts"]["augmentation_cache_hits"] == options["n_aug_per_dataset"]
     assert "decode" not in groups["aug"]["stages"]
     assert "source_read" not in groups["aug"]["stages"]

@@ -58,6 +58,7 @@ Use `input_wait` to identify waits for prepared batches, and compare `checkpoint
 with its `checkpoint_encode`, `checkpoint_local_write` (write, rename, fsync), and
 `checkpoint_persist` (filesystem commit callback) components. Source reads, decode,
 transforms, and augmentation-cache hits/misses are measured in preparation workers.
+Filesystem writes also report creation, writing, file sync, rename, and directory sync separately.
 Decode includes decoder-internal I/O, such as reading frame-image files or staging
 video bytes; preprocessed audio loading includes tensor deserialization.
 
@@ -75,8 +76,11 @@ gasbench run --image-model ./my_model --full \
   --cache-dir ./cache --run-id detector-eval
 ```
 
-Rerun the same command to resume. Completed inference batches are restored;
-unfinished work runs again. Use a new run ID for a fresh evaluation.
+Rerun the same command to resume from the last durable checkpoint. Checkpoints group
+inference batches, flushing after 15 seconds or 256 pending records, checked between
+batches, and at dataset boundaries, completion, or handled failures. Abrupt termination
+replays the uncommitted tail; a long batch can exceed the interval. Use a new run ID
+for a fresh evaluation.
 
 Checkpoints default to `<cache-dir>/runs/<run-id>/checkpoint`. Use
 `--checkpoint-dir` to place them elsewhere. Resume with the same model, benchmark

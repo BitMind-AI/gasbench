@@ -2,12 +2,11 @@
 
 import os
 import json
-import shutil
+import re
 from collections import defaultdict
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime
 from pathlib import Path
-import torch
 
 from ..logger import get_logger
 from .config import BenchmarkDatasetConfig
@@ -15,48 +14,116 @@ from .config import BenchmarkDatasetConfig
 logger = get_logger(__name__)
 
 
-def check_dataset_cache(
-    dataset_config: BenchmarkDatasetConfig, base_dir: str = "/.cache/gasbench"
-) -> Dict:
-    """Check if a dataset is already cached locally."""
+CACHE_MAX_SAMPLES = 500
+
+
+def load_partial_cache(directory):
+    """Read intact indexed samples and reserve all previously used file indices."""
+    directory = Path(directory)
+    samples = directory / "samples"
+    samples.mkdir(parents=True, exist_ok=True)
+    index = directory / "sample_metadata.json"
+    metadata = json.loads(index.read_text()) if index.exists() else {}
+    metadata = {
+        name: value for name, value in metadata.items() if (samples / name).exists()
+    }
+    indices = [
+        int(match.group(1))
+        for path in samples.iterdir()
+        if (match := re.search(r"_(\d+)", path.name))
+    ]
+    return metadata, max(indices, default=-1) + 1
+
+
+def cache_state(directory):
+    """One cache completeness policy for discovery, download and iteration.
+
+    Metadata is the committed index. Unindexed files can be remnants of an
+    interrupted write and must not become additional benchmark samples.
+    """
+    directory = Path(directory)
     try:
-        dataset_dir = os.path.join(base_dir, "datasets", dataset_config.name)
-        dataset_info_file = os.path.join(dataset_dir, "dataset_info.json")
-        samples_dir = os.path.join(dataset_dir, "samples")
-        metadata_file = os.path.join(dataset_dir, "sample_metadata.json")
-
-        if (
-            os.path.exists(dataset_info_file)
-            and os.path.exists(samples_dir)
-            and os.path.exists(metadata_file)
-        ):
-            try:
-                with open(dataset_info_file, "r") as f:
-                    json.load(f)  # validate JSON is readable
-
-                sample_count = len(
-                    [
-                        f
-                        for f in os.listdir(samples_dir)
-                        if os.path.isfile(os.path.join(samples_dir, f))
-                    ]
-                )
-
-                if sample_count > 0:
-                    return {
-                        "cached": True,
-                        "sample_count": sample_count,
-                    }
-            except Exception:
-                pass
-
-        return {
-            "cached": False,
-            "sample_count": 0,
+        metadata = json.loads((directory / "sample_metadata.json").read_text())
+        json.loads((directory / "dataset_info.json").read_text())
+        if not isinstance(metadata, dict):
+            raise ValueError("Invalid sample metadata")
+        available = {
+            p.name
+            for p in (directory / "samples").iterdir()
+            if not p.name.startswith(".")
         }
-    except Exception as e:
-        logger.warning(f"Failed to check cache for {dataset_config.name}: {e}")
-        return {"cached": False, "sample_count": 0}
+        count = len(available.intersection(metadata))
+        intact = count == len(metadata)
+        complete = bool(
+            count
+            and intact
+            and (
+                (directory / ".download_complete").is_file()
+                or count >= CACHE_MAX_SAMPLES
+            )
+        )
+        return {"cached": count > 0, "sample_count": count, "complete": complete}
+    except (OSError, ValueError, TypeError):
+        return {"cached": False, "sample_count": 0, "complete": False}
+
+
+def check_dataset_cache(dataset_config, base_dir="/.cache/gasbench"):
+    state = cache_state(Path(base_dir) / "datasets" / dataset_config.name)
+    return {key: state[key] for key in ("cached", "sample_count")}
+
+
+def fsync_directory(path):
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def atomic_json(path, value):
+    """Publish a complete JSON index and sync its containing directory."""
+    import tempfile
+
+    path = Path(path)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=path.parent, prefix=".pending-", delete=False
+        ) as stream:
+            pending = Path(stream.name)
+            json.dump(value, stream, indent=2)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(pending, path)
+        fsync_directory(path.parent)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
+
+
+def load_audio_sample(sample):
+    """Read raw or preprocessed audio, retaining the selected source identity."""
+    from ..constants import media_type_to_label
+
+    path = Path(sample["audio_path"])
+    if path.suffix == ".pt":
+        import torch
+
+        data = torch.load(path, map_location="cpu", weights_only=True)
+        return {
+            **data.get("metadata", {}),
+            **sample,
+            "preprocessed_waveform": data["waveform"],
+            "label": media_type_to_label(sample["media_type"], "audio"),
+            "cached_filename": path.name,
+            "is_preprocessed": True,
+        }
+    return {
+        **sample,
+        "audio_bytes": path.read_bytes(),
+        "cached_filename": path.name,
+        "is_preprocessed": False,
+    }
 
 
 def save_sample_to_cache(
@@ -185,19 +252,13 @@ def save_dataset_cache_files(
             },
         }
         if dataset_info_extras:
-            try:
-                for k, v in dataset_info_extras.items():
-                    dataset_info[k] = v
-            except Exception:
-                pass
+            dataset_info.update(dataset_info_extras)
 
         dataset_info_file = os.path.join(dataset_cache_dir, "dataset_info.json")
-        with open(dataset_info_file, "w") as f:
-            json.dump(dataset_info, f, indent=2)
+        atomic_json(dataset_info_file, dataset_info)
 
         metadata_file = os.path.join(dataset_cache_dir, "sample_metadata.json")
-        with open(metadata_file, "w") as f:
-            json.dump(dataset_samples, f, indent=2)
+        atomic_json(metadata_file, dataset_samples)
 
         logger.debug(f"💾 Saved dataset cache files for {dataset_config.name}")
 
@@ -206,81 +267,6 @@ def save_dataset_cache_files(
             f"Failed to save dataset cache files for {dataset_config.name}: {e}"
         )
         raise
-
-
-def cleanup_temp_directory(temp_dir: str):
-    """Clean up temporary directory after dataset processing."""
-    if os.path.exists(temp_dir):
-        try:
-            for item in os.listdir(temp_dir):
-                item_path = os.path.join(temp_dir, item)
-                if os.path.isfile(item_path):
-                    os.remove(item_path)
-                    logger.debug(f"🧹 Cleaned up temp file: {item}")
-                elif os.path.isdir(item_path):
-                    shutil.rmtree(item_path)
-                    logger.debug(f"🧹 Cleaned up temp directory: {item}")
-        except Exception as cleanup_error:
-            logger.warning(f"Failed to clean temp files: {cleanup_error}")
-
-
-def save_preprocessed_audio_tensor(
-    waveform: torch.Tensor,
-    label: int,
-    metadata: dict,
-    samples_dir: str,
-    sample_count: int
-) -> Optional[str]:
-    """
-    Save preprocessed audio tensor to cache as .pt file.
-    
-    This is much faster than saving raw audio bytes and re-processing every time.
-    
-    Args:
-        waveform: Preprocessed audio tensor (1, 96000)
-        label: Audio label (0=real, 1=synthetic)
-        metadata: Additional metadata to save
-        samples_dir: Directory to save the tensor
-        sample_count: Sample index for naming
-        
-    Returns:
-        Filename if successful, None otherwise
-    """
-    try:
-        filename = f"aud_{sample_count:06d}.pt"
-        file_path = os.path.join(samples_dir, filename)
-        
-        # Save tensor with label and metadata
-        torch.save({
-            'waveform': waveform.cpu(),  # Ensure it's on CPU for storage
-            'label': label,
-            'metadata': metadata,
-            'shape': waveform.shape,
-            'dtype': str(waveform.dtype)
-        }, file_path)
-        
-        return filename
-    except Exception as e:
-        logger.warning(f"Failed to save preprocessed audio tensor {sample_count}: {e}")
-        return None
-
-
-def load_preprocessed_audio_tensor(file_path: str) -> Optional[Dict]:
-    """
-    Load preprocessed audio tensor from cache.
-    
-    Args:
-        file_path: Path to the .pt file
-        
-    Returns:
-        Dictionary with 'waveform', 'label', and 'metadata' if successful, None otherwise
-    """
-    try:
-        data = torch.load(file_path, map_location='cpu')
-        return data
-    except Exception as e:
-        logger.warning(f"Failed to load preprocessed audio tensor from {file_path}: {e}")
-        return None
 
 
 def format_size_bytes(size_bytes: int) -> str:
@@ -434,7 +420,8 @@ def verify_cache_against_configs(
     missing = expected_names - cached_names
 
     cached_in_modalities = {
-        ds["name"] for ds in cached_datasets
+        ds["name"]
+        for ds in cached_datasets
         if ds.get("modality", "").lower() in config_modalities
     }
     extra = cached_in_modalities - expected_names

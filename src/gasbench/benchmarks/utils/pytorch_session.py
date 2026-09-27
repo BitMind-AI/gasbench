@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import List, Any
 
 from .custom_model_loader import load_custom_model
+from ..inputs import validate_audio_preprocessing
+from ...constants import AUDIO_NUM_SAMPLES
 from ...logger import get_logger
 
 logger = get_logger(__name__)
@@ -93,13 +95,10 @@ class PyTorchInferenceSession:
         """Infer input shape from preprocessing config."""
         preproc = self.config.get("preprocessing", {})
         
-        # For audio models
-        if "sample_rate" in preproc and "duration_seconds" in preproc:
-            sr = preproc["sample_rate"]
-            duration = preproc["duration_seconds"]
-            samples = int(sr * duration)
-            return [None, samples]  # Batch, Samples
-        
+        if self.model_type == "audio":
+            validate_audio_preprocessing(preproc)
+            return [None, AUDIO_NUM_SAMPLES]
+
         # For image/video models with resize config
         if "resize" in preproc:
             h, w = preproc["resize"]

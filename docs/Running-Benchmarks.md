@@ -34,6 +34,10 @@ scoring](Classification-and-Scoring.md).
 Set `--cache-dir` to a writable directory with space for the datasets; the default
 is `/.cache/gasbench`. Reuse it across runs to reuse downloaded data.
 
+For repeated audio runs, `gasbench preprocess --dataset NAME --cache-dir ./cache`
+converts cached audio to mono 16 kHz, six-second tensors. Conversion can be rerun
+and retains source files in each dataset cache's `originals/` directory.
+
 The CLI writes a JSON report, prediction parquet, and text summary to a run
 subdirectory under `results/`. Set `--results-dir` to change that location and
 `--run-name` to name the subdirectory.

@@ -33,7 +33,7 @@ def test_loads_weights_and_runs_real_model_with_native_input_dtype(tmp_path, mon
     monkeypatch.setitem(sys.modules, "custom_model", None)
     num_classes = 2 if modality == "audio" else 3
     preproc = (
-        {"sample_rate": 8, "duration_seconds": 1}
+        {"sample_rate": 16000, "duration_seconds": 6}
         if modality == "audio" else {"resize": [2, 3], "num_frames": 2}
     )
     input_dtype = "float32" if modality == "audio" else "uint8"
@@ -69,7 +69,7 @@ def load_model(weights_path, num_classes, input_dtype):
     save_file({"bias": bias}, tmp_path / "weights.safetensors")
     session = create_inference_session(str(tmp_path), modality)
     assert session.model.bias.dtype == (torch.bfloat16 if modality == "video" else torch.float32)
-    expected_shape = {"image": [None, 3, 2, 3], "video": [None, 2, 3, 2, 3], "audio": [None, 8]}[modality]
+    expected_shape = {"image": [None, 3, 2, 3], "video": [None, 2, 3, 2, 3], "audio": [None, 96000]}[modality]
     input_spec = session.get_inputs()[0]
     assert input_spec.shape == expected_shape
     assert session.get_outputs()[0].shape == [None, num_classes]
@@ -92,3 +92,39 @@ def test_logits_are_converted_to_probabilities_without_overflow(logits, expected
     predicted, probabilities = process_model_output(np.array(logits))
     np.testing.assert_allclose(probabilities, expected)
     assert predicted == (int(expected[0] > 0.5) if len(expected) == 1 else int(np.argmax(expected)))
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_loader_checks_signature_without_retrying_internal_type_errors(tmp_path, monkeypatch, legacy):
+    import sys
+    import yaml
+    from gasbench.benchmarks.utils.custom_model_loader import load_custom_model
+
+    monkeypatch.setitem(sys.modules, "custom_model", None)
+    (tmp_path / "weights.bin").touch()
+    (tmp_path / "model_config.yaml").write_text(yaml.safe_dump({"model": {
+        "weights_file": "weights.bin", "num_classes": 3, "variant": "configured",
+    }}))
+    (tmp_path / "model.py").write_text('''
+import torch
+calls = []
+def load_model(weights_path, num_classes''' + ('' if legacy else ', variant="default"') + '''):
+    calls.append(num_classes)
+''' + ('    return torch.nn.Identity()\n' if legacy else '    raise TypeError("invalid model variant")\n'))
+    if legacy:
+        load_custom_model(tmp_path)
+    else:
+        with pytest.raises(TypeError, match="invalid model variant"):
+            load_custom_model(tmp_path)
+    assert sys.modules["custom_model"].calls == [3]
+
+
+@pytest.mark.parametrize("preprocessing", [{"sample_rate": 8000}, {"duration_seconds": 1}])
+def test_audio_model_rejects_preprocessing_that_disagrees_with_delivered_tensor(preprocessing):
+    from gasbench.benchmarks.utils.pytorch_session import PyTorchInferenceSession
+
+    session = PyTorchInferenceSession.__new__(PyTorchInferenceSession)
+    session.model_type = "audio"
+    session.config = {"preprocessing": preprocessing}
+    with pytest.raises(ValueError, match="96000"):
+        session._infer_input_shape()

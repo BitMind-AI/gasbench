@@ -19,8 +19,12 @@ def _dataset() -> BenchmarkDatasetConfig:
 
 def _write_metadata(dataset_dir, count: int) -> None:
     dataset_dir.mkdir()
+    (dataset_dir / "samples").mkdir()
+    (dataset_dir / "dataset_info.json").write_text("{}")
     metadata = {f"aud_{index:06d}.wav": {} for index in range(count)}
     (dataset_dir / "sample_metadata.json").write_text(json.dumps(metadata))
+    for name in metadata:
+        (dataset_dir / "samples" / name).touch()
 
 
 def test_completion_marker_marks_exhausted_source_complete(tmp_path):

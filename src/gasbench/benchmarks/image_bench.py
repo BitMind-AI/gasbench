@@ -1,120 +1,67 @@
 import os
-import traceback
-import numpy as np
 from typing import Dict, Optional
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
-from queue import Queue, Empty
-import threading
 
-from ..logger import get_logger
+import numpy as np
+import pandas as pd
+
+from ..config import (
+    DEFAULT_IMAGE_BATCH_SIZE,
+)
+from ..constants import media_type_to_label
 from ..processing.media import process_image_sample
 from ..processing.transforms import (
     apply_random_augmentations,
     apply_robustness_augmentations,
 )
-from ..config import (
-    DEFAULT_IMAGE_BATCH_SIZE,
-)
-
-
-from ._checkpoint import CheckpointError
-from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
+from .aug_cache import img_aug_cache_path, write_aug_cache
 from .common import (
     BenchmarkRunConfig,
-    build_plan,
-    create_tracker,
-    create_dataset_iterator,
-    verify_sample,
     use_augmentation_cache,
-    finalize_run,
-    stack_uniform_batch,
-    run_batch_and_record,
+    verify_sample,
 )
-from .aug_cache import img_aug_cache_path, write_aug_cache
-import pandas as pd
-
-logger = get_logger(__name__)
+from .prefetch import PrefetchPipeline as BasePrefetchPipeline
+from .recording import build_sample_id
+from .runner import run_modality_benchmark
 
 _HEAVY_SAMPLE_KEYS = frozenset(("image", "image_bytes", "image_path"))
 
 
-class PrefetchPipeline:
-    """Pipeline for parallel loading and preprocessing of image samples.
-
-    When the iterator yields lazy samples (image_path instead of image bytes),
-    file I/O is performed inside worker threads so that multiple disk reads from
-    network volumes happen concurrently.
-    """
-
-    def __init__(
-        self,
-        dataset_iterator,
-        target_size,
-        batch_size,
-        seed,
-        augment_level,
-        crop_prob,
-        num_workers=8,
-        max_queue_size=8,
-        robustness_pass=False,
-        aug_cache_dir=None,
-        aug_cache_readonly=False,
-        tracker=None,
-    ):
-        self.tracker = tracker
-        self.dataset_iterator = dataset_iterator
-        self.target_size = target_size
-        self.batch_size = batch_size
-        self.seed = seed
-        self.augment_level = augment_level
-        self.crop_prob = crop_prob
-        self.num_workers = num_workers
-        self.max_queue_size = max_queue_size
-        self.robustness_pass = robustness_pass
-        self.aug_cache_dir = aug_cache_dir
-        self.aug_cache_readonly = aug_cache_readonly
-
-        self.batch_queue = Queue(maxsize=max_queue_size)
-        self.stop_event = threading.Event()
-        self.error = None
-
-        self.executor = ThreadPoolExecutor(max_workers=num_workers)
-        self.producer_thread = threading.Thread(target=self._producer_loop, daemon=True)
-        self.producer_thread.start()
+class PrefetchPipeline(BasePrefetchPipeline):
+    def __init__(self, *args, num_workers=8, max_queue_size=8, **kwargs):
+        super().__init__(
+            *args, num_workers=num_workers, max_queue_size=max_queue_size, **kwargs
+        )
 
     def _read_and_preprocess(self, sample, sample_index, dataset_name):
         """Read file from disk (if lazy), decode, and augment. Runs in worker thread."""
         verify_sample(sample)
-        try:
+        sample_seed = None if self.seed is None else self.seed + sample_index
+        cache_path = None
+        if self.robustness_pass and self.aug_cache_dir:
+            cache_path = img_aug_cache_path(
+                self.aug_cache_dir, build_sample_id(sample), self.target_size
+            )
+        if cache_path is not None and use_augmentation_cache(sample, cache_path):
+            aug_hwc = np.load(cache_path, allow_pickle=False)
+            if aug_hwc.shape != (*self.target_size, 3):
+                raise ValueError(
+                    "Cached image shape differs from the model preprocessing contract"
+                )
+            label = media_type_to_label(sample.get("media_type", "synthetic"), "image")
+        else:
             image_path = sample.get("image_path")
             if image_path:
-                with open(image_path, "rb") as f:
-                    image_bytes = f.read()
-                sample = {**sample, "image": image_bytes}
-
+                with open(image_path, "rb") as stream:
+                    sample = {**sample, "image": stream.read()}
             image_array, label = process_image_sample(sample)
             if image_array is None or label is None:
                 return None
-
-            sample_seed = None if self.seed is None else (self.seed + sample_index)
             if self.robustness_pass:
-                if self.aug_cache_dir:
-                    sid = build_sample_id(sample)
-                    cache_path = img_aug_cache_path(self.aug_cache_dir, sid, self.target_size)
-                    if use_augmentation_cache(sample, cache_path):
-                        aug_hwc = np.load(cache_path)
-                    else:
-                        aug_hwc, _, _, _ = apply_robustness_augmentations(
-                            image_array, self.target_size, seed=sample_seed
-                        )
-                        if not self.aug_cache_readonly:
-                            write_aug_cache(cache_path, aug_hwc)
-                else:
-                    aug_hwc, _, _, _ = apply_robustness_augmentations(
-                        image_array,
-                        self.target_size,
-                        seed=sample_seed,
-                    )
+                aug_hwc, _, _, _ = apply_robustness_augmentations(
+                    image_array, self.target_size, seed=sample_seed
+                )
+                if cache_path is not None and not self.aug_cache_readonly:
+                    write_aug_cache(cache_path, aug_hwc)
             else:
                 aug_hwc, _, _, _ = apply_random_augmentations(
                     image_array,
@@ -123,128 +70,18 @@ class PrefetchPipeline:
                     level=self.augment_level,
                     crop_prob=self.crop_prob,
                 )
-            aug_chw = np.transpose(aug_hwc, (2, 0, 1))
+        aug_chw = np.transpose(aug_hwc, (2, 0, 1))
 
-            sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_SAMPLE_KEYS}
+        sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_SAMPLE_KEYS}
 
-            return {
-                "image": aug_chw,
-                "label": label,
-                "sample": sample_meta,
-                "sample_index": sample_index,
-                "dataset_name": dataset_name,
-                "sample_seed": sample_seed,
-            }
-        except CheckpointError:
-            raise
-        except Exception as e:
-            logger.warning(f"Failed to preprocess sample {sample_index}: {e}")
-            return None
-
-    def _producer_loop(self):
-        """Read + preprocess samples in parallel with bounded concurrency."""
-        try:
-            dataset_name = getattr(self.dataset_iterator.config, "name", "unknown")
-            max_in_flight = self.num_workers * 4
-
-            sample_iter = enumerate(self.dataset_iterator, 1)
-            pending = set()
-            exhausted = False
-            batch = []
-
-            while not self.stop_event.is_set():
-                while len(pending) < max_in_flight and not exhausted:
-                    try:
-                        idx, sample = next(sample_iter)
-                        if self.tracker is not None and self.tracker.is_checkpointed(
-                            dataset_name=dataset_name, sample_index=idx,
-                            sample=sample, aug_pass=self.robustness_pass,
-                        ):
-                            continue
-                        future = self.executor.submit(
-                            self._read_and_preprocess, sample, idx, dataset_name
-                        )
-                        pending.add(future)
-                    except StopIteration:
-                        exhausted = True
-                        break
-
-                if not pending:
-                    break
-
-                done, pending = wait(pending, return_when=FIRST_COMPLETED)
-
-                for future in done:
-                    if self.stop_event.is_set():
-                        break
-                    try:
-                        result = future.result()
-                    except CheckpointError:
-                        raise
-                    except Exception:
-                        continue
-                    if result is not None:
-                        batch.append(result)
-                        if len(batch) >= self.batch_size:
-                            self.batch_queue.put(batch)
-                            batch = []
-
-            if batch and not self.stop_event.is_set():
-                self.batch_queue.put(batch)
-
-            self.batch_queue.put(None)
-
-        except Exception as e:
-            self.error = e
-            logger.error(f"Error in prefetch pipeline: {e}\n{traceback.format_exc()}")
-            self.batch_queue.put(None)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.error:
-            raise self.error
-
-        try:
-            batch = self.batch_queue.get(timeout=300)
-            if batch is None:
-                if self.error:
-                    raise self.error
-                raise StopIteration
-            return batch
-        except Empty:
-            logger.error("Timeout waiting for batch from prefetch pipeline")
-            raise StopIteration
-
-    def close(self):
-        """Clean up resources."""
-        self.stop_event.set()
-        self.executor.shutdown(wait=False, cancel_futures=True)
-
-        while not self.batch_queue.empty():
-            try:
-                self.batch_queue.get_nowait()
-            except Empty:
-                break
-
-
-def process_batch(
-    session,
-    input_specs,
-    batch_images,
-    batch_metadata,
-    tracker: BenchmarkRunRecorder,
-    batch_id: int,
-    aug_pass: bool = False,
-):
-    """push a batch of images through the model and record rows in tracker."""
-    if not batch_images:
-        return
-    batch_array = stack_uniform_batch(batch_images)
-    run_batch_and_record(
-        session, input_specs, batch_array, batch_metadata, tracker, batch_id, aug_pass
-    )
+        return {
+            "data": aug_chw,
+            "label": label,
+            "sample": sample_meta,
+            "sample_index": sample_index,
+            "dataset_name": dataset_name,
+            "sample_seed": sample_seed,
+        }
 
 
 async def run_image_benchmark(
@@ -277,212 +114,47 @@ async def run_image_benchmark(
     checkpoint_dir: Optional[str] = None,
     checkpoint_persist=None,
 ) -> pd.DataFrame:
-    """Test model on benchmark image datasets for AI-generated content detection."""
+    """Compatibility entry point; all modalities share one run lifecycle."""
+    batch_size = DEFAULT_IMAGE_BATCH_SIZE if batch_size is None else batch_size
+    config = BenchmarkRunConfig(
+        modality="image",
+        mode=mode,
+        gasstation_only=gasstation_only,
+        dataset_config_path=dataset_config,
+        holdout_config_path=holdout_config,
+        cache_dir=cache_dir,
+        hf_token=os.environ.get("HF_TOKEN"),
+        batch_size=batch_size,
+        augment_level=augment_level or 0,
+        crop_prob=crop_prob or 0.0,
+        records_parquet_path=records_parquet_path,
+        run_id=run_id,
+        checkpoint_dir=checkpoint_dir,
+        checkpoint_persist=checkpoint_persist,
+        dataset_filters=dataset_filters,
+        holdout_weight=holdout_weight,
+        holdouts_only=holdouts_only,
+        content_category=content_category,
+        score_composition=score_composition,
+        multiclass_scoring=multiclass_scoring,
+        n_aug_per_dataset=n_aug_per_dataset,
+        aug_weight=aug_weight,
+        aug_cache_dir=aug_cache_dir,
+        aug_cache_readonly=aug_cache_readonly,
+    )
+    return await run_modality_benchmark(
+        session,
+        input_specs,
+        benchmark_results,
+        config=config,
+        seed=seed,
+        skip_missing=skip_missing,
+        download_latest_gasstation_data=download_latest_gasstation_data,
+    )
 
-    seed = 42 if seed is None else seed
 
-    if batch_size is None:
-        batch_size = DEFAULT_IMAGE_BATCH_SIZE
+def preprocessing_options(session, input_specs):
+    return {}
 
-    try:
-        hf_token = os.environ.get("HF_TOKEN")
 
-        if gasstation_only:
-            logger.info("Loading gasstation image datasets only")
-        else:
-            logger.info("Loading benchmark image datasets")
-
-        run_config = BenchmarkRunConfig(
-            modality="image",
-            mode=mode,
-            gasstation_only=gasstation_only,
-            dataset_config_path=dataset_config,
-            holdout_config_path=holdout_config,
-            cache_dir=cache_dir,
-            hf_token=hf_token,
-            batch_size=batch_size,
-            augment_level=augment_level or 0,
-            crop_prob=crop_prob or 0.0,
-            records_parquet_path=records_parquet_path,
-            run_id=run_id,
-            checkpoint_dir=checkpoint_dir,
-            checkpoint_persist=checkpoint_persist,
-            dataset_filters=dataset_filters,
-            holdout_weight=holdout_weight,
-            holdouts_only=holdouts_only,
-            content_category=content_category,
-            score_composition=score_composition,
-            multiclass_scoring=multiclass_scoring,
-            n_aug_per_dataset=n_aug_per_dataset,
-            aug_weight=aug_weight,
-            aug_cache_dir=aug_cache_dir,
-            aug_cache_readonly=aug_cache_readonly,
-        )
-
-        plan = build_plan(logger, run_config, input_specs)
-        if not plan:
-            logger.error("No benchmark image datasets configured")
-            benchmark_results["image_results"] = {"error": "No datasets available"}
-            return 0.0
-
-        tracker = create_tracker(
-            run_config, plan, input_specs, session=session, seed=seed,
-            skip_missing=skip_missing,
-            download_latest_gasstation_data=download_latest_gasstation_data,
-        )
-        benchmark_results["run_id"] = run_config.run_id
-        benchmark_results["checkpoint_dir"] = run_config.checkpoint_dir
-
-        benchmark_results.setdefault("errors", [])
-        for dataset_idx, dataset_config in enumerate(plan.available_datasets):
-            dataset_cap = plan.sampling_plan[dataset_config.name]
-            logger.info(
-                f"Processing dataset {dataset_idx + 1}/{len(plan.available_datasets)}: "
-                f"{dataset_config.name} ({dataset_cap} samples)"
-            )
-
-            try:
-                dataset_iterator = create_dataset_iterator(
-                    run_config, plan, dataset_config, aug_pass=False,
-                )
-
-                if skip_missing and dataset_iterator.get_total_cached_count() == 0:
-                    logger.warning(f"Skipping {dataset_config.name} (not cached, --skip-missing enabled)")
-                    continue
-
-                pipeline = PrefetchPipeline(
-                    dataset_iterator=dataset_iterator,
-                    tracker=tracker,
-                    target_size=plan.target_size,
-                    batch_size=batch_size,
-                    seed=seed,
-                    augment_level=augment_level,
-                    crop_prob=crop_prob,
-                )
-
-                batch_id = 0
-                try:
-                    for batch_data in pipeline:
-                        batch_id += 1
-
-                        batch_images = [item["image"] for item in batch_data]
-                        batch_metadata = [
-                            (
-                                item["label"],
-                                item["sample"],
-                                item["sample_index"],
-                                item["dataset_name"],
-                                item["sample_seed"],
-                            )
-                            for item in batch_data
-                        ]
-
-                        process_batch(
-                            session,
-                            input_specs,
-                            batch_images,
-                            batch_metadata,
-                            tracker,
-                            batch_id,
-                        )
-
-                        if tracker.count % 500 == 0:
-                            logger.info(f"Progress: {tracker.count} samples")
-
-                finally:
-                    pipeline.close()
-
-                log_dataset_summary(
-                    logger, tracker, dataset_config.name, include_skipped=False
-                )
-
-            except CheckpointError:
-                raise
-            except Exception as e:
-                logger.error(f"Failed to process dataset {dataset_config.name}: {e}")
-                benchmark_results["errors"].append(
-                    f"Dataset error for {dataset_config.name}: {str(e)[:100]}"
-                )
-
-        if n_aug_per_dataset > 0:
-            aug_seed = seed if seed is not None else 42
-            logger.info(
-                f"Starting augmentation robustness pass: {n_aug_per_dataset} samples/dataset"
-                + (f" (aug_cache_dir={aug_cache_dir})" if aug_cache_dir else "")
-            )
-            for dataset_idx, dataset_config in enumerate(plan.available_datasets):
-                logger.info(
-                    f"Robustness pass {dataset_idx + 1}/{len(plan.available_datasets)}: "
-                    f"{dataset_config.name}"
-                )
-                try:
-                    aug_iterator = create_dataset_iterator(
-                        run_config, plan, dataset_config, aug_pass=True,
-                    )
-
-                    if skip_missing and aug_iterator.get_total_cached_count() == 0:
-                        continue
-
-                    aug_pipeline = PrefetchPipeline(
-                        dataset_iterator=aug_iterator,
-                        tracker=tracker,
-                        target_size=plan.target_size,
-                        batch_size=batch_size,
-                        seed=aug_seed,
-                        augment_level=augment_level,
-                        crop_prob=crop_prob,
-                        robustness_pass=True,
-                        aug_cache_dir=aug_cache_dir,
-                        aug_cache_readonly=aug_cache_readonly,
-                    )
-
-                    aug_batch_id = 0
-                    try:
-                        for batch_data in aug_pipeline:
-                            aug_batch_id += 1
-                            batch_images = [item["image"] for item in batch_data]
-                            batch_metadata = [
-                                (
-                                    item["label"],
-                                    item["sample"],
-                                    item["sample_index"],
-                                    item["dataset_name"],
-                                    item["sample_seed"],
-                                )
-                                for item in batch_data
-                            ]
-                            process_batch(
-                                session,
-                                input_specs,
-                                batch_images,
-                                batch_metadata,
-                                tracker,
-                                aug_batch_id,
-                                aug_pass=True,
-                            )
-                    finally:
-                        aug_pipeline.close()
-
-                except CheckpointError:
-                    raise
-                except Exception as e:
-                    logger.error(
-                        f"Robustness pass failed for {dataset_config.name}: {e}"
-                    )
-
-        df = finalize_run(
-            config=run_config,
-            plan=plan,
-            tracker=tracker,
-            benchmark_results=benchmark_results,
-            results_key="image_results",
-            extra_fields=None,
-        )
-        return df
-
-    except CheckpointError:
-        raise
-    except Exception as e:
-        logger.error(f"Benchmark image testing failed: {e}")
-        benchmark_results["image_results"] = {"error": str(e)}
-        raise e
+PIPELINE = PrefetchPipeline

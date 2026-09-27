@@ -22,7 +22,7 @@ class Samples(list):
 def preprocess(sample, aug_dir, **kwargs):
     pipeline = video_bench.VideoPrefetchPipeline(
         Samples([sample]), target_size=(2, 2), batch_size=1, seed=7,
-        augment_level=0, crop_prob=0, num_workers=1,
+        augment_level=0, crop_prob=0, num_workers=1, num_frames=kwargs.pop("num_frames", 2),
         robustness_pass=kwargs.pop("robustness_pass", True),
         aug_cache_dir=str(aug_dir), **kwargs,
     )
@@ -44,7 +44,7 @@ def sample(request, tmp_path):
 
 
 def cache_path(sample, aug_dir):
-    return Path(vid_aug_cache_path(str(aug_dir), build_sample_id(sample), (2, 2)))
+    return Path(vid_aug_cache_path(str(aug_dir), build_sample_id(sample), (2, 2), num_frames=2))
 
 
 def install_decoder(monkeypatch):
@@ -90,7 +90,7 @@ def test_cache_hit_matches_uncached_output_without_source_reads(
     cached = preprocess(sample, aug_dir, aug_cache_readonly=True)
     assert len(cached) == 1
     decoder.assert_not_called()
-    np.testing.assert_array_equal(cached[0]["video"], uncached[0]["video"])
+    np.testing.assert_array_equal(cached[0]["data"], uncached[0]["data"])
     for key in ("label", "sample_seed", "sample_index", "dataset_name"):
         assert cached[0][key] == uncached[0][key]
     assert build_sample_id(cached[0]["sample"]) == build_sample_id(uncached[0]["sample"])
@@ -131,5 +131,31 @@ def test_unselected_cache_cannot_replace_original_input(
     rows = preprocess(sample, aug_dir, robustness_pass=robustness_pass, aug_cache_readonly=True)
     assert len(rows) == 1
     decoder.assert_called_once()
-    assert not np.all(rows[0]["video"] == 200)
+    assert not np.all(rows[0]["data"] == 200)
     np.testing.assert_array_equal(np.load(path), np.full((2, 2, 2, 3), 200, dtype=np.uint8))
+
+
+@pytest.mark.parametrize("options", [{"num_frames": 1}, {"frame_rate": 5.0}])
+def test_temporal_preprocessing_cannot_reuse_a_different_video_cache(sample, tmp_path, monkeypatch, options):
+    aug_dir = tmp_path / "aug"
+    install_decoder(monkeypatch)
+    preprocess(sample, aug_dir)
+
+    def decode(sample, num_frames, **kwargs):
+        return np.full((num_frames, 2, 2, 3), 50, dtype=np.uint8), 0
+
+    decoder = Mock(side_effect=decode)
+    monkeypatch.setattr(video_bench, "process_video_bytes_sample", decoder)
+    monkeypatch.setattr(video_bench, "process_video_frames_sample", decoder)
+    result = preprocess(sample, aug_dir, **options)[0]["data"]
+    decoder.assert_called_once()
+    assert result.shape[0] == options.get("num_frames", 2)
+    assert np.all(result == 58)
+
+
+def test_video_cache_rejects_incompatible_tensor_shape(sample, tmp_path):
+    path = cache_path(sample, tmp_path / "aug")
+    path.parent.mkdir(parents=True)
+    np.save(path, np.zeros((1, 2, 2, 3), dtype=np.uint8))
+    with pytest.raises(ValueError, match="Cached video shape"):
+        preprocess(sample, tmp_path / "aug")

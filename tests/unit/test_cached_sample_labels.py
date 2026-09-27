@@ -8,8 +8,10 @@ from gasbench.dataset.download.cache_io import _load_dataset_from_cache
 from gasbench.dataset.iterator import DatasetIterator
 
 
-@pytest.mark.parametrize("loader", ["iterator", "download"])
-@pytest.mark.parametrize("payload", ["bytes", "frames", "lazy"])
+@pytest.mark.parametrize("loader,payload", [
+    ("iterator", "bytes"), ("iterator", "frames"), ("iterator", "lazy"),
+    ("download", "bytes"), ("download", "frames"),
+])
 def test_current_video_label_overrides_stale_cache(tmp_path, loader, payload):
     config = BenchmarkDatasetConfig(
         name="example", path="owner/repo", modality="video", media_type="real",

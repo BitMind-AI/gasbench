@@ -1,269 +1,124 @@
-"""
-Integration tests for parquet file processing.
+"""Exercise extraction using small parquet files with distinguishable payloads."""
 
-These tests use real parquet fixtures to verify extraction logic.
-"""
+from io import BytesIO
 
-from pathlib import Path
-from src.gasbench.dataset.config import BenchmarkDatasetConfig
-from src.gasbench.dataset.download import _process_parquet
+import numpy as np
+import pandas as pd
+from PIL import Image
+import pytest
+import soundfile as sf
 
-
-# Test fixtures directory
-FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
-
-
-class TestParquetProcessingSingleColumn:
-    """Test parquet processing with single media column."""
-
-    def test_process_single_column_image_parquet(self):
-        """Test processing parquet with single image column."""
-        fixture_path = FIXTURES_DIR / "test_image_single.parquet"
-        # Create test config
-        config = BenchmarkDatasetConfig(
-            name="test_single",
-            path="test/test",
-            modality="image",
-            media_type="real",
-        )
-
-        # Process parquet
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        # Verify results
-        assert len(samples) == 5, "Should yield 5 samples (1 per row)"
-
-        # Check first sample
-        # Note: _create_sample returns PIL Image object, not bytes
-        assert "image" in samples[0] or "image_bytes" in samples[0]
-        assert "dataset_name" in samples[0]
-        assert "media_type" in samples[0]
-        assert samples[0]["dataset_name"] == "test_single"
-
-        # Should NOT have source_column for single-column dataset
-        assert "source_column" not in samples[0]
-
-    def test_single_column_includes_metadata(self):
-        """Test that parquet row metadata is included."""
-        fixture_path = FIXTURES_DIR / "test_image_single.parquet"
-
-        config = BenchmarkDatasetConfig(
-            name="test_single",
-            path="test/test",
-            modality="image",
-            media_type="real",
-        )
-
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        # Check that metadata columns are included
-        assert "caption" in samples[0]
-        assert "id" in samples[0]
-        assert samples[0]["caption"] == "test caption"
-
-    def test_single_column_respects_num_items(self):
-        """Test that num_items parameter works."""
-        fixture_path = FIXTURES_DIR / "test_image_single.parquet"
-
-        config = BenchmarkDatasetConfig(
-            name="test_single",
-            path="test/test",
-            modality="image",
-            media_type="real",
-        )
-
-        # Request only 2 samples
-        samples = list(_process_parquet(fixture_path, config, num_items=2))
-
-        assert len(samples) == 2, "Should yield only 2 samples"
+from gasbench.dataset.config import BenchmarkDatasetConfig
+from gasbench.dataset.download import _process_parquet
 
 
-class TestParquetProcessingDualColumn:
-    """Test parquet processing with multiple media columns (PICA-100K style)."""
-
-    def test_process_dual_column_image_parquet(self):
-        """Test processing parquet with dual image columns."""
-        fixture_path = FIXTURES_DIR / "test_image_dual.parquet"
-        config = BenchmarkDatasetConfig(
-            name="test_dual",
-            path="test/test",
-            modality="image",
-            media_type="synthetic",
-            data_columns=["src_img", "tgt_img"],
-        )
-
-        # Process parquet
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        # Verify results: 5 rows × 2 columns = 10 samples
-        assert len(samples) == 10, (
-            f"Should yield 10 samples (5 rows × 2 columns), got {len(samples)}"
-        )
-
-    def test_dual_column_has_source_column(self):
-        """Test that dual-column datasets add source_column metadata."""
-        fixture_path = FIXTURES_DIR / "test_image_dual.parquet"
-
-        config = BenchmarkDatasetConfig(
-            name="test_dual",
-            path="test/test",
-            modality="image",
-            media_type="synthetic",
-            data_columns=["src_img", "tgt_img"],
-        )
-
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        # Check source_column is set
-        assert "source_column" in samples[0]
-        assert "source_column" in samples[1]
-
-        # First sample should be from src_img, second from tgt_img
-        assert samples[0]["source_column"] == "src_img"
-        assert samples[1]["source_column"] == "tgt_img"
-
-    def test_dual_column_alternates_correctly(self):
-        """Test that samples alternate between columns correctly."""
-        fixture_path = FIXTURES_DIR / "test_image_dual.parquet"
-
-        config = BenchmarkDatasetConfig(
-            name="test_dual",
-            path="test/test",
-            modality="image",
-            media_type="synthetic",
-            data_columns=["src_img", "tgt_img"],
-        )
-
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        # Check pattern: src_img, tgt_img, src_img, tgt_img, ...
-        for i, sample in enumerate(samples):
-            expected_col = "src_img" if i % 2 == 0 else "tgt_img"
-            assert sample["source_column"] == expected_col, (
-                f"Sample {i} should be from {expected_col}, got {sample['source_column']}"
-            )
-
-    def test_dual_column_includes_shared_metadata(self):
-        """Test that both samples from same row have same metadata."""
-        fixture_path = FIXTURES_DIR / "test_image_dual.parquet"
-
-        config = BenchmarkDatasetConfig(
-            name="test_dual",
-            path="test/test",
-            modality="image",
-            media_type="synthetic",
-            data_columns=["src_img", "tgt_img"],
-        )
-
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        # First two samples are from same row
-        sample_0 = samples[0]
-        sample_1 = samples[1]
-
-        # They should have same metadata
-        assert sample_0["caption"] == sample_1["caption"]
-        assert sample_0["video_id"] == sample_1["video_id"]
-
-    def test_dual_column_respects_num_items(self):
-        """Test that num_items affects row sampling, not final sample count."""
-        fixture_path = FIXTURES_DIR / "test_image_dual.parquet"
-
-        config = BenchmarkDatasetConfig(
-            name="test_dual",
-            path="test/test",
-            modality="image",
-            media_type="synthetic",
-            data_columns=["src_img", "tgt_img"],
-        )
-
-        # Request 2 rows: should get 4 samples (2 rows × 2 columns)
-        samples = list(_process_parquet(fixture_path, config, num_items=2))
-
-        assert len(samples) == 4, (
-            f"Should yield 4 samples (2 rows × 2 columns), got {len(samples)}"
-        )
+def png(red):
+    stream = BytesIO()
+    Image.new("RGB", (3, 2), (red, 0, 0)).save(stream, format="PNG")
+    return stream.getvalue()
 
 
-class TestParquetProcessingAudio:
-    """Test parquet processing for audio modality."""
-
-    def test_process_audio_parquet(self):
-        """Test processing audio parquet file."""
-        fixture_path = FIXTURES_DIR / "test_audio.parquet"
-        config = BenchmarkDatasetConfig(
-            name="test_audio",
-            path="test/test",
-            modality="audio",
-            media_type="real",
-        )
-
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        assert len(samples) == 5, "Should yield 5 audio samples"
-        assert "audio_bytes" in samples[0]
-        assert "transcript" in samples[0]
+@pytest.fixture
+def parquet(tmp_path):
+    def write(rows):
+        path = tmp_path / "samples.parquet"
+        pd.DataFrame(rows).to_parquet(path)
+        return path
+    return write
 
 
-class TestParquetProcessingVideo:
-    """Test parquet processing for video modality."""
+@pytest.mark.parametrize("columns", [["image"], ["source_image", "edited_image"]])
+@pytest.mark.parametrize("limit", [-1, 2])
+def test_image_rows_preserve_pixels_metadata_and_column_pairing(parquet, columns, limit):
+    rows = [
+        {"row_id": row, "caption": f"caption-{row}",
+         **{column: png(20 * row + col) for col, column in enumerate(columns)}}
+        for row in range(4)
+    ]
+    path = parquet(rows)
+    config = BenchmarkDatasetConfig(
+        "images", "test/images", "image", "synthetic",
+        data_columns=columns if len(columns) > 1 else None,
+    )
+    samples = list(_process_parquet(path, config, num_items=limit, seed=7))
+    row_count = len(rows) if limit == -1 else limit
+    assert len(samples) == row_count * len(columns)
+    assert len({sample["row_id"] for sample in samples}) == row_count
+    for start in range(0, len(samples), len(columns)):
+        group = samples[start:start + len(columns)]
+        assert len({sample["row_id"] for sample in group}) == 1
+        for col, sample in enumerate(group):
+            row = sample["row_id"]
+            assert sample["image"].getpixel((0, 0)) == (20 * row + col, 0, 0)
+            assert sample["caption"] == f"caption-{row}"
+            assert sample["dataset_name"] == config.name
+            assert sample["media_type"] == config.media_type
+            if len(columns) > 1:
+                assert sample["source_column"] == columns[col]
+            else:
+                assert "source_column" not in sample
+    if limit != -1:
+        repeat = list(_process_parquet(path, config, num_items=limit, seed=7))
+        assert [s["row_id"] for s in repeat] == [s["row_id"] for s in samples]
 
-    def test_process_video_parquet(self):
-        """Test processing video parquet file."""
-        fixture_path = FIXTURES_DIR / "test_video.parquet"
-        config = BenchmarkDatasetConfig(
-            name="test_video",
-            path="test/test",
-            modality="video",
-            media_type="real",
-        )
 
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
-
-        assert len(samples) == 3, "Should yield 3 video samples"
-        assert "video_bytes" in samples[0]
-        assert "description" in samples[0]
+@pytest.mark.parametrize("modality", ["audio", "video"])
+def test_embedded_media_bytes_and_metadata_survive_extraction(parquet, modality):
+    rows = [{modality: bytes([i, i + 1]), "description": f"sample-{i}"} for i in range(3)]
+    config = BenchmarkDatasetConfig("media", "test/media", modality, "real")
+    samples = list(_process_parquet(parquet(rows), config, num_items=-1))
+    assert [(s[f"{modality}_bytes"], s["description"]) for s in samples] == [
+        (row[modality], row["description"]) for row in rows
+    ]
 
 
-class TestParquetErrorHandling:
-    """Test error handling in parquet processing."""
+@pytest.mark.parametrize("columns,expected", [(["missing"], 0), (["image", "missing"], 2)])
+def test_missing_requested_columns_do_not_discard_available_media(parquet, columns, expected):
+    config = BenchmarkDatasetConfig("images", "test/images", "image", "real", data_columns=columns)
+    path = parquet([{"image": png(10)}, {"image": png(20)}])
+    samples = list(_process_parquet(path, config, num_items=-1))
+    assert len(samples) == expected
+    assert [s["image"].getpixel((0, 0))[0] for s in samples] == [10, 20][:expected]
 
-    def test_missing_column_returns_empty(self):
-        """Test that missing media columns are handled gracefully."""
-        fixture_path = FIXTURES_DIR / "test_image_single.parquet"
 
-        # Config specifies columns that don't exist
-        config = BenchmarkDatasetConfig(
-            name="test_missing",
-            path="test/test",
-            modality="image",
-            media_type="real",
-            data_columns=["nonexistent_col"],
-        )
+def test_corrupt_media_does_not_discard_other_rows(parquet):
+    path = parquet([{"image": png(10)}, {"image": b"broken"}, {"image": png(20)}])
+    config = BenchmarkDatasetConfig("images", "test/images", "image", "real")
+    samples = list(_process_parquet(path, config, num_items=-1))
+    assert [s["image"].getpixel((0, 0))[0] for s in samples] == [10, 20]
 
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
 
-        # Should return empty (warning logged)
-        assert len(samples) == 0, "Should return no samples when columns don't exist"
+def test_row_filter_applies_before_sampling(parquet):
+    path = parquet([{"image": png(i), "split": "keep" if i == 5 else "drop"} for i in range(8)])
+    config = BenchmarkDatasetConfig(
+        "filtered", "test/images", "image", "real", filter_column="split", filter_value="keep",
+    )
+    samples = list(_process_parquet(path, config, num_items=1, seed=1))
+    assert len(samples) == 1
+    assert samples[0]["image"].getpixel((0, 0)) == (5, 0, 0)
 
-    def test_partial_missing_columns_uses_available(self):
-        """Test that if some columns exist, they are used."""
-        fixture_path = FIXTURES_DIR / "test_image_dual.parquet"
 
-        # Config specifies one existing, one non-existing
-        config = BenchmarkDatasetConfig(
-            name="test_partial",
-            path="test/test",
-            modality="image",
-            media_type="synthetic",
-            data_columns=["src_img", "nonexistent"],
-        )
+def test_audio_array_preserves_sample_rate_and_waveform(parquet):
+    waveform = np.array([0.0, 0.25, -0.5, 0.75], dtype=np.float32)
+    path = parquet([{"audio": {"array": waveform, "sampling_rate": 22050}}])
+    config = BenchmarkDatasetConfig("audio", "test/audio", "audio", "real")
+    samples = list(_process_parquet(path, config, num_items=-1))
+    assert len(samples) == 1
+    decoded, rate = sf.read(BytesIO(samples[0]["audio_bytes"]))
+    assert rate == 22050
+    np.testing.assert_allclose(decoded, waveform, atol=1 / 32768)
 
-        samples = list(_process_parquet(fixture_path, config, num_items=-1))
 
-        # Should use only src_img: 5 rows × 1 column = 5 samples
-        assert len(samples) == 5, (
-            f"Should yield 5 samples (only src_img), got {len(samples)}"
-        )
-        # Note: source_column only added when len(media_cols) > 1, so it won't be there if only 1 column found
-        # assert all(s.get("source_column") == "src_img" for s in samples)
+@pytest.mark.parametrize("limit", [-1, 1])
+def test_frame_rows_group_by_video_and_sort_by_frame_index(parquet, limit):
+    path = parquet([
+        {"video_id": video, "frame_idx": frame, "image": png(10 * video + frame)}
+        for frame in (2, 0, 1) for video in (1, 2)
+    ])
+    config = BenchmarkDatasetConfig("frames", "test/frames", "video", "real")
+    samples = list(_process_parquet(path, config, num_items=limit, seed=7))
+    assert len(samples) == (2 if limit == -1 else limit)
+    assert len({s["source_file"] for s in samples}) == len(samples)
+    for sample in samples:
+        video = int(sample["source_file"])
+        assert sample["video_frames"] == [png(10 * video + frame) for frame in range(3)]

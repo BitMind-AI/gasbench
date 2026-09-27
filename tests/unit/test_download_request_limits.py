@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from src.gasbench.dataset.download.listing import (
+from gasbench.dataset.download.listing import (
     _get_huggingface_urls,
     list_hf_files,
 )
@@ -16,7 +16,7 @@ def test_fallback_files_do_not_crow_out_preferred_format():
     ]
 
     with patch(
-        "src.gasbench.dataset.download.listing.hf_hub.HfApi.list_repo_tree",
+        "gasbench.dataset.download.listing.hf_hub.HfApi.list_repo_tree",
         return_value=(SimpleNamespace(path=path) for path in remote_files),
     ) as list_repo_tree:
         files = list_hf_files(
@@ -34,7 +34,7 @@ def test_fallback_listing_retains_only_requested_count_per_format():
     remote_files = [*(f"archives/{i}.zip" for i in range(10)), "README.md"]
 
     with patch(
-        "src.gasbench.dataset.download.listing.hf_hub.HfApi.list_repo_tree",
+        "gasbench.dataset.download.listing.hf_hub.HfApi.list_repo_tree",
         return_value=(SimpleNamespace(path=path) for path in remote_files),
     ):
         files = list_hf_files(
@@ -49,7 +49,7 @@ def test_fallback_listing_retains_only_requested_count_per_format():
 
 def test_hf_listing_targets_pinned_subfolder():
     with patch(
-        "src.gasbench.dataset.download.listing.hf_hub.HfApi.list_repo_tree",
+        "gasbench.dataset.download.listing.hf_hub.HfApi.list_repo_tree",
         return_value=iter([SimpleNamespace(path="pedestrian/session/video/front.mp4")]),
     ) as list_repo_tree:
         files = list_hf_files(

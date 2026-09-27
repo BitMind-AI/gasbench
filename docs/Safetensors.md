@@ -155,8 +155,8 @@ Class order is fixed by modality:
 | Video | 3 | `[real, synthetic, semisynthetic]` |
 | Audio | 2 | `[real, synthetic]` |
 
-See [Classification Taxonomy and Scoring](./Classification-and-Scoring.md) for
-the experimental taxonomy, binary compatibility collapse, and scoring rules.
+See [classification and scoring](./Classification-and-Scoring.md) for label
+definitions and how predictions contribute to the score.
 
 ### Image Models
 

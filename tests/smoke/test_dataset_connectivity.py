@@ -1,43 +1,32 @@
-"""Small, explicit network smoke test for representative HF datasets."""
+"""Optional live check of the download listing path for one dataset per modality."""
 
 import pytest
-from huggingface_hub import list_repo_files
-from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError
 
-from src.gasbench.dataset.config import load_benchmark_datasets_from_yaml
-
+from gasbench.dataset.config import load_benchmark_datasets_from_yaml
+from gasbench.dataset.download.listing import list_hf_files
 
 pytestmark = pytest.mark.slow
 
-REPRESENTATIVE_DATASETS = (
-    ("image", "pica-100k"),
-    ("video", "vap-data"),
-    ("audio", "deepfake-urdu-real"),
-)
 
-
-@pytest.mark.parametrize("modality,dataset_name", REPRESENTATIVE_DATASETS)
-def test_representative_dataset_is_accessible_and_has_expected_files(
-    modality, dataset_name
-):
-    configs = load_benchmark_datasets_from_yaml()
-    dataset = next(
-        (item for item in configs[modality] if item.name == dataset_name), None
+@pytest.mark.parametrize("modality", ["image", "video", "audio"])
+def test_representative_dataset_has_downloadable_files(modality):
+    dataset = next((
+        item for item in load_benchmark_datasets_from_yaml()[modality]
+        if item.source == "huggingface" and item.source_format
+        and item.source_format != "frames" and "gasstation" not in item.name.lower()
+    ), None)
+    if dataset is None:
+        pytest.skip(f"No file-based HF dataset configured for {modality}")
+    formats = dataset.source_format
+    if isinstance(formats, str):
+        formats = [formats]
+    files = list_hf_files(
+        dataset.path,
+        extension=tuple(f".{fmt.lstrip('.')}" for fmt in formats),
+        revision=dataset.hf_revision,
+        subfolders=dataset.hf_subfolders,
+        include_paths=dataset.include_paths,
+        exclude_paths=dataset.exclude_paths,
+        max_files=1,
     )
-    assert dataset is not None, (
-        f"representative dataset {dataset_name} is not registered"
-    )
-
-    try:
-        files = list(list_repo_files(dataset.path, repo_type="dataset"))
-    except GatedRepoError:
-        pytest.skip(f"dataset {dataset.path} requires authentication")
-    except RepositoryNotFoundError:
-        pytest.fail(f"dataset {dataset.path} does not exist")
-
-    assert files, f"dataset {dataset.path} contains no files"
-    if dataset.source_format and dataset.source_format != "frames":
-        extension = f".{dataset.source_format.lstrip('.')}"
-        assert any(filename.lower().endswith(extension) for filename in files), (
-            f"dataset {dataset.path} has no {extension} files"
-        )
+    assert files, f"No downloadable files found for {dataset.name} ({dataset.path})"

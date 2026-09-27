@@ -61,13 +61,10 @@ def test_conflicting_replay_rejects_entire_batch(tmp_path, manifest):
     assert RecorderCheckpoint(tmp_path, manifest).records == [record("a")]
 
 
-@pytest.mark.parametrize(
-    "field",
-    ["run_id", "model_hash", "benchmark_version", "seed", "sample_plan", "settings"],
-)
-def test_changed_run_identity_fails_closed(tmp_path, manifest, field):
+def test_changed_run_identity_fails_closed(tmp_path, manifest):
     RecorderCheckpoint(tmp_path, manifest).commit_batch([record("a")])
-    changed = {**manifest, field: "changed"}
+    # The store treats the manifest as opaque; nested changes must count too.
+    changed = {**manifest, "settings": {**manifest["settings"], "augmentation": False}}
     with pytest.raises(CheckpointError, match="manifest differs"):
         RecorderCheckpoint(tmp_path, changed)
     assert RecorderCheckpoint(tmp_path, manifest).records == [record("a")]
@@ -180,7 +177,7 @@ def test_failed_commit_is_not_acknowledged(tmp_path, manifest, monkeypatch, fail
 
     def persist(directory):
         calls.append(directory)
-        if failure == "callback" and len(calls) > 2:
+        if failure == "callback" and list(directory.glob("batch-*.json")):
             fail()
 
     store = RecorderCheckpoint(tmp_path, manifest, persist=persist)

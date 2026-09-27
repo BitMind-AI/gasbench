@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.gasbench.benchmarks.utils.metrics import Metrics
-from src.gasbench.benchmarks.recording import (
+from gasbench.benchmarks.utils.metrics import Metrics
+from gasbench.benchmarks.recording import (
     classify_sample_provenance,
     compute_metrics_from_df,
     derive_provenance_weights,
@@ -59,35 +59,32 @@ class TestWeightedMetrics:
         )
         assert m.calculate_brier() == pytest.approx(expected_brier)
 
-    def test_weight_equals_duplication(self):
-        """A sample with weight=w must contribute exactly like w copies."""
-        samples = [
-            (1, 1, [0.2, 0.8]),
-            (0, 0, [0.7, 0.3]),
-            (1, 0, [0.55, 0.45]),
-            (0, 1, [0.4, 0.6]),
-            (1, 1, [0.05, 0.95]),
-        ]
-        weights = [3.0, 1.0, 2.0, 1.0, 4.0]
+    @pytest.mark.parametrize("num_classes", [2, 3, 4])
+    def test_weight_equals_duplication(self, num_classes):
+        # Unequal weights expose ignored multiclass weights; uniformly scaling
+        # every sample cannot distinguish that defect from correct weighting.
+        samples = []
+        for label in range(num_classes):
+            probs = np.full(num_classes, 0.1 / (num_classes - 1))
+            probs[label] = 0.9
+            samples.append((label, probs, label + 2))
+        samples.extend([(num_classes - 1, np.eye(num_classes)[0], 1),
+                        (0, np.eye(num_classes)[1], 0)])
+        weighted = Metrics(num_classes=num_classes)
+        duplicated = Metrics(num_classes=num_classes)
+        for label, probs, weight in samples:
+            weighted.update(label, int(np.argmax(probs)), probs, weight=weight)
+            for _ in range(weight):
+                duplicated.update(label, int(np.argmax(probs)), probs)
 
-        weighted = Metrics()
-        for (label, pred, probs), w in zip(samples, weights):
-            weighted.update(label, pred, probs, weight=w)
-
-        duplicated = Metrics()
-        for (label, pred, probs), w in zip(samples, weights):
-            for _ in range(int(w)):
-                duplicated.update(label, pred, probs)
-
-        assert weighted.calculate_binary_mcc() == pytest.approx(
-            duplicated.calculate_binary_mcc()
-        )
-        assert weighted.calculate_brier() == pytest.approx(duplicated.calculate_brier())
-        assert weighted.calculate_binary_cross_entropy() == pytest.approx(
-            duplicated.calculate_binary_cross_entropy()
-        )
-        assert weighted.compute_sn34_score() == pytest.approx(
-            duplicated.compute_sn34_score()
+        np.testing.assert_allclose(weighted.confusion, duplicated.confusion)
+        for method in ("calculate_binary_mcc", "calculate_brier",
+                       "calculate_binary_cross_entropy", "calculate_multiclass_mcc",
+                       "calculate_multiclass_brier", "compute_sn34_score"):
+            assert getattr(weighted, method)() == pytest.approx(getattr(duplicated, method)())
+        assert 0 < weighted.compute_sn34_score(multiclass=True) < 1
+        assert weighted.compute_sn34_score(multiclass=True) == pytest.approx(
+            duplicated.compute_sn34_score(multiclass=True)
         )
 
     def test_weights_are_scale_invariant(self):

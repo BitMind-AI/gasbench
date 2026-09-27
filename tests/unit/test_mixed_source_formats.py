@@ -3,14 +3,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.gasbench.dataset.config import (
+from gasbench.dataset.config import (
     BenchmarkDatasetConfig,
     _obfuscate_holdout_names,
     validate_dataset_config,
 )
-from src.gasbench.dataset.download import core
-from src.gasbench.dataset.download.listing import _list_remote_dataset_files
-from src.gasbench.dataset.utils import s3_utils
+from gasbench.dataset.download import core
+from gasbench.dataset.download.listing import _list_remote_dataset_files
+from gasbench.dataset.utils import s3_utils
 
 
 def test_s3_parent_discovers_nested_shards_and_filters_sibling_datasets(monkeypatch):

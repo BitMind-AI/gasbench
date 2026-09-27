@@ -3,10 +3,11 @@
 from collections import Counter
 from pathlib import Path
 
+import pytest
 import yaml
 
-from src.gasbench.constants import VALID_MEDIA_TYPES
-from src.gasbench.dataset.config import load_benchmark_datasets_from_yaml
+from gasbench.constants import VALID_MEDIA_TYPES
+from gasbench.dataset.config import load_benchmark_datasets_from_yaml
 
 
 CONFIG_DIR = Path(__file__).resolve().parents[2] / "src/gasbench/dataset/configs"
@@ -63,3 +64,36 @@ def test_legacy_datasets_are_not_in_the_active_registry():
 
     overlap = sorted(active & legacy)
     assert not overlap, f"legacy datasets still active: {overlap}"
+
+
+@pytest.mark.parametrize("layout", ["flat", "grouped"])
+def test_custom_yaml_preserves_download_constraints(tmp_path, layout):
+    from gasbench.dataset.config import load_datasets_from_yaml
+
+    entry = {
+        "name": "custom", "path": "example/repo", "modality": "image",
+        "media_type": "synthetic", "source_format": ["jpg", "png"],
+        "hf_revision": "pinned-revision", "hf_subfolders": ["subset"],
+        "include_paths": ["keep"], "exclude_paths": ["drop"],
+        "data_columns": ["source", "edited"], "media_per_archive": 7,
+    }
+    path = tmp_path / "datasets.yaml"
+    path.write_text(yaml.safe_dump({"datasets" if layout == "flat" else "image": [entry]}))
+    result = load_datasets_from_yaml(str(path))
+    (dataset,) = result["image"]
+    assert not result["video"] and not result["audio"]
+    for field, value in entry.items():
+        assert getattr(dataset, field) == value
+
+
+@pytest.mark.parametrize("entry", [
+    {"path": "example/repo", "modality": "image", "media_type": "real"},
+    {"name": "bad", "path": "example/repo", "modality": "image", "media_type": "unknown"},
+])
+def test_custom_yaml_rejects_invalid_entries_instead_of_silently_dropping_them(tmp_path, entry):
+    from gasbench.dataset.config import load_datasets_from_yaml
+
+    path = tmp_path / "datasets.yaml"
+    path.write_text(yaml.safe_dump({"datasets": [entry]}))
+    with pytest.raises(ValueError, match="Validation errors"):
+        load_datasets_from_yaml(str(path))

@@ -5,11 +5,24 @@ import types
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from gasbench.dataset.utils import gasstation_utils
 
 
+class FrozenDateTime(datetime):
+    @classmethod
+    def now(cls):
+        return cls(2026, 1, 1)
+
+
+@pytest.fixture(autouse=True)
+def fixed_clock(monkeypatch):
+    monkeypatch.setattr(gasstation_utils, "datetime", FrozenDateTime)
+
+
 def _iso_week(offset_weeks: int = 0) -> str:
-    date = datetime.now() - timedelta(weeks=offset_weeks)
+    date = FrozenDateTime.now() - timedelta(weeks=offset_weeks)
     year, week, _ = date.isocalendar()
     return f"{year}W{week:02d}"
 
@@ -40,8 +53,7 @@ def test_fallback_uses_cached_previous_week_when_hf_fails(tmp_path, monkeypatch)
         cache_dir=str(tmp_path),
         dataset_name=dataset,
     )
-    assert _iso_week(0) in weeks
-    assert _iso_week(1) in weeks
+    assert weeks == sorted([_iso_week(0), _iso_week(1)])
 
 
 def test_populated_current_week_is_kept_without_hf(tmp_path, monkeypatch):

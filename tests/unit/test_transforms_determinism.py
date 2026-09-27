@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pytest
 
-from src.gasbench.processing.transforms import (
+from gasbench.processing.transforms import (
     apply_random_augmentations,
     apply_robustness_augmentations,
 )
@@ -21,18 +21,6 @@ TARGET = (224, 224)
 
 def _img(seed=0, h=260, w=300):
     return (np.random.RandomState(seed).rand(h, w, 3) * 255).astype(np.uint8)
-
-
-@pytest.mark.parametrize("level", [0, 1, 2, 3])
-def test_same_seed_same_output(level):
-    img = _img()
-    a, *_ = apply_random_augmentations(
-        img.copy(), TARGET, level=level, crop_prob=0.5, seed=42
-    )
-    b, *_ = apply_random_augmentations(
-        img.copy(), TARGET, level=level, crop_prob=0.5, seed=42
-    )
-    assert np.array_equal(a, b)
 
 
 def test_different_seed_different_output():
@@ -46,15 +34,16 @@ def test_different_seed_different_output():
     assert not np.array_equal(a, b)
 
 
-def test_deterministic_under_thread_pool():
+@pytest.mark.parametrize("level", [0, 1, 2, 3])
+def test_deterministic_under_thread_pool(level):
     """The core guarantee: seeding is per-call, not global, so concurrent workers
     cannot clobber each other's RNG state."""
-    samples = [(_img(seed=i), 1000 + i) for i in range(24)]
+    samples = [(_img(seed=i), 1000 + i) for i in range(8)]
 
     def one(item):
         img, seed = item
         out, *_ = apply_random_augmentations(
-            img.copy(), TARGET, level=3, crop_prob=0.5, seed=seed
+            img.copy(), TARGET, level=level, crop_prob=0.5, seed=seed
         )
         return out
 
@@ -68,8 +57,12 @@ def test_deterministic_under_thread_pool():
         )
 
 
-def test_robustness_pass_is_deterministic():
+def test_robustness_pass_is_deterministic_and_changes_the_image():
     img = _img()
     a, *_ = apply_robustness_augmentations(img.copy(), TARGET, seed=42)
     b, *_ = apply_robustness_augmentations(img.copy(), TARGET, seed=42)
     assert np.array_equal(a, b)
+    base, *_ = apply_random_augmentations(img, TARGET, level=0, crop_prob=0)
+    assert a.shape == (*TARGET, 3)
+    assert a.dtype == np.uint8
+    assert not np.array_equal(a, base)

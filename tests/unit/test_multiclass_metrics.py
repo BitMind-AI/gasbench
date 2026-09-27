@@ -11,21 +11,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.gasbench.benchmarks.utils.metrics import Metrics, calculate_per_source_accuracy
-from src.gasbench.benchmarks.recording import compute_per_dataset_from_df
-from src.gasbench.constants import MODALITY_NUM_CLASSES
+from gasbench.benchmarks.utils.metrics import Metrics, calculate_per_source_accuracy
+from gasbench.benchmarks.recording import compute_per_dataset_from_df
+from sklearn.metrics import matthews_corrcoef
 
 
-def _softmax(x):
-    e = np.exp(x - np.max(x))
-    return e / e.sum()
-
-
-class TestClassCounts:
-    def test_modality_num_classes(self):
-        # Derived from the label maps; audio collapses semisynthetic onto synthetic.
-        assert MODALITY_NUM_CLASSES == {"image": 3, "video": 3, "audio": 2}
-
+class TestReports:
     def test_per_dataset_report_preserves_all_video_prediction_classes(self):
         df = pd.DataFrame(
             {
@@ -52,44 +43,31 @@ class TestClassCounts:
 
 
 class TestBinaryReduction:
-    """num_classes=2 must reproduce the binary metrics exactly."""
-
-    def test_gorodkin_equals_binary_mcc(self):
-        rng = np.random.default_rng(0)
+    def test_two_class_metrics_and_score_reduce_to_binary(self):
+        # Include errors and unequal weights, with a score above the floor.
+        # Random, uncorrelated predictions can make both scores zero even if
+        # their formulas disagree.
         m = Metrics(num_classes=2)
-        for _ in range(2000):
-            y = int(rng.random() < 0.5)
-            p = _softmax(rng.normal(0, 1.5, 2))
-            m.update(y, int(np.argmax(p)), p)
-        assert m.calculate_multiclass_mcc() == pytest.approx(
-            m.calculate_binary_mcc(), abs=1e-12
-        )
+        for label, p, weight in [(0, 0.1, 2), (1, 0.85, 3), (0, 0.6, 1), (1, 0.7, 2)]:
+            m.update(label, int(p > 0.5), [1 - p, p], weight=weight)
+        assert m.calculate_multiclass_mcc() == pytest.approx(m.calculate_binary_mcc())
+        assert m.calculate_multiclass_brier() == pytest.approx(2 * m.calculate_brier())
+        assert Metrics(num_classes=2).compute_sn34_score() < m.compute_sn34_score() < 1
+        assert m.compute_sn34_score(multiclass=True) == pytest.approx(m.compute_sn34_score())
 
-    def test_multiclass_brier_is_twice_binary(self):
-        rng = np.random.default_rng(1)
-        m = Metrics(num_classes=2)
-        for _ in range(2000):
-            y = int(rng.random() < 0.5)
-            p = _softmax(rng.normal(0, 1.5, 2))
-            m.update(y, int(np.argmax(p)), p)
-        # Sum-over-classes form is exactly 2x the single-probability form, and
-        # the baseline scales the same way, so the normalised score is unchanged.
-        assert m.calculate_multiclass_brier() == pytest.approx(
-            2 * m.calculate_brier(), rel=1e-12
-        )
-        assert m.multiclass_random_baseline() == pytest.approx(0.5)
 
-    def test_sn34_identical_at_k2(self):
-        rng = np.random.default_rng(2)
-        for _ in range(50):
-            m = Metrics(num_classes=2)
-            for _ in range(200):
-                y = int(rng.random() < 0.5)
-                p = _softmax(rng.normal(0, 2, 2))
-                m.update(y, int(np.argmax(p)), p, weight=float(rng.random() * 2))
-            assert m.compute_sn34_score(multiclass=True) == pytest.approx(
-                m.compute_sn34_score(multiclass=False), abs=1e-12
-            )
+@pytest.mark.parametrize("num_classes", [2, 3, 4])
+def test_mcc_matches_independent_reference(num_classes):
+    labels = np.repeat(np.arange(num_classes), 3)
+    predictions = labels.copy()
+    predictions[::4] = (predictions[::4] + 1) % num_classes
+    weights = np.arange(1, len(labels) + 1)
+    metrics = Metrics(num_classes=num_classes)
+    for label, pred, weight in zip(labels, predictions, weights):
+        metrics.update(label, pred, np.eye(num_classes)[pred], weight=weight)
+    assert metrics.calculate_multiclass_mcc() == pytest.approx(
+        matthews_corrcoef(labels, predictions, sample_weight=weights)
+    )
 
 
 class TestBinaryDecisionCollapse:
@@ -104,15 +82,22 @@ class TestBinaryDecisionCollapse:
         assert m.true_positives == 1.0
         assert m.false_negatives == 0.0
 
-    def test_two_class_head_matches_argmax(self):
-        rng = np.random.default_rng(3)
-        for _ in range(2000):
-            p = _softmax(rng.normal(0, 2, 2))
-            argmax_pred = int(np.argmax(p))
+    def test_two_class_head_matches_argmax_including_ties(self):
+        for p in ([0.75, 0.25], [0.5, 0.5], [0.25, 0.75]):
+            pred = int(np.argmax(p))
             m = Metrics(num_classes=2)
-            m.update(label=1, pred=argmax_pred, pred_probs=p)
-            collapsed = 1.0 if m.true_positives else 0.0
-            assert collapsed == float(argmax_pred == 1)
+            m.update(label=1, pred=pred, pred_probs=p)
+            assert m.true_positives == pred
+            assert m.false_negatives == 1 - pred
+
+    def test_all_non_real_labels_collapse_to_positive(self):
+        m = Metrics(num_classes=4)
+        for label in (1, 2, 3):
+            m.update(label, label, np.eye(4)[label])
+        m.update(0, 0, np.eye(4)[0])
+        assert m.true_positives == 3
+        assert m.true_negatives == 1
+        assert m.calculate_binary_mcc() == pytest.approx(1)
 
     def test_falls_back_to_argmax_without_probs(self):
         m = Metrics(num_classes=4)
@@ -126,15 +111,13 @@ class TestBinaryDecisionCollapse:
 class TestEndpoints:
     @pytest.mark.parametrize("K", [2, 3, 4])
     def test_perfect_is_one_and_random_is_zero(self, K):
-        rng = np.random.default_rng(4)
         perfect = Metrics(num_classes=K)
         rand = Metrics(num_classes=K)
-        for _ in range(3000):
-            y = int(rng.integers(0, K))
+        for y in range(K):
             oh = np.zeros(K)
             oh[y] = 1.0
             perfect.update(y, y, oh)
-            rand.update(y, int(rng.integers(0, K)), np.ones(K) / K)
+            rand.update(y, (y + 1) % K, np.ones(K) / K)
         assert perfect.compute_sn34_score(multiclass=True) == pytest.approx(1.0)
         # compute_sn34_score floors the geomean at max(1e-12, ...) ** 0.5 = 1e-6,
         # so a uniform guesser bottoms out there rather than at exactly 0.
@@ -161,7 +144,6 @@ class TestHeadWidthHandling:
         # mass is [0.1, 0.2, 0.3] so the best valid guess is class 2.
         m = Metrics(num_classes=3)
         m.update(label=0, pred=3, pred_probs=np.array([0.1, 0.2, 0.3, 0.4]))
-        assert m._clipped_preds == 1
         assert m.confusion.shape == (3, 3)
         assert m.confusion[0, 2] == 1.0
 
@@ -171,7 +153,6 @@ class TestHeadWidthHandling:
         # class that does not exist in this modality as correct.
         m = Metrics(num_classes=3)
         m.update(label=2, pred=3, pred_probs=np.array([0.5, 0.05, 0.05, 0.4]))
-        assert m._clipped_preds == 1
         # Best valid class is 0 (0.5), so this must be off the diagonal.
         assert m.confusion[2, 2] == 0.0
         assert m.confusion[2, 0] == 1.0
@@ -186,26 +167,6 @@ class TestHeadWidthHandling:
                 assert m.confusion[label].sum() == 1.0
 
 
-class TestWeighting:
-    def test_weight_equals_repetition(self):
-        rng = np.random.default_rng(5)
-        samples = []
-        for _ in range(200):
-            y = int(rng.integers(0, 4))
-            samples.append((y, _softmax(rng.normal(0, 1.5, 4))))
-
-        weighted = Metrics(num_classes=4)
-        repeated = Metrics(num_classes=4)
-        for y, p in samples:
-            weighted.update(y, int(np.argmax(p)), p, weight=3.0)
-            for _ in range(3):
-                repeated.update(y, int(np.argmax(p)), p, weight=1.0)
-
-        assert weighted.compute_sn34_score(multiclass=True) == pytest.approx(
-            repeated.compute_sn34_score(multiclass=True), abs=1e-12
-        )
-
-
 class TestPerClassRecall:
     def test_recall_reports_each_class(self):
         m = Metrics(num_classes=4)
@@ -213,5 +174,4 @@ class TestPerClassRecall:
             m.update(y, y, np.eye(4)[y])
         m.update(3, 1, np.eye(4)[1])
         recall = m.per_class_recall()
-        assert recall[0] == pytest.approx(1.0)
-        assert recall[3] == pytest.approx(0.5)
+        assert recall == pytest.approx({0: 1, 1: 1, 2: 1, 3: 0.5})

@@ -1,6 +1,7 @@
 """Exercise interruption recovery through real iterators, pipelines and scoring."""
 
 import asyncio
+import builtins
 import importlib
 import json
 from pathlib import Path
@@ -35,7 +36,8 @@ class Session:
         self.calls.extend(int(value.flat[0]) for value in values)
         if self.error:
             raise RuntimeError("model failed")
-        return [np.tile([2.0, 0.0], (len(values), 1))]
+        signal = values.reshape(len(values), -1)[:, 0].astype(np.float32)
+        return [np.column_stack((signal + 1, -signal))]
 
 
 @pytest.fixture(params=["image", "video", "audio", "audio-tensor"])
@@ -94,7 +96,8 @@ def benchmark(request, tmp_path, monkeypatch):
         monkeypatch.setattr(module, "apply_video_robustness_augmentations", augment)
     else:
         monkeypatch.setattr(module, "process_audio_sample", decode)
-    specs = [SimpleNamespace(name="input", shape=[None, 3, 2, 2], type="tensor(float)")]
+    shape = {"image": [None, 3, 2, 2], "video": [None, 2, 3, 2, 2], "audio": [None, 8]}[modality]
+    specs = [SimpleNamespace(name="input", shape=shape, type="tensor(float)")]
 
     def run(session, run_id="run", **extra):
         results = {"errors": []}
@@ -122,6 +125,7 @@ def benchmark(request, tmp_path, monkeypatch):
         decoded=decoded,
         modality=modality,
         module=module,
+        specs=specs,
         checkpoint=cache / "runs" / "run" / "checkpoint",
     )
 
@@ -171,7 +175,7 @@ def test_resume_skips_committed_inputs_and_preserves_results(
     left, right = (
         pd.read_parquet(tmp_path / f"{name}.parquet") for name in ("control", "resumed")
     )
-    columns = keys + ["label", "predicted", "correct"]
+    columns = keys + ["label", "predicted", "correct", "probs"]
     pd.testing.assert_frame_equal(
         left[columns].sort_values(keys).reset_index(drop=True),
         right[columns].sort_values(keys).reset_index(drop=True),
@@ -194,19 +198,22 @@ def test_checkpoint_startup_never_reads_media_or_augmentation_payloads(benchmark
     """The old planner read every full video and augmentation before inference."""
     b = benchmark
     aug_dir = tmp_path / "augmentations"
-    aug_dir.mkdir()
+    populate_augmentation_cache(b, aug_dir)
     original = common.create_tracker
 
     def create_tracker(*args, **kwargs):
-        original_open = Path.open
-
-        def guarded_open(path, *open_args, **open_kwargs):
-            if b.samples_dir in path.parents or aug_dir in path.parents:
-                pytest.fail("Checkpoint startup opened a media payload")
-            return original_open(path, *open_args, **open_kwargs)
+        def guarded_open(original_open):
+            def open_file(path, *open_args, **open_kwargs):
+                if isinstance(path, (str, Path)):
+                    parents = Path(path).parents
+                    if b.samples_dir in parents or aug_dir in parents:
+                        pytest.fail("Checkpoint startup opened a media payload")
+                return original_open(path, *open_args, **open_kwargs)
+            return open_file
 
         with monkeypatch.context() as patch:
-            patch.setattr(Path, "open", guarded_open)
+            patch.setattr(Path, "open", guarded_open(Path.open))
+            patch.setattr(builtins, "open", guarded_open(builtins.open))
             tracker = original(*args, **kwargs)
         assert tracker.count == 0
         raise Interrupted()
@@ -284,8 +291,9 @@ def test_unreadable_audio_preserves_pending_batch_and_remaining_samples(benchmar
     assert resumed_session.calls == []
 
 
-@pytest.mark.parametrize("n_aug", [0, 3])
-def test_failed_inference_is_committed_and_not_retried(benchmark, n_aug):
+def test_failed_inference_is_committed_and_not_retried(benchmark):
+    # One run exercises failures in both base and augmented passes.
+    n_aug = 3
     b = benchmark
     b.run(Session(b.model_dir, error=True), n_aug_per_dataset=n_aug)
     rows = checkpoint_rows(b.checkpoint)
@@ -319,9 +327,7 @@ def test_top_level_api_checkpoints_by_default(benchmark, monkeypatch, n_aug):
     session = Session(b.model_dir)
 
     async def load_model(*args):
-        return session, [
-            SimpleNamespace(name="input", shape=[None, 3, 2, 2], type="tensor(float)")
-        ]
+        return session, b.specs
 
     monkeypatch.setattr(driver, "load_model_for_benchmark", load_model)
     for _ in range(2):
@@ -348,12 +354,10 @@ def test_top_level_api_checkpoints_by_default(benchmark, monkeypatch, n_aug):
     assert len(checkpoint_rows(Path(result["checkpoint_dir"]))) == 5 + n_aug
 
 
-def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):
+def populate_augmentation_cache(b, aug_dir):
     from gasbench.benchmarks.aug_cache import aud_aug_cache_path, img_aug_cache_path, vid_aug_cache_path
     from gasbench.benchmarks.recording import build_sample_id
 
-    b = benchmark
-    aug_dir = tmp_path / "augmentations"
     cache_path = img_aug_cache_path if b.modality == "image" else vid_aug_cache_path
     selected = common.DatasetIterator(
         b.dataset, max_samples=3, cache_dir=str(b.cache), download=False,
@@ -367,6 +371,12 @@ def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):
         artifact.parent.mkdir(parents=True, exist_ok=True)
         shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (8,)}[b.modality]
         np.save(artifact, np.zeros(shape))
+
+
+def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):
+    b = benchmark
+    aug_dir = tmp_path / "augmentations"
+    populate_augmentation_cache(b, aug_dir)
     with pytest.raises(Interrupted):
         b.run(
             Session(b.model_dir, stop_after=5),
@@ -450,6 +460,8 @@ def test_audio_augmented_predictions_use_shared_scoring(benchmark, monkeypatch):
     )
 
 
+# Compatibility is implemented in the shared tracker, so one modality suffices.
+@pytest.mark.parametrize("benchmark", ["image"], indirect=True)
 @pytest.mark.parametrize("change", ["reader", "unapproved-evaluator", "model"])
 def test_audited_reader_upgrade_preserves_resume_guards(benchmark, monkeypatch, tmp_path, change):
     b = benchmark

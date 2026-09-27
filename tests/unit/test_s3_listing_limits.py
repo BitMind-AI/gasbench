@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.gasbench.dataset.download.listing import _list_remote_dataset_files
-from src.gasbench.dataset.utils import s3_utils
+from gasbench.dataset.download.listing import _list_remote_dataset_files
+from gasbench.dataset.utils import s3_utils
 
 
 def mock_pages(monkeypatch, pages):
@@ -17,7 +17,7 @@ def mock_pages(monkeypatch, pages):
     return calls
 
 
-def test_prefixes_keep_partial_shard_names_deduplicate_and_stop(monkeypatch):
+def test_prefixes_keep_partial_shard_names_and_stop(monkeypatch):
     def pages(prefix):
         yield {"Contents": [{"Key": prefix + "001/no.txt"},
                             {"Key": prefix + "001/excluded.jpg"},
@@ -59,7 +59,7 @@ def test_prefix_cannot_escape_dataset_path(prefixes):
 
 
 def test_prefix_config_is_loaded_and_changes_cache_identity():
-    from src.gasbench.dataset.config import _dataset_dict_to_config, _obfuscate_holdout_names
+    from gasbench.dataset.config import _dataset_dict_to_config, _obfuscate_holdout_names
     row = {"name": "corpus", "path": "bucket/root", "source": "s3",
            "modality": "image", "media_type": "real", "source_format": "jpg"}
     original = _dataset_dict_to_config(row)

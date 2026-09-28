@@ -64,7 +64,7 @@ video bytes; preprocessed audio loading includes tensor deserialization.
 
 Durations are inclusive and can overlap: **do not sum worker stages into wall
 time**, or add checkpoint components to the checkpoint total. Pass `wall` is the
-sum of dataset execution times. `inference` includes transfers, model execution,
+sum of dataset execution and final pass checkpoint times. `inference` includes transfers, model execution,
 and output conversion; it is not a GPU-kernel-only measurement.
 
 ## Resume an interrupted run
@@ -77,8 +77,8 @@ gasbench run --image-model ./my_model --full \
 ```
 
 Rerun the same command to resume from the last durable checkpoint. Checkpoints group
-inference batches, flushing after 15 seconds or 256 pending records, checked between
-batches, and at dataset boundaries, completion, or handled failures. Abrupt termination
+inference batches, flushing after 60 seconds or 1,024 pending records, checked between
+batches, and at pass boundaries, completion, or handled failures. Abrupt termination
 replays the uncommitted tail; a long batch can exceed the interval. Use a new run ID
 for a fresh evaluation.
 
@@ -93,7 +93,8 @@ For managed workers:
 - Use a trusted filesystem that preserves input file metadata across mounts;
   pending inputs are checked for changes using file size and timestamps.
 - Pass `checkpoint_persist(directory)` to the Python API when the filesystem
-  requires an explicit commit to persist writes remotely.
+  requires an explicit commit to persist writes remotely. It must persist all
+  checkpoint files before returning; a failed commit aborts the writer.
 - Let one worker own a run directory at a time. The caller handles worker restarts.
 
 ## Evaluate robustness

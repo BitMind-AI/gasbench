@@ -11,6 +11,7 @@ from ..config import DEFAULT_AUDIO_BATCH_SIZE
 from ..constants import AUDIO_NUM_SAMPLES, AUDIO_SAMPLE_RATE, media_type_to_label
 from ..dataset.cache import load_audio_sample
 from ..processing.media import process_audio_sample
+from ..processing.audio_decode import AUDIO_DECODE_WORKERS
 from ..processing.transforms import apply_audio_robustness_augmentations
 from .aug_cache import aud_aug_cache_path, write_aug_cache
 from .common import BenchmarkRunConfig, load_augmentation_cache, verify_sample
@@ -35,7 +36,7 @@ def preprocessing_options(session, input_specs):
 
 
 class AudioPrefetchPipeline(PrefetchPipeline):
-    def __init__(self, *args, num_workers=1, max_queue_size=1, **kwargs):
+    def __init__(self, *args, num_workers=AUDIO_DECODE_WORKERS, max_queue_size=2, **kwargs):
         super().__init__(
             *args, num_workers=num_workers, max_queue_size=max_queue_size, **kwargs
         )

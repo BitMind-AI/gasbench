@@ -330,6 +330,10 @@ def _decode_audio_waveform_ffmpeg_cli(audio_bytes: bytes, target_sr: int) -> tor
             "-hide_banner",
             "-loglevel",
             "error",
+            "-threads",
+            "1",
+            "-filter_threads",
+            "1",
             "-i",
             tmp_path,
             "-vn",
@@ -420,10 +424,9 @@ def process_audio_sample(
 
         if waveform.shape[0] > target_length:
             if use_random_crop:
-                if seed is not None:
-                    torch.manual_seed(seed)
+                generator = torch.Generator().manual_seed(seed) if seed is not None else None
                 max_start = waveform.shape[0] - target_length
-                start_idx = torch.randint(0, max_start + 1, (1,)).item()
+                start_idx = torch.randint(0, max_start + 1, (1,), generator=generator).item()
             else:
                 start_idx = (waveform.shape[0] - target_length) // 2
             waveform = waveform[start_idx:start_idx + target_length]

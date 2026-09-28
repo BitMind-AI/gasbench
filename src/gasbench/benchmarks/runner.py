@@ -115,7 +115,7 @@ async def run_modality_benchmark(
                             tracker.checkpoint(timings=timings)
                             raise
                         else:
-                            tracker.checkpoint(timings=timings)
+                            tracker.checkpoint_if_due(timings=timings)
                 finally:
                     snapshot = timings.snapshot()
                     scopes[pass_name].merge(snapshot)
@@ -123,6 +123,8 @@ async def run_modality_benchmark(
                         "Performance %s/%s: %s", pass_name, dataset.name,
                         json.dumps(snapshot, sort_keys=True),
                     )
+            with scopes[pass_name].measure("wall"):
+                tracker.checkpoint(timings=scopes[pass_name])
         with scopes["finalization"].measure("wall"):
             tracker.checkpoint(timings=scopes["finalization"])
             validate_completed_plan(plan, tracker)

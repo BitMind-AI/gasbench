@@ -312,6 +312,7 @@ def runtime_versions():
         "scipy",
         "pillow",
         "opencv-python-headless",
+        "av",
         "decord",
         "torchcodec",
     ):

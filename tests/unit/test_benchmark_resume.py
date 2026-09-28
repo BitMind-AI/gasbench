@@ -79,7 +79,8 @@ def benchmark(request, tmp_path, monkeypatch):
 
     def decode(sample, **kwargs):
         decoded.append(sample["source_file"])
-        data = sample.get("image", sample.get("video_bytes", sample.get("audio_bytes")))
+        data = (Path(sample["video_path"]).read_bytes() if "video_path" in sample
+                else sample.get("image", sample.get("video_bytes", sample.get("audio_bytes"))))
         shape = {"image": (2, 2, 3), "video": (2, 2, 2, 3), "audio": (96000,)}[modality]
         return np.full(shape, data[0], dtype=np.float32), 0
 
@@ -413,7 +414,9 @@ def test_performance_separates_passes_cache_hits_and_resumed_work(benchmark, tmp
     assert groups["aug"]["counts"]["augmentation_cache_hits"] == options["n_aug_per_dataset"]
     assert "decode" not in groups["aug"]["stages"]
     assert "source_read" not in groups["aug"]["stages"]
-    assert groups["base"]["stages"]["source_read"]["calls"] == sum(not row["aug_pass"] for row in rows)
+    # Video reads through its decoder instead of a separate whole-file copy.
+    input_stage = "decode" if b.modality == "video" else "source_read"
+    assert groups["base"]["stages"][input_stage]["calls"] == sum(not row["aug_pass"] for row in rows)
     exported = Path(save_results_to_json(result, output_dir=str(tmp_path)))
     assert json.loads(exported.read_text())["performance"] == performance
 

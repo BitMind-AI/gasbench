@@ -55,13 +55,6 @@ class VideoPrefetchPipeline(BasePrefetchPipeline):
                 )
             label = media_type_to_label(sample.get("media_type", "synthetic"), "video")
         else:
-            video_path = sample.get("video_path")
-            if video_path:
-                with self.timings.measure("source_read"):
-                    with open(video_path, "rb") as f:
-                        video_bytes = f.read()
-                    sample = {**sample, "video_bytes": video_bytes}
-
             with self.timings.measure("decode"):
                 if "video_frames" in sample:
                     video_array, label = process_video_frames_sample(

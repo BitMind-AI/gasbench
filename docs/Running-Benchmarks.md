@@ -29,6 +29,14 @@ Filtering keeps each selected dataset's sample limit from the unfiltered run.
 For class definitions and dataset weighting, see [classification and
 scoring](Classification-and-Scoring.md).
 
+## Video sampling
+
+PyAV reads frames sequentially from the beginning, stopping after the requested
+prefix. Frame-rate sampling uses an index stride based on average FPS; short
+clips repeat the last selected frame. No whole-file copy or frame-count scan is
+required. Files with missing frame counts can be evaluated; damage beyond the
+requested prefix is not checked.
+
 ## Store inputs and results
 
 Set `--cache-dir` to a writable directory with space for the datasets; the default
@@ -59,8 +67,8 @@ with its `checkpoint_encode`, `checkpoint_local_write` (write, rename, fsync), a
 `checkpoint_persist` (filesystem commit callback) components. Source reads, decode,
 transforms, and augmentation-cache hits/misses are measured in preparation workers.
 Filesystem writes also report creation, writing, file sync, rename, and directory sync separately.
-Decode includes decoder-internal I/O, such as reading frame-image files or staging
-video bytes; preprocessed audio loading includes tensor deserialization.
+Decode includes decoder-internal I/O, including video-file and frame-image reads;
+preprocessed audio loading includes tensor deserialization.
 
 Durations are inclusive and can overlap: **do not sum worker stages into wall
 time**, or add checkpoint components to the checkpoint total. Pass `wall` is the

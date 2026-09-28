@@ -7,7 +7,8 @@ import numpy as np
 _logger = logging.getLogger(__name__)
 
 _IMG_AUG_VERSION = "img_v1"
-_VID_AUG_VERSION = "vid_v2"
+# Decoder changes must not reuse tensors produced by the previous backend.
+_VID_AUG_VERSION = "vid_v3"
 # Includes the fixed mono 16 kHz / six-second audio preprocessing contract.
 _AUD_AUG_VERSION = "aud_v1"
 

@@ -159,3 +159,26 @@ def test_video_cache_rejects_incompatible_tensor_shape(sample, tmp_path):
     np.save(path, np.zeros((1, 2, 2, 3), dtype=np.uint8))
     with pytest.raises(ValueError, match="Cached video shape"):
         preprocess(sample, tmp_path / "aug")
+
+
+def test_uncached_video_path_reaches_decoder_without_eager_read(tmp_path, monkeypatch):
+    path = tmp_path / "clip.mp4"
+    path.write_bytes(b"source")
+    sample = {
+        "video_path": str(path), "source_file": path.name, "media_type": "real",
+        "file_metadata_sha256": common.file_metadata_digest([path]),
+    }
+    decoder = install_decoder(monkeypatch)
+    original_open = builtins.open
+
+    def guarded_open(file, *args, **kwargs):
+        if Path(file) == path:
+            raise AssertionError("Prefetch materialized the video before decoding")
+        return original_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", guarded_open)
+    rows = preprocess(sample, tmp_path / "aug", aug_cache_readonly=True)
+    assert len(rows) == 1
+    decoded_sample = decoder.call_args.args[0]
+    assert decoded_sample["video_path"] == str(path)
+    assert "video_bytes" not in decoded_sample

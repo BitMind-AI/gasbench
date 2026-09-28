@@ -88,8 +88,6 @@ def test_callers_cannot_mutate_checkpoint_state(tmp_path, manifest):
         "truncated",
         "checksum",
         "missing_batch",
-        "missing_tail",
-        "head_checksum",
         "missing_manifest",
     ],
 )
@@ -106,16 +104,68 @@ def test_committed_corruption_never_silently_restarts(tmp_path, manifest, damage
         first.write_text(json.dumps(envelope))
     elif damage == "missing_batch":
         first.unlink()
-    elif damage == "missing_tail":
-        sorted(tmp_path.glob("batch-*.json"))[-1].unlink()
-    elif damage == "head_checksum":
-        head_path = tmp_path / "head.json"
-        head = json.loads(head_path.read_text())
-        head["payload"]["last_batch"] = -1
-        head_path.write_text(json.dumps(head))
     else:
         (tmp_path / "manifest.json").unlink()
     with pytest.raises(CheckpointError):
+        RecorderCheckpoint(tmp_path, manifest)
+
+
+@pytest.mark.parametrize("damage", ["missing", "incomplete"])
+def test_remote_snapshot_recovers_tail_before_publishing_another_head(tmp_path, manifest, damage):
+    store = RecorderCheckpoint(tmp_path, manifest)
+    store.commit_batch([record("a")])
+    store.commit_batch([record("b")])
+    tail = sorted(tmp_path.glob("batch-*.json"))[-1]
+    if damage == "missing":
+        tail.unlink()
+    else:
+        tail.write_bytes(b"\x00" * 100)
+    persisted = []
+
+    def persist(directory):
+        persisted.append(RecorderCheckpoint(directory, manifest).records)
+
+    resumed = RecorderCheckpoint(tmp_path, manifest, persist=persist)
+    assert persisted == [[record("a"), record("b")]]
+    assert tail.exists()  # Durable repair must precede replacement of its head.
+    resumed.commit_batch([record("c")])
+    assert persisted[-1] == [record("a"), record("b"), record("c")]
+
+
+@pytest.mark.parametrize("incomplete_tail", [False, True])
+def test_incomplete_remote_head_recovers_valid_prefix_and_replays_only_tail(tmp_path, manifest, incomplete_tail):
+    store = RecorderCheckpoint(tmp_path, manifest)
+    store.commit_batch([record("a")])
+    store.commit_batch([record("b")])
+    (tmp_path / "head.json").write_bytes(b"\x00" * 100)
+    if incomplete_tail:
+        sorted(tmp_path.glob("batch-*.json"))[-1].write_bytes(b"\x00" * 100)
+    resumed = RecorderCheckpoint(tmp_path, manifest)
+    assert resumed.records == ([record("a")] if incomplete_tail else [record("a"), record("b")])
+    resumed.commit_batch([record("b"), record("c")])
+    assert RecorderCheckpoint(tmp_path, manifest).records == [record("a"), record("b"), record("c")]
+
+
+def test_head_recovery_never_discards_corrupt_older_batches(tmp_path, manifest):
+    store = RecorderCheckpoint(tmp_path, manifest)
+    for name in ('a', 'b', 'c'):
+        store.commit_batch([record(name)])
+    (tmp_path / "head.json").write_text("incomplete")
+    sorted(tmp_path.glob("batch-*.json"))[0].write_text("corrupt committed prefix")
+    with pytest.raises(CheckpointError):
+        RecorderCheckpoint(tmp_path, manifest)
+
+
+def test_legacy_checkpoint_remains_readable_and_requires_its_separate_tail(tmp_path, manifest):
+    from gasbench.benchmarks._checkpoint import _digest
+
+    saved = {"schema_version": 2, "manifest": manifest, "sha256": _digest(manifest)}
+    (tmp_path / "manifest.json").write_text(json.dumps(saved))
+    store = RecorderCheckpoint(tmp_path, manifest)
+    store.commit_batch([record("a")])
+    assert RecorderCheckpoint(tmp_path, manifest).records == [record("a")]
+    next(tmp_path.glob("batch-*.json")).unlink()
+    with pytest.raises(CheckpointError, match="incomplete"):
         RecorderCheckpoint(tmp_path, manifest)
 
 

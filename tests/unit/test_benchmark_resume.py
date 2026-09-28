@@ -393,7 +393,7 @@ def test_performance_separates_passes_cache_hits_and_resumed_work(benchmark, tmp
     from gasbench.benchmark import save_results_to_json
     from gasbench.benchmarks import recording
 
-    # Neither threshold expires: only dataset/pass boundaries should flush.
+    # Neither threshold expires: pass boundaries must still flush.
     monkeypatch.setattr(recording, "monotonic", lambda: 0)
     monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 100)
 
@@ -426,6 +426,27 @@ def test_performance_separates_passes_cache_hits_and_resumed_work(benchmark, tmp
         assert "prepare" not in group["stages"]
         assert "checkpoint" not in group["stages"]
         assert group["counts"]["restored_samples"] == groups[pass_name]["counts"]["inferred_samples"]
+
+
+@pytest.mark.parametrize("benchmark", ["image"], indirect=True)
+def test_checkpoint_groups_across_datasets_but_flushes_at_pass_end(benchmark, monkeypatch):
+    import shutil
+    from dataclasses import replace
+    from gasbench.benchmarks import recording
+
+    b = benchmark
+    second = replace(b.dataset, name="second")
+    shutil.copytree(b.cache / "datasets" / b.dataset.name, b.cache / "datasets" / second.name)
+    monkeypatch.setattr(common, "discover_benchmark_datasets", lambda **_: [b.dataset, second])
+    monkeypatch.setattr(common, "calculate_weighted_dataset_sampling", lambda *_: {b.dataset.name: 5, second.name: 5})
+    monkeypatch.setattr(recording, "monotonic", lambda: 0)
+    monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 100)
+    result = b.run(Session(b.model_dir))
+    group = result["metrics"]["performance"]["groups"]["base"]
+    assert group["stages"]["checkpoint"]["calls"] == 1
+    rows = checkpoint_rows(b.checkpoint)
+    assert {row["dataset_name"] for row in rows} == {b.dataset.name, second.name}
+    assert group["counts"]["committed_samples"] == len(rows)
 
 
 def test_augmentation_cache_cannot_change_across_attempts(benchmark, tmp_path):

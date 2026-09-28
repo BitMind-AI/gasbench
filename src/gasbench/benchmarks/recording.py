@@ -18,8 +18,8 @@ from ..constants import MODALITY_NUM_CLASSES
 
 # Checked between inference batches: replay is bounded by these thresholds plus
 # the current batch. Explicit checkpoint() calls always flush synchronously.
-_CHECKPOINT_INTERVAL_SECONDS = 15.0
-_CHECKPOINT_MAX_PENDING_ROWS = 256
+_CHECKPOINT_INTERVAL_SECONDS = 60.0
+_CHECKPOINT_MAX_PENDING_ROWS = 1024
 
 
 class BenchmarkRunRecorder:

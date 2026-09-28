@@ -5,10 +5,12 @@ import multiprocessing
 import os
 import signal
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 
 AUDIO_DECODE_TIMEOUT = 30
+AUDIO_DECODE_WORKERS = 2
 
 
 def _decode(audio_bytes, target_sr):
@@ -25,6 +27,9 @@ def _decode(audio_bytes, target_sr):
 
 
 def _worker(connection):
+    import torch
+
+    torch.set_num_threads(1)
     try:
         while True:
             request = connection.recv()
@@ -113,7 +118,49 @@ class AudioDecoderWorker:
                     raise
 
 
-_decoder = AudioDecoderWorker()
+class AudioDecoderPool:
+    """Bound concurrent decoders and include pool waits in each request deadline."""
+
+    def __init__(self, max_workers=AUDIO_DECODE_WORKERS, *, worker=_worker):
+        if type(max_workers) is not int or max_workers < 1:
+            raise ValueError("Audio decoder pool requires a positive worker count")
+        self._workers = [AudioDecoderWorker(worker=worker) for _ in range(max_workers)]
+        self._available = list(self._workers)
+        self._condition = threading.Condition()
+        self._closed = False
+
+    def decode(self, audio_bytes, sample_rate, timeout=AUDIO_DECODE_TIMEOUT):
+        deadline = time.monotonic() + timeout
+        with self._condition:
+            while not self._available and not self._closed:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("Timed out waiting for an audio decoder")
+                self._condition.wait(remaining)
+            if self._closed:
+                raise RuntimeError("Audio decoder pool is closed")
+            decoder = self._available.pop()
+        try:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("Audio decoder exceeded its deadline")
+            return decoder.decode(audio_bytes, sample_rate, timeout=remaining)
+        finally:
+            with self._condition:
+                self._available.append(decoder)
+                self._condition.notify_all()
+
+    def close(self):
+        with self._condition:
+            self._closed = True
+            self._condition.notify_all()
+            while len(self._available) < len(self._workers):
+                self._condition.wait()
+        for decoder in self._workers:
+            decoder.close()
+
+
+_decoder = AudioDecoderPool()
 atexit.register(_decoder.close)
 
 

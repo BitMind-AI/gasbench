@@ -12,7 +12,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Generator, Optional, Tuple
 from zipfile import ZipFile
-from datetime import datetime
 
 import soundfile as sf
 import pandas as pd
@@ -108,7 +107,6 @@ def yield_media_from_source(
         return
 
 
-
 def _extract_unique_archive_filenames(parquet_path: Path) -> set:
     """Extract unique archive filenames from gasstation parquet metadata file.
 
@@ -131,7 +129,6 @@ def _extract_unique_archive_filenames(parquet_path: Path) -> set:
     except (OSError, pyarrow.ArrowInvalid) as e:
         logger.warning(f"Failed to extract archive filenames from {parquet_path}: {e}")
         return set()
-
 
 
 def _build_parquet_metadata_map(
@@ -171,7 +168,6 @@ def _build_parquet_metadata_map(
     except (OSError, json.JSONDecodeError, FileNotFoundError) as e:
         logger.warning(f"Failed to build metadata map from {parquet_path}: {e}")
         return {}
-
 
 
 def _process_tar_with_metadata(
@@ -270,7 +266,6 @@ def _process_tar_with_metadata(
     except Exception as e:
         logger.warning(f"Error opening tar archive {archive_path}: {e}")
         return
-
 
 
 def _process_zip_or_tar(
@@ -385,7 +380,6 @@ def _process_zip_or_tar(
         return
 
 
-
 def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
     filename = str(source_path.name).lower()
     try:
@@ -412,77 +406,6 @@ def _process_raw(source_path: Path, dataset, iso_week: Optional[str] = None):
     except Exception as e:
         logger.warning(f"Error reading direct file {source_path}: {e}")
         return
-
-
-
-def _clean_to_json_serializable(value: Any) -> Any:
-    """Convert arbitrary values to JSON-serializable equivalents."""
-    try:
-        if value is None or isinstance(value, (str, int, bool)):
-            return value
-
-        if isinstance(value, float):
-            if np.isnan(value) or np.isinf(value):
-                return None
-            return value
-
-        if isinstance(value, (np.integer,)):
-            return int(value)
-        if isinstance(value, (np.floating,)):
-            f = float(value)
-            if np.isnan(f) or np.isinf(f):
-                return None
-            return f
-        if isinstance(value, (np.bool_,)):
-            return bool(value)
-
-        if isinstance(value, (bytes, bytearray)):
-            try:
-                return base64.b64encode(bytes(value)).decode("ascii")
-            except Exception:
-                return None
-
-        if isinstance(value, datetime):
-            return value.isoformat()
-
-        if isinstance(value, (np.ndarray, list, tuple, set)):
-            return [
-                _clean_to_json_serializable(v) for v in (value.tolist() if isinstance(value, np.ndarray) else list(value))
-            ]
-
-        if isinstance(value, dict):
-            return {str(k): _clean_to_json_serializable(v) for k, v in value.items()}
-
-        try:
-            json.dumps(value)
-            return value
-        except (TypeError, ValueError):
-            return str(value)
-    except (TypeError, ValueError):
-        return None
-
-
-
-def _extract_parquet_row_metadata(row: Any, media_col: str) -> Dict[str, Any]:
-    """Extract non-media columns from a pandas Series row and clean to JSON-serializable dict."""
-    metadata: Dict[str, Any] = {}
-    try:
-        for col, val in row.items():
-            if str(col) == str(media_col):
-                continue
-            cleaned = _clean_to_json_serializable(val)
-            col_str = str(col)
-            metadata[col_str] = cleaned
-            
-            col_lower = col_str.lower()
-            if "hotkey" in col_lower and "generator_hotkey" not in metadata:
-                metadata["generator_hotkey"] = cleaned
-            if "uid" in col_lower and "generator_uid" not in metadata:
-                metadata["generator_uid"] = cleaned
-    except (OSError, json.JSONDecodeError, FileNotFoundError):
-        pass
-    return metadata
-
 
 
 def _process_parquet(
@@ -631,7 +554,7 @@ def _process_parquet(
                                 continue
                         sample = create_sample(dataset, bytes(media_data), source_path, iso_week)
 
-                    row_metadata = _extract_parquet_row_metadata(row, col)
+                    row_metadata = extract_row_metadata(row, col)
                     for k, v in row_metadata.items():
                         if k not in sample:
                             sample[k] = v
@@ -646,7 +569,6 @@ def _process_parquet(
     except Exception as e:
         logger.warning(f"Error processing parquet file {source_path}: {e}")
         return
-
 
 
 def _process_frames_parquet(

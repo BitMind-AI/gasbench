@@ -1,6 +1,7 @@
 """Load custom model architectures from model.py files."""
 
 import sys
+import inspect
 import importlib.util
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -87,16 +88,16 @@ def load_custom_model(model_dir: Path) -> Tuple[torch.nn.Module, Dict[str, Any]]
     if model_config:
         logger.info(f"Model params: {model_config}")
 
-    # Call load_model with weights_path and all config params as kwargs
+    # Choose legacy signature compatibility before executing model code. A
+    # TypeError raised inside the loader is an implementation error, not a
+    # reason to silently discard its configuration and try another model.
+    signature = inspect.signature(module.load_model)
     try:
-        model = module.load_model(str(weights_path), **model_config)
-    except TypeError as e:
-        # Fallback for minimal load_model signature
-        logger.warning(f"load_model kwargs failed ({e}), trying minimal signature")
-        num_classes = model_config.get("num_classes", 2)
-        model = module.load_model(str(weights_path), num_classes=num_classes)
-    except Exception as e:
-        raise ValueError(f"Failed to load model: {e}")
+        signature.bind(str(weights_path), **model_config)
+    except TypeError:
+        model_config = {"num_classes": model_config.get("num_classes", 2)}
+        signature.bind(str(weights_path), **model_config)
+    model = module.load_model(str(weights_path), **model_config)
 
     if not isinstance(model, torch.nn.Module):
         raise ValueError(

@@ -1,7 +1,7 @@
 import os
 import subprocess
 import tempfile
-import concurrent.futures
+from .audio_decode import AUDIO_DECODE_TIMEOUT, decode_audio as _decode_audio_with_timeout
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 
@@ -12,105 +12,11 @@ from PIL import Image
 import torch
 
 from ..logger import get_logger
-from ..constants import media_type_to_label
+from ..constants import AUDIO_DURATION_SECONDS, AUDIO_SAMPLE_RATE, media_type_to_label
 
-# decord is the primary video decoder (fast, frame-accurate random access).
-# It has no macOS ARM wheel, so on Darwin we fall back to OpenCV —
-# suitable for local development / smoke-testing but NOT for benchmark
-# runs that need to be comparable to Linux results.
-try:
-    from decord import VideoReader, cpu
-    _HAS_DECORD = True
-except ImportError:
-    _HAS_DECORD = False
-    logger = None  # placeholder, will be reassigned below
-
-try:
-    from torchcodec.decoders import AudioDecoder
-except Exception:
-    AudioDecoder = None
+from .video_decode import decode_video
 
 logger = get_logger(__name__)
-
-if not _HAS_DECORD:
-    logger.info(
-        "decord not available — using OpenCV fallback "
-        "(fine for dev/testing, not recommended for benchmark runs)"
-    )
-
-
-class _VideoReader:
-    """Video frame reader — decord (production) or cv2 (macOS dev fallback).
-
-    decord is the preferred backend: fast random access and frame-accurate
-    seeking.  cv2 is only used when decord is unavailable (macOS) and
-    falls back to sequential decode to guarantee identical frame selection.
-
-    Both backends return RGB uint8 numpy arrays of shape (H, W, C).
-    """
-
-    def __init__(self, path: str):
-        if _HAS_DECORD:
-            self._vr = VideoReader(path, ctx=cpu(0), num_threads=1)
-            self._cap = None
-        else:
-            self._vr = None
-            self._cap = cv2.VideoCapture(path)
-
-    @property
-    def total_frames(self) -> int:
-        if self._vr is not None:
-            return len(self._vr)
-        return int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    @property
-    def fps(self):
-        """Average FPS, or None if unavailable."""
-        if self._vr is not None:
-            return self._vr.get_avg_fps()
-        f = self._cap.get(cv2.CAP_PROP_FPS)
-        return f if f > 0 else None
-
-    def read_frames(self, indices):
-        """Read frames at *indices* (sorted list of ints).
-
-        Returns list of RGB uint8 (H, W, C) arrays.  Frames that fail
-        to decode are silently skipped.
-        """
-        if self._vr is not None:
-            # decord: true random access
-            frames = []
-            for i in indices:
-                frame = self._vr[i].asnumpy()  # Already RGB
-                if frame is None or frame.size == 0:
-                    logger.warning(f"Skipping invalid frame at index {i}")
-                    continue
-                frames.append(frame)
-            return frames
-        else:
-            # cv2: sequential scan — cv2 seeking is imprecise, so we
-            # decode every frame and keep only the ones we want.  This
-            # matches decord's frame selection exactly but is slower,
-            # hence only used as a macOS dev fallback.
-            frames = []
-            idx_set = set(indices)
-            max_idx = max(indices) if indices else -1
-            for i in range(max_idx + 1):
-                ok, frame = self._cap.read()
-                if not ok or frame is None:
-                    break
-                if i in idx_set:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    if frame is None or frame.size == 0:
-                        logger.warning(f"Skipping invalid frame at index {i}")
-                        continue
-                    frames.append(frame)
-            return frames
-
-    def close(self):
-        if self._cap is not None:
-            self._cap.release()
-        # decord VideoReader needs no explicit cleanup
 
 
 def configure_huggingface_cache(volume_dir: str = "/benchmark_data"):
@@ -137,86 +43,21 @@ def process_video_bytes_sample(
     num_frames: int = 16,
     frame_rate: Optional[float] = None,
 ) -> Tuple[any, int]:
-    """Process a video sample that contains raw video bytes.
+    """Decode a cached video path or raw bytes into RGB uint8 THWC frames.
 
-    Uses decord (the preferred, production decoder) when available.
-    On macOS where decord has no wheel, falls back to OpenCV — suitable
-    for local development but benchmark comparisons should be run on
-    Linux with decord.
-
-    Both backends return uint8 RGB frames of shape (H, W, C).
-
-    Args:
-        sample: Dict containing 'video_bytes' and metadata.
-        num_frames: Number of frames to extract (default 16).
-        frame_rate: If set, sample frames at this fps from the video; otherwise
-            take the first ``num_frames`` frames sequentially.
+    Paths are opened directly; byte-backed samples stay in memory. Both use
+    sequential prefix decoding, optional frame-index strides and last-frame
+    padding. Unreadable prefixes return ``(None, None)``; damage beyond the
+    requested prefix is not scanned.
     """
     try:
-        video_bytes = sample.get("video_bytes")
-        if not video_bytes:
+        source = sample.get("video_path") or sample.get("video_bytes")
+        if not source:
             return None, None
-
-        media_type = sample.get("media_type", "synthetic")
-        label = media_type_to_label(media_type, "video")
-
-        src_name = str(sample.get("source_file", ""))
-        ext = Path(src_name).suffix.lower() if src_name else ".mp4"
-        if ext not in (".mp4", ".avi", ".mov", ".mkv", ".wmv", ".webm", ".m4v", ".mpeg", ".mpg"):
-            ext = ".mp4"
-
-        temp_video = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
-        temp_video_path = temp_video.name
-
-        try:
-            temp_video.write(video_bytes)
-            temp_video.flush()
-            temp_video.close()
-
-            vr = _VideoReader(temp_video_path)
-            total_frames = vr.total_frames
-
-            if total_frames == 0:
-                logger.warning("No frames in video")
-                return None, None
-
-            if frame_rate is not None:
-                video_fps = vr.fps
-                if not video_fps or video_fps <= 0:
-                    logger.warning("Video has no fps metadata, assuming 30fps")
-                    video_fps = 30.0
-                frame_step = max(1, round(video_fps / frame_rate))
-                frame_indices = list(range(0, total_frames, frame_step))[:num_frames]
-            else:
-                frame_indices = list(range(min(num_frames, total_frames)))
-
-            frames = vr.read_frames(frame_indices)
-
-            if len(frames) == 0:
-                logger.warning("No frames extracted from video")
-                return None, None
-
-            if len(frames) < num_frames:
-                last_frame = frames[-1]
-                for _ in range(len(frames), num_frames):
-                    frames.append(last_frame)
-
-            video_array = np.array(frames, dtype=np.uint8)  # THWC uint8 RGB
-
-            return video_array, label
-
-        finally:
-            try:
-                os.unlink(temp_video_path)
-            except Exception:
-                pass
-            try:
-                vr.close()
-            except Exception:
-                pass
-
+        label = media_type_to_label(sample.get("media_type", "synthetic"), "video")
+        return decode_video(source, num_frames, frame_rate), label
     except Exception as e:
-        logger.warning(f"Failed to process video bytes sample: {e}")
+        logger.warning(f"Failed to process video sample: {e}")
         return None, None
 
 
@@ -315,9 +156,6 @@ def process_image_sample(sample: Dict) -> Tuple[any, int]:
         return None, None
 
 
-AUDIO_DECODE_TIMEOUT = 30  # seconds -- prevents ffmpeg deadlocks on malformed files
-
-
 def _decode_audio_waveform_ffmpeg_cli(audio_bytes: bytes, target_sr: int) -> torch.Tensor:
     """Decode arbitrary audio bytes to mono float32 PCM using the ffmpeg CLI.
 
@@ -338,6 +176,10 @@ def _decode_audio_waveform_ffmpeg_cli(audio_bytes: bytes, target_sr: int) -> tor
             "-hide_banner",
             "-loglevel",
             "error",
+            "-threads",
+            "1",
+            "-filter_threads",
+            "1",
             "-i",
             tmp_path,
             "-vn",
@@ -374,48 +216,10 @@ def _decode_audio_waveform_ffmpeg_cli(audio_bytes: bytes, target_sr: int) -> tor
             pass
 
 
-def _decode_audio_with_timeout(audio_bytes: bytes, target_sr: int, timeout: int = AUDIO_DECODE_TIMEOUT):
-    """Decode audio bytes with a timeout.
-
-    Tries TorchCodec first (in-process, resamples to ``target_sr``, mono). If TorchCodec
-    cannot load or fails, falls back to the ``ffmpeg`` CLI (same sample rate / channel layout).
-
-    A thread pool enforces ``timeout`` so a stuck decoder cannot block indefinitely.
-
-    Args:
-        audio_bytes: Raw audio file bytes
-        target_sr: Target sample rate
-        timeout: Maximum seconds to wait for decode
-
-    Returns:
-        ``torch.Tensor`` of shape ``(num_samples,)``, float32 in roughly [-1, 1]
-
-    Raises:
-        concurrent.futures.TimeoutError: If decode hangs beyond timeout
-    """
-    def _decode() -> torch.Tensor:
-        try:
-            if AudioDecoder is None:
-                raise RuntimeError("torchcodec AudioDecoder not importable")
-            decoder = AudioDecoder(audio_bytes, sample_rate=target_sr, num_channels=1)
-            samples = decoder.get_all_samples()
-            return samples.data.squeeze(0)
-        except Exception as e:
-            logger.debug(
-                "TorchCodec audio decode unavailable (%s); using ffmpeg CLI fallback",
-                e,
-            )
-            return _decode_audio_waveform_ffmpeg_cli(audio_bytes, target_sr)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_decode)
-        return future.result(timeout=timeout)
-
-
 def process_audio_sample(
     sample: Dict,
-    target_sr: int = 16000,
-    target_duration_seconds: float = 6.0,
+    target_sr: int = AUDIO_SAMPLE_RATE,
+    target_duration_seconds: float = AUDIO_DURATION_SECONDS,
     use_random_crop: bool = False,
     seed: Optional[int] = 42,
     device: Optional[str] = None,
@@ -466,10 +270,9 @@ def process_audio_sample(
 
         if waveform.shape[0] > target_length:
             if use_random_crop:
-                if seed is not None:
-                    torch.manual_seed(seed)
+                generator = torch.Generator().manual_seed(seed) if seed is not None else None
                 max_start = waveform.shape[0] - target_length
-                start_idx = torch.randint(0, max_start + 1, (1,)).item()
+                start_idx = torch.randint(0, max_start + 1, (1,), generator=generator).item()
             else:
                 start_idx = (waveform.shape[0] - target_length) // 2
             waveform = waveform[start_idx:start_idx + target_length]
@@ -479,7 +282,7 @@ def process_audio_sample(
 
         return waveform.float(), label
 
-    except concurrent.futures.TimeoutError:
+    except TimeoutError:
         logger.warning(
             f"Audio decode timed out after {AUDIO_DECODE_TIMEOUT}s, skipping sample"
         )

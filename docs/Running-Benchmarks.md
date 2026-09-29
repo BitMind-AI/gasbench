@@ -29,10 +29,22 @@ Filtering keeps each selected dataset's sample limit from the unfiltered run.
 For class definitions and dataset weighting, see [classification and
 scoring](Classification-and-Scoring.md).
 
+## Video sampling
+
+PyAV reads frames sequentially from the beginning, stopping after the requested
+prefix. Frame-rate sampling uses an index stride based on average FPS; short
+clips repeat the last selected frame. No whole-file copy or frame-count scan is
+required. Files with missing frame counts can be evaluated; damage beyond the
+requested prefix is not checked.
+
 ## Store inputs and results
 
 Set `--cache-dir` to a writable directory with space for the datasets; the default
 is `/.cache/gasbench`. Reuse it across runs to reuse downloaded data.
+
+For repeated audio runs, `gasbench preprocess --dataset NAME --cache-dir ./cache`
+converts cached audio to mono 16 kHz, six-second tensors. Conversion can be rerun
+and retains source files in each dataset cache's `originals/` directory.
 
 The CLI writes a JSON report, prediction parquet, and text summary to a run
 subdirectory under `results/`. Set `--results-dir` to change that location and
@@ -40,6 +52,28 @@ subdirectory under `results/`. Set `--results-dir` to change that location and
 
 The Python API returns a results dictionary. Call `save_results_to_json()` to
 save it, and pass `records_parquet_path` to `run_benchmark()` to export predictions.
+
+## Diagnose runtime
+
+The JSON report's `performance` field (Python: `results["metrics"]["performance"]`)
+contains stage totals, call counts, and maximum durations for the current attempt.
+Startup, base inference, augmentation, model loading, and finalization are separate
+groups. Per-dataset timing summaries also appear in the logs, including on errors.
+Resumed predictions are counted as restored work; their original timings are not
+added to the new attempt.
+
+Use `input_wait` to identify waits for prepared batches, and compare `checkpoint`
+with its `checkpoint_encode`, `checkpoint_local_write` (write, rename, fsync), and
+`checkpoint_persist` (filesystem commit callback) components. Source reads, decode,
+transforms, and augmentation-cache hits/misses are measured in preparation workers.
+Filesystem writes also report creation, writing, file sync, rename, and directory sync separately.
+Decode includes decoder-internal I/O, including video-file and frame-image reads;
+preprocessed audio loading includes tensor deserialization.
+
+Durations are inclusive and can overlap: **do not sum worker stages into wall
+time**, or add checkpoint components to the checkpoint total. Pass `wall` is the
+sum of dataset execution and final pass checkpoint times. `inference` includes transfers, model execution,
+and output conversion; it is not a GPU-kernel-only measurement.
 
 ## Resume an interrupted run
 
@@ -50,8 +84,11 @@ gasbench run --image-model ./my_model --full \
   --cache-dir ./cache --run-id detector-eval
 ```
 
-Rerun the same command to resume. Completed inference batches are restored;
-unfinished work runs again. Use a new run ID for a fresh evaluation.
+Rerun the same command to resume from the last durable checkpoint. Checkpoints group
+inference batches, flushing after 60 seconds or 1,024 pending records, checked between
+batches, and at pass boundaries, completion, or handled failures. Abrupt termination
+replays the uncommitted tail; a long batch can exceed the interval. Use a new run ID
+for a fresh evaluation.
 
 Checkpoints default to `<cache-dir>/runs/<run-id>/checkpoint`. Use
 `--checkpoint-dir` to place them elsewhere. Resume with the same model, benchmark
@@ -64,7 +101,8 @@ For managed workers:
 - Use a trusted filesystem that preserves input file metadata across mounts;
   pending inputs are checked for changes using file size and timestamps.
 - Pass `checkpoint_persist(directory)` to the Python API when the filesystem
-  requires an explicit commit to persist writes remotely.
+  requires an explicit commit to persist writes remotely. It must persist all
+  checkpoint files before returning; a failed commit aborts the writer.
 - Let one worker own a run directory at a time. The caller handles worker restarts.
 
 ## Evaluate robustness

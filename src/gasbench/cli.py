@@ -739,14 +739,14 @@ Examples:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Preprocess a specific audio dataset with GPU acceleration
-  gasbench preprocess --dataset deepfake-audio-dataset --gpu
+  # Preprocess a specific cached audio dataset
+  gasbench preprocess --dataset deepfake-audio-dataset
   
   # Preprocess all audio datasets
-  gasbench preprocess --all --gpu
+  gasbench preprocess --all
   
   # Preprocess with custom cache directory
-  gasbench preprocess --all --cache-dir /custom/cache --gpu
+  gasbench preprocess --all --cache-dir /custom/cache
         """,
     )
 
@@ -765,18 +765,6 @@ Examples:
         type=str,
         help="Base cache directory (default: /.cache/gasbench)",
     )
-    preprocess_parser.add_argument(
-        "--gpu",
-        action="store_true",
-        help="Use GPU for preprocessing (faster if CUDA available)",
-    )
-    preprocess_parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=32,
-        help="Batch size for GPU processing (default: 32)",
-    )
-
     preprocess_parser.set_defaults(func=command_preprocess)
 
     # ========== VERIFY-CACHE COMMAND ==========
@@ -839,8 +827,6 @@ def command_preprocess(args):
     
     config = {
         "cache_dir": cache_dir,
-        "use_gpu": args.gpu,
-        "batch_size": args.batch_size,
     }
     
     if args.dataset:
@@ -853,16 +839,14 @@ def command_preprocess(args):
         from .processing.preprocess_audio import preprocess_dataset, preprocess_all_datasets
         
         if args.all:
-            preprocess_all_datasets(cache_dir=cache_dir, use_gpu=args.gpu)
+            success = preprocess_all_datasets(cache_dir=cache_dir)
         else:
             success = preprocess_dataset(
                 dataset_name=args.dataset,
                 cache_dir=cache_dir,
-                use_gpu=args.gpu,
-                batch_size=args.batch_size
             )
-            if not success:
-                return 1
+        if not success:
+            return 1
         
         print("\n✅ Preprocessing completed successfully")
         return 0

@@ -2,6 +2,7 @@ import uuid
 import time
 import os
 import hashlib
+from time import monotonic
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -10,7 +11,15 @@ import numpy as np
 
 from .utils.metrics import Metrics
 from ._checkpoint import RecorderCheckpoint
+from .errors import BenchmarkError
+from .timing import StageTimings
 from ..constants import MODALITY_NUM_CLASSES
+
+
+# Checked between inference batches: replay is bounded by these thresholds plus
+# the current batch. Explicit checkpoint() calls always flush synchronously.
+_CHECKPOINT_INTERVAL_SECONDS = 60.0
+_CHECKPOINT_MAX_PENDING_ROWS = 1024
 
 
 class BenchmarkRunRecorder:
@@ -27,11 +36,14 @@ class BenchmarkRunRecorder:
         checkpoint_dir: Optional[Path] = None,
         checkpoint_context: Optional[Dict[str, Any]] = None,
         checkpoint_persist: Optional[Callable[[Path], None]] = None,
+        timings=None,
     ):
         # Identity must be supplied by the coordinator, never regenerated on resume.
         if checkpoint_dir is not None and (not run_id or not checkpoint_context):
             raise ValueError("Checkpointing requires run_id and benchmark context")
-        if checkpoint_dir is None and (checkpoint_context is not None or checkpoint_persist is not None):
+        if checkpoint_dir is None and (
+            checkpoint_context is not None or checkpoint_persist is not None
+        ):
             raise ValueError("Checkpoint context/persistence requires checkpoint_dir")
         self.run_id = run_id or str(uuid.uuid4())
         self.run_started_at = int(time.time())
@@ -51,28 +63,47 @@ class BenchmarkRunRecorder:
         self._dataset_counts: Dict[str, Dict[str, int]] = {}
         self._checkpoint = None
         self._checkpointed_count = 0
+        timings = timings if timings is not None else StageTimings()
         if checkpoint_dir is not None:
             self._checkpoint = RecorderCheckpoint(
                 checkpoint_dir,
                 {
                     "run_id": self.run_id,
                     "recorder": {
-                        "mode": self.mode, "modality": self.modality,
-                        "target_height": self.target_height, "target_width": self.target_width,
-                        "input_name": self.model_input_name, "model_name": self.model_name,
-                        "augment_level": self.augment_level, "crop_prob": self.crop_prob,
+                        "mode": self.mode,
+                        "modality": self.modality,
+                        "target_height": self.target_height,
+                        "target_width": self.target_width,
+                        "input_name": self.model_input_name,
+                        "model_name": self.model_name,
+                        "augment_level": self.augment_level,
+                        "crop_prob": self.crop_prob,
                     },
                     "benchmark": checkpoint_context,
                 },
                 persist=checkpoint_persist,
+                timings=timings,
             )
             for row in self._checkpoint.records:
                 self._append_row(row)
             if self.rows:
                 self.run_started_at = self.rows[0]["run_started_at"]
             self._checkpointed_count = len(self.rows)
+        self._last_checkpoint_at = monotonic()
 
-    def checkpoint(self) -> int:
+    def checkpoint_if_due(self, *, timings=None) -> int:
+        """Group completed batches until the time or pending-record limit is met."""
+        pending = len(self.rows) - self._checkpointed_count
+        if self._checkpoint is None or not pending:
+            return 0
+        if (
+            pending < _CHECKPOINT_MAX_PENDING_ROWS
+            and monotonic() - self._last_checkpoint_at < _CHECKPOINT_INTERVAL_SECONDS
+        ):
+            return 0
+        return self.checkpoint(timings=timings)
+
+    def checkpoint(self, *, timings=None) -> int:
         """Commit pending recorder rows; distributed storage must supply persist.
 
         checkpoint_context must include the model/evaluator identity, immutable
@@ -82,27 +113,45 @@ class BenchmarkRunRecorder:
         """
         if self._checkpoint is None or self._checkpointed_count == len(self.rows):
             return 0
-        count = self._checkpoint.commit_batch(self.rows[self._checkpointed_count:])
+        timings = timings if timings is not None else StageTimings()
+        with timings.measure("checkpoint"):
+            count = self._checkpoint.commit_batch(
+                self.rows[self._checkpointed_count :], timings=timings
+            )
         self._checkpointed_count = len(self.rows)
+        self._last_checkpoint_at = monotonic()
+        timings.count("committed_samples", count)
         return count
 
-    def is_checkpointed(self, *, dataset_name: str, sample_index: int,
-                        sample: Dict[str, Any], aug_pass: bool = False) -> bool:
+    def is_checkpointed(
+        self,
+        *,
+        dataset_name: str,
+        sample_index: int,
+        sample: Dict[str, Any],
+        aug_pass: bool = False,
+    ) -> bool:
         """Check durable progress before decoding or inferring a planned sample."""
         if self._checkpoint is None:
             return False
-        return self._checkpoint.contains_prediction({
-            "run_id": self.run_id, "dataset_name": dataset_name,
-            "iteration_index": sample_index, "sample_id": build_sample_id(sample),
-            "aug_pass": aug_pass,
-        })
+        return self._checkpoint.contains_prediction(
+            {
+                "run_id": self.run_id,
+                "dataset_name": dataset_name,
+                "iteration_index": sample_index,
+                "sample_id": build_sample_id(sample),
+                "aug_pass": aug_pass,
+            }
+        )
 
     def _append_row(self, row: Dict[str, Any]) -> None:
         """Apply the same counters for live records and checkpoint restoration."""
         self.rows.append(row)
         if row.get("aug_pass", False) or row["status"] == "error":
             return
-        ds = self._dataset_counts.setdefault(row["dataset_name"], {"ok": 0, "correct": 0, "skipped": 0})
+        ds = self._dataset_counts.setdefault(
+            row["dataset_name"], {"ok": 0, "correct": 0, "skipped": 0}
+        )
         if row["status"] == "ok":
             ds["ok"] += 1
             ds["correct"] += int(bool(row["correct"]))
@@ -112,6 +161,65 @@ class BenchmarkRunRecorder:
     @property
     def count(self) -> int:
         return len(self.rows)
+
+    def _record(
+        self, *, dataset_name, sample_index, sample, aug_pass, status, **outcome
+    ):
+        row = {
+            "run_id": self.run_id,
+            "run_started_at": self.run_started_at,
+            "mode": self.mode,
+            "modality": self.modality,
+            "model_name": self.model_name,
+            "input_name": self.model_input_name,
+            "target_height": self.target_height,
+            "target_width": self.target_width,
+            "augment_level": self.augment_level,
+            "crop_prob": self.crop_prob,
+            "aug_pass": bool(aug_pass),
+            "dataset_name": dataset_name,
+            "iteration_index": int(sample_index),
+            "media_type": sample.get("media_type"),
+            "status": status,
+            **dict.fromkeys(
+                (
+                    "label",
+                    "predicted",
+                    "probs",
+                    "correct",
+                    "inference_time_ms",
+                    "batch_inference_time_ms",
+                    "batch_id",
+                    "batch_size",
+                    "sample_seed",
+                    "skip_reason",
+                    "error_message",
+                )
+            ),
+            **outcome,
+            **{
+                key: sample.get(key)
+                for key in (
+                    "source_kind",
+                    "dataset_path",
+                    "hf_resolved_revision",
+                    "archive_filename",
+                    "source_file",
+                    "iso_week",
+                    "cache_relpath",
+                    "generator_hotkey",
+                    "generator_uid",
+                    "generator_name",
+                )
+            },
+            "path_in_archive": sample.get("path_in_archive")
+            or sample.get("member_path"),
+            "generator_model": sample.get("model_name"),
+        }
+        row["sample_id"] = build_sample_id(row)
+        row["sample_compound_id"] = build_compound_id(row)
+        row["sample_display_uri"] = build_display_uri(row)
+        self._append_row(row)
 
     def add_ok(
         self,
@@ -130,65 +238,22 @@ class BenchmarkRunRecorder:
         aug_pass: bool = False,
     ):
         # Normalize probabilities to a list of floats for parquet friendliness
-        try:
-            probs_list = [
-                float(x)
-                for x in (probs.tolist() if hasattr(probs, "tolist") else list(probs))
-            ]
-        except Exception:
-            probs_list = []
-        row = {
-            "run_id": self.run_id,
-            "run_started_at": self.run_started_at,
-            "mode": self.mode,
-            "modality": self.modality,
-            "model_name": self.model_name,
-            "input_name": self.model_input_name,
-            "target_height": self.target_height,
-            "target_width": self.target_width,
-            "augment_level": self.augment_level,
-            "crop_prob": self.crop_prob,
-            "aug_pass": bool(aug_pass),
-            "dataset_name": dataset_name,
-            "iteration_index": int(sample_index),
-            "media_type": sample.get("media_type"),
-            "status": "ok",
-            "label": int(label),
-            "predicted": int(predicted),
-            "probs": probs_list,
-            "correct": bool(predicted == label),
-            "inference_time_ms": float(inference_time_ms),
-            "batch_inference_time_ms": float(batch_inference_time_ms),
-            "batch_id": int(batch_id),
-            "batch_size": int(batch_size),
-            "sample_seed": None if sample_seed is None else int(sample_seed),
-            "skip_reason": None,
-            "error_message": None,
-        }
-
-        row.update(
-            {
-                "source_kind": sample.get("source_kind"),
-                "dataset_path": sample.get("dataset_path"),
-                "hf_resolved_revision": sample.get("hf_resolved_revision"),
-                "archive_filename": sample.get("archive_filename"),
-                "path_in_archive": sample.get("path_in_archive") or sample.get("member_path"),
-                "source_file": sample.get("source_file"),
-                "iso_week": sample.get("iso_week"),
-                "cache_relpath": sample.get("cache_relpath"),
-                "generator_hotkey": sample.get("generator_hotkey"),
-                "generator_uid": sample.get("generator_uid"),
-                "generator_name": sample.get("generator_name"),
-                "generator_model": sample.get("model_name"),
-            }
+        self._record(
+            dataset_name=dataset_name,
+            sample_index=sample_index,
+            sample=sample,
+            aug_pass=aug_pass,
+            status="ok",
+            label=int(label),
+            predicted=int(predicted),
+            probs=[float(value) for value in probs],
+            correct=bool(predicted == label),
+            inference_time_ms=float(inference_time_ms),
+            batch_inference_time_ms=float(batch_inference_time_ms),
+            batch_id=int(batch_id),
+            batch_size=int(batch_size),
+            sample_seed=None if sample_seed is None else int(sample_seed),
         )
-
-        # Derived convenience identifiers
-        row["sample_id"] = build_sample_id(row)
-        row["sample_compound_id"] = build_compound_id(row)
-        row["sample_display_uri"] = build_display_uri(row)
-
-        self._append_row(row)
 
     def add_skip(
         self,
@@ -199,54 +264,14 @@ class BenchmarkRunRecorder:
         reason: str,
         aug_pass: bool = False,
     ):
-        row = {
-            "run_id": self.run_id,
-            "run_started_at": self.run_started_at,
-            "mode": self.mode,
-            "modality": self.modality,
-            "model_name": self.model_name,
-            "input_name": self.model_input_name,
-            "target_height": self.target_height,
-            "target_width": self.target_width,
-            "augment_level": self.augment_level,
-            "crop_prob": self.crop_prob,
-            "dataset_name": dataset_name,
-            "iteration_index": int(sample_index),
-            "media_type": sample.get("media_type"),
-            "status": "skipped",
-            "aug_pass": bool(aug_pass),
-            "label": None,
-            "predicted": None,
-            "probs": None,
-            "correct": None,
-            "inference_time_ms": None,
-            "batch_inference_time_ms": None,
-            "batch_id": None,
-            "batch_size": None,
-            "sample_seed": None,
-            "skip_reason": reason,
-            "error_message": None,
-        }
-        row.update(
-            {
-                "source_kind": sample.get("source_kind"),
-                "dataset_path": sample.get("dataset_path"),
-                "hf_resolved_revision": sample.get("hf_resolved_revision"),
-                "archive_filename": sample.get("archive_filename"),
-                "path_in_archive": sample.get("path_in_archive") or sample.get("member_path"),
-                "source_file": sample.get("source_file"),
-                "iso_week": sample.get("iso_week"),
-                "cache_relpath": sample.get("cache_relpath"),
-                "generator_hotkey": sample.get("generator_hotkey"),
-                "generator_uid": sample.get("generator_uid"),
-                "generator_name": sample.get("generator_name"),
-                "generator_model": sample.get("model_name"),
-            }
+        self._record(
+            dataset_name=dataset_name,
+            sample_index=sample_index,
+            sample=sample,
+            aug_pass=aug_pass,
+            status="skipped",
+            skip_reason=reason,
         )
-        row["sample_id"] = build_sample_id(row)
-        row["sample_compound_id"] = build_compound_id(row)
-        row["sample_display_uri"] = build_display_uri(row)
-        self._append_row(row)
 
     def add_error(
         self,
@@ -257,58 +282,22 @@ class BenchmarkRunRecorder:
         error_message: str,
         aug_pass: bool = False,
     ):
-        row = {
-            "run_id": self.run_id,
-            "run_started_at": self.run_started_at,
-            "mode": self.mode,
-            "modality": self.modality,
-            "model_name": self.model_name,
-            "input_name": self.model_input_name,
-            "target_height": self.target_height,
-            "target_width": self.target_width,
-            "augment_level": self.augment_level,
-            "crop_prob": self.crop_prob,
-            "dataset_name": dataset_name,
-            "iteration_index": int(sample_index),
-            "media_type": sample.get("media_type"),
-            "status": "error",
-            "aug_pass": bool(aug_pass),
-            "label": None,
-            "predicted": None,
-            "probs": None,
-            "correct": None,
-            "inference_time_ms": None,
-            "batch_inference_time_ms": None,
-            "batch_id": None,
-            "batch_size": None,
-            "sample_seed": None,
-            "skip_reason": None,
-            "error_message": error_message[:300],
-        }
-        row.update(
-            {
-                "source_kind": sample.get("source_kind"),
-                "dataset_path": sample.get("dataset_path"),
-                "hf_resolved_revision": sample.get("hf_resolved_revision"),
-                "archive_filename": sample.get("archive_filename"),
-                "path_in_archive": sample.get("path_in_archive") or sample.get("member_path"),
-                "source_file": sample.get("source_file"),
-                "iso_week": sample.get("iso_week"),
-                "cache_relpath": sample.get("cache_relpath"),
-                "generator_hotkey": sample.get("generator_hotkey"),
-                "generator_uid": sample.get("generator_uid"),
-                "generator_name": sample.get("generator_name"),
-                "generator_model": sample.get("model_name"),
-            }
+        self._record(
+            dataset_name=dataset_name,
+            sample_index=sample_index,
+            sample=sample,
+            aug_pass=aug_pass,
+            status="error",
+            error_message=error_message[:300],
         )
-        row["sample_id"] = build_sample_id(row)
-        row["sample_compound_id"] = build_compound_id(row)
-        row["sample_display_uri"] = build_display_uri(row)
-        self._append_row(row)
 
-    def get_dataset_summary(self, dataset_name: str, include_skipped: bool = False) -> Dict[str, Any]:
+    def get_dataset_summary(
+        self, dataset_name: str, include_skipped: bool = False
+    ) -> Dict[str, Any]:
         """Return per-dataset accuracy from incremental counters — O(1), no DataFrame."""
-        ds = self._dataset_counts.get(dataset_name, {"ok": 0, "correct": 0, "skipped": 0})
+        ds = self._dataset_counts.get(
+            dataset_name, {"ok": 0, "correct": 0, "skipped": 0}
+        )
         total = ds["ok"]
         correct = ds["correct"]
         summary: Dict[str, Any] = {
@@ -349,9 +338,11 @@ def build_compound_id(row: Dict[str, Any]) -> Optional[str]:
             archive_filename = row.get("archive_filename")
             path_in_archive = row.get("path_in_archive")
             source_file = row.get("source_file")
-            
+
             if path_in_archive and archive_filename:
-                return f"hf://{repo}@{rev or 'main'}::{archive_filename}#{path_in_archive}"
+                return (
+                    f"hf://{repo}@{rev or 'main'}::{archive_filename}#{path_in_archive}"
+                )
             if archive_filename:
                 return f"hf://{repo}@{rev or 'main'}::{archive_filename}"
             if source_file:
@@ -383,7 +374,7 @@ def build_display_uri(row: Dict[str, Any]) -> Optional[str]:
             archive_filename = row.get("archive_filename")
             path_in_archive = row.get("path_in_archive")
             source_file = row.get("source_file")
-            
+
             if path_in_archive and archive_filename:
                 return f"{repo}::{archive_filename}#{path_in_archive}"
             if archive_filename:
@@ -518,6 +509,8 @@ def compute_metrics_from_df(
             "sn34_score": 0.0,
         }
 
+    if (df["status"] == "error").any():
+        raise BenchmarkError("Cannot score a run containing failed inference")
     all_ok_df = df[df["status"] == "ok"].copy()
     if all_ok_df.empty:
         return {
@@ -580,7 +573,7 @@ def compute_metrics_from_df(
         # Legacy: holdout_weight affects accuracy only (not MCC/Brier/sn34)
         is_holdout = ok_df["dataset_name"].str.contains("-holdout-", na=False)
         weights = np.where(is_holdout, holdout_weight, 1.0)
-        
+
         # Weighted accuracy: sum(correct * weight) / sum(weight)
         correct_arr = ok_df["correct"].astype(float).values
         weighted_correct = (correct_arr * weights).sum()
@@ -684,19 +677,25 @@ def _compute_aug_metrics(
     aug_sample_weights = np.ones(len(aug_df), dtype=float)
     if class_weights and "dataset_name" in aug_df.columns:
         provenance = aug_df["dataset_name"].map(classify_sample_provenance)
-        aug_sample_weights = provenance.map(class_weights).fillna(1.0).astype(float).values
+        aug_sample_weights = (
+            provenance.map(class_weights).fillna(1.0).astype(float).values
+        )
 
     for (_, r), weight in zip(aug_df.iterrows(), aug_sample_weights):
         try:
             probs = [
                 float(x)
                 for x in (
-                    r["probs"].tolist() if hasattr(r["probs"], "tolist") else list(r["probs"])
+                    r["probs"].tolist()
+                    if hasattr(r["probs"], "tolist")
+                    else list(r["probs"])
                 )
             ]
         except Exception:
             probs = []
-        aug_metrics.update(int(r["label"]), int(r["predicted"]), probs, weight=float(weight))
+        aug_metrics.update(
+            int(r["label"]), int(r["predicted"]), probs, weight=float(weight)
+        )
 
     aug_sn34 = aug_metrics.compute_sn34_score(multiclass=multiclass_scoring)
     robustness_ratio = (aug_sn34 / base_sn34) if base_sn34 > 0 else 0.0
@@ -714,9 +713,12 @@ def _compute_aug_metrics(
 
     # Per-sample degradation: join augmented rows to their base counterpart via sample_id
     if "sample_id" in base_df.columns and "sample_id" in aug_df.columns:
+
         def _prob_correct(r):
             try:
-                probs = list(r["probs"].tolist() if hasattr(r["probs"], "tolist") else r["probs"])
+                probs = list(
+                    r["probs"].tolist() if hasattr(r["probs"], "tolist") else r["probs"]
+                )
                 label = int(r["label"])
                 return float(probs[label]) if label < len(probs) else None
             except Exception:
@@ -728,17 +730,25 @@ def _compute_aug_metrics(
         aug_pc = aug_df[["sample_id", "label", "probs", "correct"]].copy()
         aug_pc["prob_correct"] = aug_pc.apply(_prob_correct, axis=1)
 
-        paired = base_pc[["sample_id", "prob_correct", "correct"]].merge(
-            aug_pc[["sample_id", "prob_correct", "correct"]],
-            on="sample_id",
-            suffixes=("_base", "_aug"),
-        ).dropna(subset=["prob_correct_base", "prob_correct_aug"])
+        paired = (
+            base_pc[["sample_id", "prob_correct", "correct"]]
+            .merge(
+                aug_pc[["sample_id", "prob_correct", "correct"]],
+                on="sample_id",
+                suffixes=("_base", "_aug"),
+            )
+            .dropna(subset=["prob_correct_base", "prob_correct_aug"])
+        )
 
         if not paired.empty:
-            paired["prob_degradation"] = paired["prob_correct_base"] - paired["prob_correct_aug"]
+            paired["prob_degradation"] = (
+                paired["prob_correct_base"] - paired["prob_correct_aug"]
+            )
             out["aug_paired_samples"] = int(len(paired))
             out["aug_mean_prob_degradation"] = float(paired["prob_degradation"].mean())
-            out["aug_p95_prob_degradation"] = float(np.percentile(paired["prob_degradation"], 95))
+            out["aug_p95_prob_degradation"] = float(
+                np.percentile(paired["prob_degradation"], 95)
+            )
 
     return out
 

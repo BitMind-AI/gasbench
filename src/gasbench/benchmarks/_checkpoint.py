@@ -22,8 +22,11 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from copy import deepcopy
+from itertools import chain
 from pathlib import Path
 from typing import Callable, Iterable, Mapping, Optional
+
+from .timing import StageTimings
 
 
 class CheckpointError(RuntimeError):
@@ -45,6 +48,16 @@ def _read(path: Path):
         return json.loads(path.read_bytes())
     except (OSError, ValueError) as exc:
         raise CheckpointError(f"Cannot read checkpoint {path.name}") from exc
+
+
+def _verified_payload(envelope):
+    try:
+        payload = envelope["payload"]
+        if isinstance(payload, dict) and envelope["sha256"] == _digest(payload):
+            return payload
+    except (KeyError, TypeError, ValueError):
+        pass
+    raise CheckpointError("Invalid checkpoint envelope checksum")
 
 
 # Limit both active I/O and queued decoded batches on remote filesystems.
@@ -102,8 +115,10 @@ def prediction_key(row: Mapping) -> tuple:
 class RecorderCheckpoint:
     """Internal persistence for BenchmarkRunRecorder rows.
 
-    Reopening validates every committed batch. Temporary writes are ignored;
-    corrupt or missing committed batches fail closed, including a missing tail.
+    Reopening validates the committed prefix. The newest batch also lives in
+    the commit head, allowing either copy to repair an incomplete snapshot.
+    If both copies are incomplete, only the newest group can be replayed;
+    damage to older batches fails closed. Temporary writes are ignored.
     Replaying an identical record is a no-op; changing a completed prediction
     is rejected.
     """
@@ -117,7 +132,7 @@ class RecorderCheckpoint:
                 raise CheckpointError("Checkpoint progress exists without a manifest")
             return None
         value = _read(path)
-        if not isinstance(value, dict) or value.get("schema_version") != 2 or not isinstance(value.get("manifest"), dict):
+        if not isinstance(value, dict) or value.get("schema_version") not in (2, 3) or not isinstance(value.get("manifest"), dict):
             raise CheckpointError("Invalid checkpoint manifest")
         if value.get("sha256") != _digest(value["manifest"]):
             raise CheckpointError("Invalid checkpoint manifest checksum")
@@ -129,17 +144,26 @@ class RecorderCheckpoint:
         manifest: Mapping,
         *,
         persist: Optional[Callable[[Path], None]] = None,
+        timings=None,
     ):
         self.directory = Path(directory)
         self._persist = persist
         self._usable = True
         self._records = {}
         self._next_batch = 0
+        timings = timings if timings is not None else StageTimings()
         if not isinstance(manifest, Mapping) or not manifest:
             raise ValueError("A nonempty run manifest is required")
+        manifest_path = self.directory / "manifest.json"
+        saved = _read(manifest_path) if manifest_path.exists() else None
+        self._schema_version = (
+            saved.get("schema_version") if isinstance(saved, dict) else 3
+        )
+        if self._schema_version not in (2, 3):
+            raise CheckpointError("Invalid checkpoint manifest")
         # Normalize JSON types and detach mutable caller-owned objects.
         expected = {
-            "schema_version": 2,
+            "schema_version": self._schema_version,
             "manifest": json.loads(_encode(dict(manifest))),
         }
         expected["sha256"] = _digest(expected["manifest"])
@@ -155,50 +179,84 @@ class RecorderCheckpoint:
             os.fsync(parent_fd)
         finally:
             os.close(parent_fd)
-        manifest_path = self.directory / "manifest.json"
         batches = sorted(self.directory.glob("batch-*.json"))
         if manifest_path.exists():
-            if _encode(_read(manifest_path)) != _encode(expected):
+            if _encode(saved) != _encode(expected):
                 raise CheckpointError("Checkpoint manifest differs from this run")
         else:
             if batches:
                 raise CheckpointError("Checkpoint batches exist without a manifest")
-            self._write(manifest_path, expected)
+            self._write(manifest_path, expected, timings=timings)
 
         head_path = self.directory / "head.json"
         if not head_path.exists():
-            if batches:
+            if batches and self._schema_version == 2:
                 raise CheckpointError("Checkpoint batches exist without a commit head")
-            self._write_head(-1, None)
-        head_envelope = _read(head_path)
-        if not isinstance(head_envelope, dict) or not isinstance(
-            head_envelope.get("payload"), dict
-        ):
-            raise CheckpointError("Invalid checkpoint commit head")
-        head = head_envelope["payload"]
+            if not batches:
+                self._write_head(-1, None, timings=timings)
+        rebuild_head = False
         try:
-            head_valid = head_envelope.get("sha256") == _digest(head)
-        except (TypeError, ValueError):
-            head_valid = False
-        if not head_valid:
-            raise CheckpointError("Invalid checkpoint commit head checksum")
+            head = _verified_payload(_read(head_path))
+        except CheckpointError:
+            if self._schema_version != 3 or not batches:
+                raise
+            # Background snapshots can expose an incomplete mutable head. The
+            # immutable batch log is a second copy. At most its newest file can
+            # be in flight; every earlier batch was persisted before it began.
+            tail = None
+            for path in reversed(batches[-2:]):
+                try:
+                    tail = _read(path)
+                    payload = _verified_payload(tail)
+                    if (
+                        payload.get("manifest_sha256") != self._manifest_digest
+                        or type(payload.get("batch_index")) is not int
+                        or path.name != self._batch_name(payload["batch_index"])
+                    ):
+                        raise CheckpointError("Invalid checkpoint batch identity")
+                    break
+                except CheckpointError:
+                    tail = None
+            if tail is None:
+                raise CheckpointError("Cannot recover checkpoint commit head")
+            head = {
+                "last_batch": payload["batch_index"],
+                "sha256": tail["sha256"],
+                "tail": tail,
+            }
+            rebuild_head = True
         if (
             not isinstance(head, dict)
             or type(head.get("last_batch")) is not int
             or head["last_batch"] < -1
-            or head["last_batch"] >= len(batches)
+            or head["last_batch"] > len(batches)
             or (head["last_batch"] == -1 and head.get("sha256") is not None)
         ):
             raise CheckpointError("Invalid or incomplete checkpoint commit head")
         # Files newer than the head were never acknowledged. They can be safely
         # replaced when the interrupted batch is replayed.
-        committed = batches[: head["last_batch"] + 1]
+        tail = head.get("tail") if self._schema_version == 3 else None
+        last_batch = head["last_batch"]
+        if self._schema_version == 3 and (
+            (last_batch >= 0 and not isinstance(tail, dict))
+            or (last_batch == -1 and tail is not None)
+        ):
+            raise CheckpointError("Invalid checkpoint tail in commit head")
+        tail_path = self.directory / self._batch_name(last_batch)
+        repair_tail = False
+        if tail is not None:
+            try:
+                repair_tail = _read(tail_path) != tail
+            except CheckpointError:
+                repair_tail = True
+        committed = [self.directory / self._batch_name(i) for i in range(last_batch + 1)]
+        on_disk = set(batches)
         for index, path in enumerate(committed):
-            if path.name != self._batch_name(index):
+            if path not in on_disk and not (repair_tail and index == last_batch):
                 raise CheckpointError("Checkpoint batch sequence is incomplete")
         started = time.monotonic()
-        with _prefetch_batches(committed) as loaded:
-            for path, envelope in loaded:
+        with _prefetch_batches(committed[:-1] if tail is not None else committed) as loaded:
+            for path, envelope in chain(loaded, [(tail_path, tail)] if tail is not None else []):
                 if not isinstance(envelope, dict):
                     raise CheckpointError(f"Invalid checkpoint batch {path.name}")
                 payload = envelope.get("payload")
@@ -213,17 +271,25 @@ class RecorderCheckpoint:
                     valid = False
                 if not valid:
                     raise CheckpointError(f"Invalid checkpoint batch {path.name}")
+                if self._next_batch == last_batch and (
+                    envelope["sha256"] != head.get("sha256")
+                    or (tail is not None and _encode(envelope) != _encode(tail))
+                ):
+                    raise CheckpointError("Checkpoint tail differs from commit head")
                 records = self._validate_records(payload.get("records"))
                 if any(prediction_key(row) in self._records for row in records):
                     raise CheckpointError("Duplicate work in committed checkpoint batches")
                 self._records.update((prediction_key(row), row) for row in records)
                 self._next_batch += 1
-        if (
-            batches
-            and head["last_batch"] >= 0
-            and envelope["sha256"] != head.get("sha256")
-        ):
-            raise CheckpointError("Checkpoint tail differs from commit head")
+        if repair_tail:
+            # Persist the recovered copy before any later head can replace it.
+            # Every earlier batch is durable before a new commit starts.
+            self._write(tail_path, tail, timings=timings)
+        if rebuild_head:
+            self._write_head(last_batch, head["sha256"], tail=tail, timings=timings)
+            logging.getLogger(__name__).warning(
+                "Recovered an incomplete checkpoint head from validated batches"
+            )
         if committed:
             logging.getLogger(__name__).info(
                 "Validated %s checkpoint batches (%s rows) in %.2fs",
@@ -260,7 +326,7 @@ class RecorderCheckpoint:
     def records(self) -> list:
         return deepcopy(list(self._records.values()))
 
-    def commit_batch(self, records: Iterable[Mapping]) -> int:
+    def commit_batch(self, records: Iterable[Mapping], *, timings=None) -> int:
         """Commit new records; return their count after persistence succeeds.
 
         The caller may replay an overlapping batch on recovery. All previously
@@ -268,9 +334,11 @@ class RecorderCheckpoint:
         """
         if not self._usable:
             raise CheckpointError("Persistence failed; reopen the durable checkpoint")
-        rows = self._validate_records(
-            json.loads(_encode(list(records), sort_keys=False))
-        )
+        timings = timings if timings is not None else StageTimings()
+        with timings.measure("checkpoint_encode"):
+            rows = self._validate_records(
+                json.loads(_encode(list(records), sort_keys=False))
+            )
         new_rows = []
         for row in rows:
             old = self._records.get(prediction_key(row))
@@ -287,45 +355,66 @@ class RecorderCheckpoint:
             "batch_index": self._next_batch,
             "records": new_rows,
         }
+        with timings.measure("checkpoint_encode"):
+            checksum = _digest(payload)
+        envelope = {"payload": payload, "sha256": checksum}
         self._write(
             self.directory / self._batch_name(self._next_batch),
-            {"payload": payload, "sha256": _digest(payload)},
+            envelope,
             persist=False,
+            timings=timings,
         )
-        self._write_head(self._next_batch, _digest(payload))
+        self._write_head(self._next_batch, checksum, tail=envelope, timings=timings)
         self._records.update((prediction_key(row), row) for row in new_rows)
         self._next_batch += 1
         return len(new_rows)
 
-    def _write_head(self, index: int, checksum: Optional[str]) -> None:
+    def _write_head(self, index: int, checksum: Optional[str], *, tail=None, timings=None) -> None:
         payload = {"last_batch": index, "sha256": checksum}
+        if self._schema_version == 3:
+            # A remote snapshot may publish the head before the batch file.
+            # Include the newest batch atomically; prior batches were persisted
+            # by earlier callbacks. This permits one remote commit per batch.
+            payload["tail"] = tail
         self._write(
             self.directory / "head.json",
             {"payload": payload, "sha256": _digest(payload)},
+            timings=timings,
         )
 
-    def _write(self, destination: Path, value, *, persist: bool = True) -> None:
+    def _write(self, destination: Path, value, *, persist: bool = True, timings=None) -> None:
         # Preserve recorder column order in stored rows; checksums still use
         # canonical key ordering so integrity does not depend on JSON layout.
         temp_path = None
+        timings = timings if timings is not None else StageTimings()
         try:
-            content = _encode(value, sort_keys=False)
+            with timings.measure("checkpoint_encode"):
+                content = _encode(value, sort_keys=False)
             try:
-                with tempfile.NamedTemporaryFile(
-                    dir=self.directory, prefix=".pending-", delete=False
-                ) as handle:
-                    temp_path = Path(handle.name)
-                    handle.write(content)
-                    handle.flush()
-                    os.fsync(handle.fileno())
-                os.replace(temp_path, destination)
-                fd = os.open(self.directory, os.O_RDONLY)
-                try:
-                    os.fsync(fd)
-                finally:
-                    os.close(fd)
+                with timings.measure("checkpoint_local_write"):
+                    with timings.measure("checkpoint_create"):
+                        handle = tempfile.NamedTemporaryFile(
+                            dir=self.directory, prefix=".pending-", delete=False
+                        )
+                    with handle:
+                        temp_path = Path(handle.name)
+                        with timings.measure("checkpoint_write"):
+                            handle.write(content)
+                            handle.flush()
+                        with timings.measure("checkpoint_file_sync"):
+                            os.fsync(handle.fileno())
+                    with timings.measure("checkpoint_rename"):
+                        os.replace(temp_path, destination)
+                    with timings.measure("checkpoint_directory_sync"):
+                        fd = os.open(self.directory, os.O_RDONLY)
+                        try:
+                            os.fsync(fd)
+                        finally:
+                            os.close(fd)
                 if persist and self._persist is not None:
-                    self._persist(self.directory)
+                    with timings.measure("checkpoint_persist"):
+                        self._persist(self.directory)
+                timings.count("checkpoint_bytes", len(content))
             finally:
                 if temp_path is not None:
                     temp_path.unlink(missing_ok=True)

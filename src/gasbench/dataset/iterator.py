@@ -5,6 +5,7 @@ import json
 import random
 import re
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -12,13 +13,15 @@ from typing import Optional, Dict
 from ..logger import get_logger
 from .config import BenchmarkDatasetConfig
 from .download import download_and_extract
-from .cache import save_sample_to_cache, save_dataset_cache_files
+from .cache import (
+    CACHE_MAX_SAMPLES, cache_state, load_audio_sample, load_partial_cache,
+    save_sample_to_cache, save_dataset_cache_files,
+)
 from .utils import gasstation_utils
 
 logger = get_logger(__name__)
 
 DEFAULT_MAX_SAMPLES = 10000
-CACHE_MAX_SAMPLES = 500
 GASSTATION_CACHE_MAX_SAMPLES = 10000
 
 
@@ -40,7 +43,9 @@ class DatasetIterator:
         frozen_samples: Optional[list] = None,
     ):
         self.config = dataset_config
-        self.max_samples = max_samples or DEFAULT_MAX_SAMPLES
+        self.max_samples = DEFAULT_MAX_SAMPLES if max_samples is None else max_samples
+        if self.max_samples < -1:
+            raise ValueError("max_samples must be -1 (unlimited) or nonnegative")
         self.samples_yielded = 0
         self.cache_dir = cache_dir
         self.num_weeks = num_weeks
@@ -83,7 +88,7 @@ class DatasetIterator:
         return self
 
     def __next__(self):
-        if self.samples_yielded >= self.max_samples:
+        if self.max_samples >= 0 and self.samples_yielded >= self.max_samples:
             raise StopIteration
 
         if not hasattr(self, "_generator"):
@@ -119,8 +124,8 @@ class DatasetIterator:
 
         For gasstation datasets, loads from all target week directories.
 
-        Note: This generator yields ALL available cached samples. The __next__() method
-        is responsible for enforcing max_samples limit. This avoids double-counting issues.
+        Selection within each cache is capped by max_samples; __next__ also
+        enforces the total limit when reading multiple weekly caches.
         """
         if self.frozen_samples is not None:
             yield from self.frozen_samples
@@ -147,7 +152,7 @@ class DatasetIterator:
                     return
 
                 cached_count = self._get_cached_count()
-                samples_to_load = min(cached_count, self.max_samples)
+                samples_to_load = min(cached_count, self.max_samples) if self.max_samples >= 0 else cached_count
                 logger.debug(
                     f"Loading {samples_to_load} cached samples for {self.config.name}"
                 )
@@ -203,7 +208,8 @@ class DatasetIterator:
             # dataset fields
             "dataset_path": sample.get("dataset_path", self.config.path),
             "archive_filename": sample.get("archive_filename", ""),
-            "member_path": sample.get("member_path", ""),
+            "member_path": sample.get("member_path", sample.get("path_in_archive", "")),
+            "source_column": sample.get("source_column", ""),
             "source_kind": self.source_kind,
         }
 
@@ -262,39 +268,8 @@ class DatasetIterator:
             downloaded_archives: Set of already-downloaded archive basenames
         """
         samples_dir = os.path.join(week_dir, "samples")
-        metadata_file = os.path.join(week_dir, "sample_metadata.json")
-
-        sample_metadata = {}
-        sample_count = 0
-        next_index = 0  # Track the next index to use for new files
-
-        # Load existing cache
-        if os.path.exists(metadata_file):
-            try:
-                with open(metadata_file, "r") as f:
-                    sample_metadata = json.load(f)
-                sample_count = len(sample_metadata)
-
-                # Find the highest index used so far to continue from there
-                max_index = -1
-                for filename in sample_metadata.keys():
-                    match = re.search(r"_(\d+)", filename)
-                    if match:
-                        max_index = max(max_index, int(match.group(1)))
-                next_index = max_index + 1
-
-                logger.info(
-                    f"Found {sample_count} existing samples for week {week_str}, next index: {next_index}"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to load partial metadata for week {week_str}: {e}"
-                )
-                sample_metadata = {}
-                sample_count = 0
-                next_index = 0
-
-        Path(samples_dir).mkdir(parents=True, exist_ok=True)
+        sample_metadata, next_index = load_partial_cache(week_dir)
+        sample_count = len(sample_metadata)
 
         initial_sample_count = sample_count
 
@@ -307,7 +282,7 @@ class DatasetIterator:
             media_per_archive=self.config.media_per_archive,
             archives_per_dataset=self.config.archives_per_dataset,
             temp_dir=f"{self.cache_dir}/temp_downloads",
-            force_download=False,
+            force_download=True,
             cache_dir=self.cache_dir,
             num_weeks=None,
             downloaded_archives=downloaded_archives,
@@ -398,51 +373,28 @@ class DatasetIterator:
         Used for non-gasstation datasets.
         """
         samples_dir = os.path.join(self.dataset_dir, "samples")
-        metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
-
-        sample_metadata = {}
-        sample_count = 0
-        next_index = 0  # Track the next index to use for new files
-
-        # Load existing cache
-        if os.path.exists(metadata_file):
-            try:
-                with open(metadata_file, "r") as f:
-                    sample_metadata = json.load(f)
-                sample_count = len(sample_metadata)
-
-                max_index = -1
-                for filename in sample_metadata.keys():
-                    match = re.search(r"_(\d+)", filename)
-                    if match:
-                        max_index = max(max_index, int(match.group(1)))
-                next_index = max_index + 1
-
-                logger.info(
-                    f"Found partial cache with {sample_count} samples, next index: {next_index}, resuming download"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to load partial metadata, starting fresh: {e}")
-                sample_metadata = {}
-                sample_count = 0
-                next_index = 0
-        else:
-            logger.info(
-                f"No cached datasets found.\nDownloading {self.config.name} (max {CACHE_MAX_SAMPLES} samples)"
-            )
-
+        sample_metadata, next_index = load_partial_cache(self.dataset_dir)
+        sample_count = len(sample_metadata)
         if sample_count >= CACHE_MAX_SAMPLES:
-            logger.info(f"Cache complete with {sample_count} samples")
             return
+        (Path(self.dataset_dir) / ".download_complete").unlink(missing_ok=True)
 
-        Path(samples_dir).mkdir(parents=True, exist_ok=True)
+        def source_key(sample):
+            metadata = self._extract_sample_metadata(sample)
+            return tuple(metadata[key] for key in (
+                "source_file", "archive_filename", "member_path", "source_column"
+            ))
 
+        # Legacy parquet caches identify the shard/column, not the individual
+        # row. Match occurrences from the seeded replay rather than collapsing
+        # all rows sharing that source into one sample.
+        cached_occurrences = Counter(source_key(item) for item in sample_metadata.values())
         for sample in download_and_extract(
             self.config,
             media_per_archive=self.config.media_per_archive,
             archives_per_dataset=self.config.archives_per_dataset,
             temp_dir=f"{self.cache_dir}/temp_downloads",
-            force_download=False,
+            force_download=True,
             cache_dir=self.cache_dir,
             num_weeks=self.num_weeks,
             downloaded_archives=None,
@@ -452,6 +404,10 @@ class DatasetIterator:
             if sample_count >= CACHE_MAX_SAMPLES:
                 break
 
+            key = source_key(sample)
+            if cached_occurrences[key]:
+                cached_occurrences[key] -= 1
+                continue
             filename = save_sample_to_cache(
                 sample, self.config, samples_dir, next_index
             )
@@ -507,64 +463,15 @@ class DatasetIterator:
             logger.warning(f"No samples were downloaded for {self.config.name}")
 
     def _has_cached_dataset(self) -> bool:
-        """Check if dataset has any cached data (even if incomplete)."""
-        try:
-            dataset_info_file = os.path.join(self.dataset_dir, "dataset_info.json")
-            samples_dir = os.path.join(self.dataset_dir, "samples")
-            metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
-
-            return (
-                os.path.exists(dataset_info_file)
-                and os.path.exists(samples_dir)
-                and os.path.exists(metadata_file)
-                and len(os.listdir(samples_dir)) > 0
-            )
-        except Exception:
-            return False
+        return cache_state(self.dataset_dir)["cached"]
 
     def _is_cache_complete(self) -> bool:
-        """Check if cached dataset has enough samples for max_samples.
-
-        For gasstation datasets, checks all week directories.
-        For non-gasstation datasets, checks the single dataset directory.
-        """
-        try:
-            if self.is_gasstation:
-                # For gasstation, check all week directories
-                # (Individual weeks are checked in _ensure_week_cached)
-                total_cached = gasstation_utils.get_total_cached_samples(self.week_dirs)
-                return total_cached >= self.max_samples
-            else:
-                if not self._has_cached_dataset():
-                    return False
-
-                # Check for completion marker file (dataset fully downloaded, even if < CACHE_MAX_SAMPLES)
-                completion_marker = os.path.join(self.dataset_dir, ".download_complete")
-                if os.path.exists(completion_marker):
-                    return True
-
-                metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
-                with open(metadata_file, "r") as f:
-                    metadata = json.load(f)
-
-                cached_count = len(metadata)
-                return cached_count >= CACHE_MAX_SAMPLES
-
-        except Exception:
-            return False
+        if self.is_gasstation:
+            return gasstation_utils.get_total_cached_samples(self.week_dirs) >= self.max_samples
+        return cache_state(self.dataset_dir)["complete"]
 
     def _get_cached_count(self) -> int:
-        """Get the number of samples currently cached."""
-        try:
-            metadata_file = os.path.join(self.dataset_dir, "sample_metadata.json")
-            if not os.path.exists(metadata_file):
-                return 0
-
-            with open(metadata_file, "r") as f:
-                metadata = json.load(f)
-            return len(metadata)
-        except Exception:
-            return 0
+        return cache_state(self.dataset_dir)["sample_count"]
 
     def get_total_cached_count(self) -> int:
         """Get total number of samples cached across all directories.
@@ -613,7 +520,10 @@ class DatasetIterator:
             except Exception:
                 dataset_info = {}
 
-            sample_items = [f for f in os.listdir(samples_dir) if not f.startswith(".")]
+            sample_items = sorted(
+                f for f in os.listdir(samples_dir)
+                if not f.startswith(".") and f in metadata_map
+            )
 
             if self.is_gasstation:
 
@@ -627,7 +537,8 @@ class DatasetIterator:
                     random.Random(self.seed).shuffle(sample_items)
                 else:
                     random.shuffle(sample_items)
-                sample_items = sample_items[: self.max_samples]
+                if self.max_samples >= 0:
+                    sample_items = sample_items[: self.max_samples]
 
             for filename in sample_items:
                 file_path = os.path.join(samples_dir, filename)
@@ -754,21 +665,3 @@ class DatasetIterator:
         except Exception as e:
             logger.error(f"Failed to load cached dataset from {cache_dir}: {e}")
             raise
-
-
-def load_audio_sample(sample):
-    """Materialize cached audio after resume filtering, preserving cache provenance."""
-    path = Path(sample["audio_path"])
-    if path.suffix == ".pt":
-        import torch
-
-        data = torch.load(path, map_location="cpu")
-        return {
-            **data.get("metadata", {}), **sample,
-            "preprocessed_waveform": data["waveform"], "label": data["label"],
-            "cached_filename": path.name, "is_preprocessed": True,
-        }
-    return {
-        **sample, "audio_bytes": path.read_bytes(),
-        "cached_filename": path.name, "is_preprocessed": False,
-    }

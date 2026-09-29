@@ -1,116 +1,61 @@
 import os
-import numpy as np
-import traceback
 from typing import Dict, Optional
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
-from queue import Queue, Empty
-import threading
 
-from ..logger import get_logger
-from ..processing.archive import video_archive_manager
+import numpy as np
+import pandas as pd
+
+from ..config import DEFAULT_VIDEO_BATCH_SIZE
+from ..constants import media_type_to_label
 from ..processing.media import process_video_bytes_sample, process_video_frames_sample
 from ..processing.transforms import (
     apply_random_augmentations,
     apply_video_robustness_augmentations,
-    extract_num_frames_from_input_specs,
-)
-from ..config import DEFAULT_VIDEO_BATCH_SIZE
-from ..constants import MAX_VIDEO_NUM_FRAMES, media_type_to_label
-
-from ._checkpoint import CheckpointError
-from .recording import BenchmarkRunRecorder, log_dataset_summary, build_sample_id
-from .common import (
-    BenchmarkRunConfig,
-    build_plan,
-    create_tracker,
-    create_dataset_iterator,
-    verify_sample,
-    use_augmentation_cache,
-    finalize_run,
-    stack_uniform_batch,
-    run_batch_and_record,
 )
 from .aug_cache import vid_aug_cache_path, write_aug_cache
-import pandas as pd
-
-logger = get_logger(__name__)
+from .common import (
+    BenchmarkRunConfig,
+    load_augmentation_cache,
+    verify_sample,
+)
+from .prefetch import PrefetchPipeline as BasePrefetchPipeline
+from .recording import build_sample_id
+from .runner import run_modality_benchmark
 
 _HEAVY_VIDEO_KEYS = frozenset(("video_bytes", "video_path"))
 
 
-class VideoPrefetchPipeline:
-    """Pipeline for parallel loading and preprocessing of video samples.
-
-    When the iterator yields lazy samples (video_path instead of video_bytes),
-    file I/O is performed inside worker threads so that multiple disk reads from
-    network volumes happen concurrently.
-    """
-
-    def __init__(
-        self,
-        dataset_iterator,
-        target_size,
-        batch_size,
-        seed,
-        augment_level,
-        crop_prob,
-        num_workers=4,
-        max_queue_size=6,
-        num_frames=16,
-        frame_rate=None,
-        robustness_pass=False,
-        aug_cache_dir=None,
-        aug_cache_readonly=False,
-        tracker=None,
-    ):
-        self.tracker = tracker
-        self.dataset_iterator = dataset_iterator
-        self.target_size = target_size
-        self.batch_size = batch_size
-        self.seed = seed
-        self.augment_level = augment_level
-        self.crop_prob = crop_prob
-        self.num_workers = num_workers
-        self.max_queue_size = max_queue_size
+class VideoPrefetchPipeline(BasePrefetchPipeline):
+    def __init__(self, *args, num_frames=16, frame_rate=None, **kwargs):
         self.num_frames = num_frames
         self.frame_rate = frame_rate
-        self.robustness_pass = robustness_pass
-        self.aug_cache_dir = aug_cache_dir
-        self.aug_cache_readonly = aug_cache_readonly
-
-        self.batch_queue = Queue(maxsize=max_queue_size)
-        self.stop_event = threading.Event()
-        self.error = None
-
-        self.executor = ThreadPoolExecutor(max_workers=num_workers)
-        self.producer_thread = threading.Thread(target=self._producer_loop, daemon=True)
-        self.producer_thread.start()
+        super().__init__(*args, **kwargs)
 
     def _read_and_preprocess(self, sample, sample_index, dataset_name):
         """Read file from disk (if lazy), decode, and augment. Runs in worker thread."""
-        verify_sample(sample)
-        try:
-            sample_seed = None if self.seed is None else (self.seed + sample_index)
-            cache_path = None
-            if self.robustness_pass and self.aug_cache_dir:
-                cache_path = vid_aug_cache_path(
-                    self.aug_cache_dir, build_sample_id(sample), self.target_size
-                )
+        with self.timings.measure("source_validation"):
+            verify_sample(sample)
+        sample_seed = None if self.seed is None else (self.seed + sample_index)
+        cache_path = None
+        if self.robustness_pass and self.aug_cache_dir:
+            cache_path = vid_aug_cache_path(
+                self.aug_cache_dir,
+                build_sample_id(sample),
+                self.target_size,
+                num_frames=self.num_frames,
+                frame_rate=self.frame_rate,
+            )
 
-            # Validate the frozen source and cache before loading cached frames.
-            # A cache hit already contains the frames needed for inference.
-            if cache_path is not None and use_augmentation_cache(sample, cache_path):
-                aug_thwc = np.load(cache_path)
-                label = media_type_to_label(
-                    sample.get("media_type", "synthetic"), "video"
+        # Validate the frozen source and cache before loading cached frames.
+        # A cache hit already contains the frames needed for inference.
+        aug_thwc = load_augmentation_cache(sample, cache_path, timings=self.timings)
+        if aug_thwc is not None:
+            if aug_thwc.shape != (self.num_frames, *self.target_size, 3):
+                raise ValueError(
+                    "Cached video shape differs from the model preprocessing contract"
                 )
-            else:
-                video_path = sample.get("video_path")
-                if video_path:
-                    with open(video_path, "rb") as f:
-                        video_bytes = f.read()
-                    sample = {**sample, "video_bytes": video_bytes}
-
+            label = media_type_to_label(sample.get("media_type", "synthetic"), "video")
+        else:
+            with self.timings.measure("decode"):
                 if "video_frames" in sample:
                     video_array, label = process_video_frames_sample(
                         sample, num_frames=self.num_frames
@@ -120,16 +65,19 @@ class VideoPrefetchPipeline:
                         sample, num_frames=self.num_frames, frame_rate=self.frame_rate
                     )
 
-                if video_array is None or label is None:
-                    return None
+            if video_array is None or label is None:
+                return None
 
-                if self.robustness_pass:
+            if self.robustness_pass:
+                with self.timings.measure("transform"):
                     aug_thwc, _, _, _ = apply_video_robustness_augmentations(
                         video_array, self.target_size, seed=sample_seed
                     )
-                    if cache_path is not None and not self.aug_cache_readonly:
+                if cache_path is not None and not self.aug_cache_readonly:
+                    with self.timings.measure("cache_write"):
                         write_aug_cache(cache_path, aug_thwc)
-                else:
+            else:
+                with self.timings.measure("transform"):
                     aug_thwc, _, _, _ = apply_random_augmentations(
                         video_array,
                         self.target_size,
@@ -138,130 +86,18 @@ class VideoPrefetchPipeline:
                         crop_prob=self.crop_prob,
                     )
 
-            aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
+        aug_tchw = np.transpose(aug_thwc, (0, 3, 1, 2))
 
-            sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_VIDEO_KEYS}
+        sample_meta = {k: v for k, v in sample.items() if k not in _HEAVY_VIDEO_KEYS}
 
-            return {
-                "video": aug_tchw,
-                "label": label,
-                "sample": sample_meta,
-                "sample_index": sample_index,
-                "dataset_name": dataset_name,
-                "sample_seed": sample_seed,
-            }
-        except CheckpointError:
-            raise
-        except Exception as e:
-            logger.warning(f"Failed to preprocess video sample {sample_index}: {e}")
-            return None
-
-    def _producer_loop(self):
-        """Read + preprocess samples in parallel with bounded concurrency."""
-        try:
-            dataset_name = getattr(self.dataset_iterator.config, "name", "unknown")
-            max_in_flight = self.num_workers * 3
-
-            sample_iter = enumerate(self.dataset_iterator, 1)
-            pending = set()
-            exhausted = False
-            batch = []
-
-            while not self.stop_event.is_set():
-                while len(pending) < max_in_flight and not exhausted:
-                    try:
-                        idx, sample = next(sample_iter)
-                        if self.tracker is not None and self.tracker.is_checkpointed(
-                            dataset_name=dataset_name, sample_index=idx,
-                            sample=sample, aug_pass=self.robustness_pass,
-                        ):
-                            continue
-                        future = self.executor.submit(
-                            self._read_and_preprocess, sample, idx, dataset_name
-                        )
-                        pending.add(future)
-                    except StopIteration:
-                        exhausted = True
-                        break
-
-                if not pending:
-                    break
-
-                done, pending = wait(pending, return_when=FIRST_COMPLETED)
-
-                for future in done:
-                    if self.stop_event.is_set():
-                        break
-                    try:
-                        result = future.result()
-                    except CheckpointError:
-                        raise
-                    except Exception:
-                        continue
-                    if result is not None:
-                        batch.append(result)
-                        if len(batch) >= self.batch_size:
-                            self.batch_queue.put(batch)
-                            batch = []
-
-            if batch and not self.stop_event.is_set():
-                self.batch_queue.put(batch)
-
-            self.batch_queue.put(None)
-
-        except Exception as e:
-            self.error = e
-            logger.error(
-                f"Error in video prefetch pipeline: {e}\n{traceback.format_exc()}"
-            )
-            self.batch_queue.put(None)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.error:
-            raise self.error
-
-        try:
-            batch = self.batch_queue.get(timeout=300)
-            if batch is None:
-                if self.error:
-                    raise self.error
-                raise StopIteration
-            return batch
-        except Empty:
-            logger.error("Timeout waiting for batch from video prefetch pipeline")
-            raise StopIteration
-
-    def close(self):
-        """Clean up resources."""
-        self.stop_event.set()
-        self.executor.shutdown(wait=False, cancel_futures=True)
-
-        while not self.batch_queue.empty():
-            try:
-                self.batch_queue.get_nowait()
-            except Empty:
-                break
-
-
-def process_video_batch(
-    session,
-    input_specs,
-    batch_videos,
-    batch_metadata,
-    tracker: BenchmarkRunRecorder,
-    batch_id: int,
-    aug_pass: bool = False,
-):
-    """push a batch of videos through the model and record rows in tracker."""
-    if not batch_videos:
-        return
-    batch_array = stack_uniform_batch(batch_videos)
-    run_batch_and_record(
-        session, input_specs, batch_array, batch_metadata, tracker, batch_id, aug_pass
-    )
+        return {
+            "data": aug_tchw,
+            "label": label,
+            "sample": sample_meta,
+            "sample_index": sample_index,
+            "dataset_name": dataset_name,
+            "sample_seed": sample_seed,
+        }
 
 
 async def run_video_benchmark(
@@ -294,253 +130,49 @@ async def run_video_benchmark(
     checkpoint_dir: Optional[str] = None,
     checkpoint_persist=None,
 ) -> pd.DataFrame:
-    """Test model on benchmark video datasets for AI-generated content detection."""
+    """Compatibility entry point; all modalities share one run lifecycle."""
+    batch_size = DEFAULT_VIDEO_BATCH_SIZE if batch_size is None else batch_size
+    config = BenchmarkRunConfig(
+        modality="video",
+        mode=mode,
+        gasstation_only=gasstation_only,
+        dataset_config_path=dataset_config,
+        holdout_config_path=holdout_config,
+        cache_dir=cache_dir,
+        hf_token=os.environ.get("HF_TOKEN"),
+        batch_size=batch_size,
+        augment_level=augment_level or 0,
+        crop_prob=crop_prob or 0.0,
+        records_parquet_path=records_parquet_path,
+        run_id=run_id,
+        checkpoint_dir=checkpoint_dir,
+        checkpoint_persist=checkpoint_persist,
+        dataset_filters=dataset_filters,
+        holdout_weight=holdout_weight,
+        holdouts_only=holdouts_only,
+        content_category=content_category,
+        score_composition=score_composition,
+        multiclass_scoring=multiclass_scoring,
+        n_aug_per_dataset=n_aug_per_dataset,
+        aug_weight=aug_weight,
+        aug_cache_dir=aug_cache_dir,
+        aug_cache_readonly=aug_cache_readonly,
+    )
+    return await run_modality_benchmark(
+        session,
+        input_specs,
+        benchmark_results,
+        config=config,
+        seed=seed,
+        skip_missing=skip_missing,
+        download_latest_gasstation_data=download_latest_gasstation_data,
+    )
 
-    seed = 42 if seed is None else seed
 
-    if batch_size is None:
-        batch_size = DEFAULT_VIDEO_BATCH_SIZE
+PIPELINE = VideoPrefetchPipeline
 
-    # Resolve num_frames and frame_rate from input shape / preprocessing config.
-    # If frame_rate is not specified, frames are taken sequentially at native video fps.
-    num_frames = extract_num_frames_from_input_specs(input_specs)
-    frame_rate = None
-    if hasattr(session, "get_preprocessing_config"):
-        preproc = session.get_preprocessing_config()
-        if num_frames is None:
-            num_frames = preproc.get("num_frames", 16)
-        frame_rate = preproc.get("frame_rate")
-    if num_frames is None:
-        num_frames = 16
-    if num_frames > MAX_VIDEO_NUM_FRAMES:
-        logger.warning(
-            f"num_frames={num_frames} exceeds maximum allowed ({MAX_VIDEO_NUM_FRAMES}). "
-            f"Clamping to {MAX_VIDEO_NUM_FRAMES}."
-        )
-        num_frames = MAX_VIDEO_NUM_FRAMES
-    logger.info(f"Video preprocessing: num_frames={num_frames}, frame_rate={frame_rate}")
 
-    try:
-        hf_token = os.environ.get("HF_TOKEN")
+def preprocessing_options(session, input_specs):
+    from .inputs import video_preprocessing
 
-        if gasstation_only:
-            logger.info("Loading gasstation video datasets only")
-        else:
-            logger.info("Loading benchmark video datasets")
-
-        run_config = BenchmarkRunConfig(
-            modality="video",
-            mode=mode,
-            gasstation_only=gasstation_only,
-            dataset_config_path=dataset_config,
-            holdout_config_path=holdout_config,
-            cache_dir=cache_dir,
-            hf_token=hf_token,
-            batch_size=batch_size,
-            augment_level=augment_level or 0,
-            crop_prob=crop_prob or 0.0,
-            records_parquet_path=records_parquet_path,
-            run_id=run_id,
-            checkpoint_dir=checkpoint_dir,
-            checkpoint_persist=checkpoint_persist,
-            dataset_filters=dataset_filters,
-            holdout_weight=holdout_weight,
-            holdouts_only=holdouts_only,
-            content_category=content_category,
-            score_composition=score_composition,
-            multiclass_scoring=multiclass_scoring,
-            n_aug_per_dataset=n_aug_per_dataset,
-            aug_weight=aug_weight,
-            aug_cache_dir=aug_cache_dir,
-            aug_cache_readonly=aug_cache_readonly,
-        )
-        plan = build_plan(logger, run_config, input_specs)
-        if not plan:
-            logger.error("No benchmark video datasets configured")
-            benchmark_results["video_results"] = {"error": "No datasets available"}
-            return 0.0
-
-        tracker = create_tracker(
-            run_config, plan, input_specs, session=session, seed=seed,
-            skip_missing=skip_missing,
-            download_latest_gasstation_data=download_latest_gasstation_data,
-        )
-        benchmark_results["run_id"] = run_config.run_id
-        benchmark_results["checkpoint_dir"] = run_config.checkpoint_dir
-
-        with video_archive_manager(cache_dir=cache_dir) as video_cache:
-            skipped_samples = 0
-            benchmark_results.setdefault("errors", [])
-            logger.info(
-                f"Sampling plan targets {plan.sampling_summary.actual_total_samples} samples across {plan.sampling_summary.num_datasets} datasets"
-            )
-
-            for dataset_idx, dataset_config in enumerate(plan.available_datasets):
-                dataset_cap = plan.sampling_plan[dataset_config.name]
-                logger.info(
-                    f"Processing dataset {dataset_idx + 1}/{len(plan.available_datasets)}: "
-                    f"{dataset_config.name} ({dataset_cap} samples)"
-                )
-
-                try:
-                    dataset_iterator = create_dataset_iterator(
-                        run_config, plan, dataset_config, aug_pass=False,
-                    )
-
-                    if skip_missing and dataset_iterator.get_total_cached_count() == 0:
-                        logger.warning(f"Skipping {dataset_config.name} (not cached, --skip-missing enabled)")
-                        continue
-
-                    pipeline = VideoPrefetchPipeline(
-                        dataset_iterator=dataset_iterator,
-                        tracker=tracker,
-                        target_size=plan.target_size,
-                        batch_size=batch_size,
-                        seed=seed,
-                        augment_level=augment_level,
-                        crop_prob=crop_prob,
-                        num_frames=num_frames,
-                        frame_rate=frame_rate,
-                    )
-
-                    batch_id = 0
-                    try:
-                        for batch_data in pipeline:
-                            batch_id += 1
-
-                            batch_videos = [item["video"] for item in batch_data]
-                            batch_metadata = [
-                                (
-                                    item["label"],
-                                    item["sample"],
-                                    item["sample_index"],
-                                    item["dataset_name"],
-                                    item["sample_seed"],
-                                )
-                                for item in batch_data
-                            ]
-
-                            process_video_batch(
-                                session,
-                                input_specs,
-                                batch_videos,
-                                batch_metadata,
-                                tracker,
-                                batch_id,
-                            )
-
-                            if tracker.count % 500 == 0:
-                                logger.info(f"Progress: {tracker.count} samples")
-
-                    finally:
-                        pipeline.close()
-
-                        log_dataset_summary(
-                            logger, tracker, dataset_config.name, include_skipped=True
-                        )
-
-                except CheckpointError:
-                    raise
-                except Exception as e:
-                    logger.error(
-                        f"Failed to process dataset {dataset_config.name}: {e}"
-                    )
-                    benchmark_results["errors"].append(
-                        f"Dataset error for {dataset_config.name}: {str(e)[:100]}"
-                    )
-
-            if n_aug_per_dataset > 0:
-                aug_seed = seed if seed is not None else 42
-                logger.info(
-                    f"Starting video augmentation robustness pass: "
-                    f"{n_aug_per_dataset} samples/dataset"
-                    + (f" (aug_cache_dir={aug_cache_dir})" if aug_cache_dir else "")
-                )
-                for dataset_idx, dataset_config in enumerate(plan.available_datasets):
-                    logger.info(
-                        f"Robustness pass {dataset_idx + 1}/{len(plan.available_datasets)}: "
-                        f"{dataset_config.name}"
-                    )
-                    try:
-                        aug_iterator = create_dataset_iterator(
-                            run_config, plan, dataset_config, aug_pass=True,
-                        )
-
-                        if skip_missing and aug_iterator.get_total_cached_count() == 0:
-                            continue
-
-                        aug_pipeline = VideoPrefetchPipeline(
-                            dataset_iterator=aug_iterator,
-                            tracker=tracker,
-                            target_size=plan.target_size,
-                            batch_size=batch_size,
-                            seed=aug_seed,
-                            augment_level=augment_level,
-                            crop_prob=crop_prob,
-                            num_frames=num_frames,
-                            frame_rate=frame_rate,
-                            robustness_pass=True,
-                            aug_cache_dir=aug_cache_dir,
-                            aug_cache_readonly=aug_cache_readonly,
-                        )
-
-                        aug_batch_id = 0
-                        try:
-                            for batch_data in aug_pipeline:
-                                aug_batch_id += 1
-                                batch_videos = [item["video"] for item in batch_data]
-                                batch_metadata = [
-                                    (
-                                        item["label"],
-                                        item["sample"],
-                                        item["sample_index"],
-                                        item["dataset_name"],
-                                        item["sample_seed"],
-                                    )
-                                    for item in batch_data
-                                ]
-                                process_video_batch(
-                                    session,
-                                    input_specs,
-                                    batch_videos,
-                                    batch_metadata,
-                                    tracker,
-                                    aug_batch_id,
-                                    aug_pass=True,
-                                )
-                        finally:
-                            aug_pipeline.close()
-
-                    except CheckpointError:
-                        raise
-                    except Exception as e:
-                        logger.error(
-                            f"Video robustness pass failed for {dataset_config.name}: {e}"
-                        )
-
-            cache_info = video_cache.get_cache_info()
-            df = finalize_run(
-                config=run_config,
-                plan=plan,
-                tracker=tracker,
-                benchmark_results=benchmark_results,
-                results_key="video_results",
-                extra_fields={"cache_info": cache_info},
-            )
-
-            logger.info(
-                f"Archive cache: {cache_info['unpacked_archives']} archives cached locally"
-            )
-            if skipped_samples > 0:
-                logger.warning(
-                    f"Skipped {skipped_samples} samples due to missing/inaccessible archives or processing errors"
-                )
-
-            return df
-
-    except CheckpointError:
-        raise
-    except Exception as e:
-        logger.error(f"Benchmark video testing failed: {e}")
-        benchmark_results["video_results"] = {"error": str(e)}
-        raise e
+    return video_preprocessing(session, input_specs)

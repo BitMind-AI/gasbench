@@ -1,5 +1,10 @@
 """Recovery uses real recorder rows, summaries, scoring, and parquet output."""
 
+import json
+import os
+import subprocess
+import sys
+
 import pandas as pd
 import pytest
 
@@ -9,6 +14,7 @@ from gasbench.benchmarks.recording import (
     compute_per_dataset_from_df,
 )
 from gasbench.benchmarks._checkpoint import CheckpointError
+from gasbench.benchmarks.errors import BenchmarkError
 
 
 @pytest.fixture
@@ -92,9 +98,9 @@ def test_resumed_recorder_uses_existing_metrics_summaries_and_parquet(
     assert resumed.get_dataset_summary("dataset", True) == original.get_dataset_summary(
         "dataset", True
     )
-    assert compute_metrics_from_df(resumed.to_dataframe()) == compute_metrics_from_df(
-        original.to_dataframe()
-    )
+    for recorder in (original, resumed):
+        with pytest.raises(BenchmarkError, match="Cannot score"):
+            compute_metrics_from_df(recorder.to_dataframe())
     assert compute_per_dataset_from_df(
         resumed.to_dataframe()
     ) == compute_per_dataset_from_df(original.to_dataframe())
@@ -204,7 +210,85 @@ def test_plain_recorder_still_records_without_checkpoint_configuration():
     add_prediction(recorder, "a")
     assert recorder.count == 1
     assert recorder.checkpoint() == 0
+    assert recorder.checkpoint_if_due() == 0
     assert recorder.get_dataset_summary("dataset")["total"] == 1
+
+
+def test_grouped_checkpoint_deadline_and_explicit_flush(tmp_path, context, monkeypatch):
+    from gasbench.benchmarks import recording
+
+    clock = 0
+    monkeypatch.setattr(recording, "monotonic", lambda: clock)
+    monkeypatch.setattr(recording, "_CHECKPOINT_INTERVAL_SECONDS", 10)
+    monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 100)
+    kwargs = dict(run_id="run", checkpoint_dir=tmp_path, checkpoint_context=context)
+    recorder = BenchmarkRunRecorder(**kwargs)
+    add_prediction(recorder, "a")
+    clock = 9
+    add_prediction(recorder, "b", index=2)
+    assert recorder.checkpoint_if_due() == 0
+    assert BenchmarkRunRecorder(**kwargs).rows == []
+    assert not recorder.is_checkpointed(dataset_name="dataset", sample_index=1, sample=sample("a"))
+    clock = 10
+    assert recorder.checkpoint_if_due() == 2
+    assert BenchmarkRunRecorder(**kwargs).rows == recorder.rows
+    clock = 11
+    add_prediction(recorder, "c", index=3)
+    assert recorder.checkpoint_if_due() == 0
+    assert recorder.checkpoint() == 1  # Explicit flush never waits for the deadline.
+    clock = 20
+    add_prediction(recorder, "d", index=4)
+    assert recorder.checkpoint_if_due() == 0  # Explicit flush reset the deadline.
+    clock = 21
+    assert recorder.checkpoint_if_due() == 1
+    assert recorder.checkpoint_if_due() == 0
+    assert BenchmarkRunRecorder(**kwargs).rows == recorder.rows
+
+
+def test_pending_limit_includes_skipped_and_augmented_rows(tmp_path, context, monkeypatch):
+    from gasbench.benchmarks import recording
+
+    monkeypatch.setattr(recording, "monotonic", lambda: 0)
+    monkeypatch.setattr(recording, "_CHECKPOINT_MAX_PENDING_ROWS", 2)
+    kwargs = dict(run_id="run", checkpoint_dir=tmp_path, checkpoint_context=context)
+    recorder = BenchmarkRunRecorder(**kwargs)
+    add_prediction(recorder, "a", aug_pass=True)
+    assert recorder.checkpoint_if_due() == 0
+    recorder.add_skip(dataset_name="dataset", sample_index=2, sample=sample("b"), reason="decode")
+    assert recorder.checkpoint_if_due() == 2
+    assert BenchmarkRunRecorder(**kwargs).rows == recorder.rows
+    add_prediction(recorder, "c", index=3)
+    assert recorder.checkpoint_if_due() == 0  # Only pending rows count toward the cap.
+
+
+def test_process_death_replays_only_uncommitted_group(tmp_path, context):
+    # An abrupt exit bypasses the runner's graceful-interruption flush.
+    program = """
+import json, os, sys
+from pathlib import Path
+from gasbench.benchmarks import recording
+recording._CHECKPOINT_MAX_PENDING_ROWS = 2
+recording.monotonic = lambda: 0
+recorder = recording.BenchmarkRunRecorder(
+    run_id='run', checkpoint_dir=Path(sys.argv[1]), checkpoint_context=json.loads(sys.argv[2])
+)
+for index in range(1, 4):
+    recorder.add_skip(dataset_name='dataset', sample_index=index,
+                      sample={'source_file': str(index)}, reason='decode')
+    recorder.checkpoint_if_due()
+os._exit(71)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", program, str(tmp_path), json.dumps(context)],
+        env=os.environ.copy(), check=False,
+    )
+    assert result.returncode == 71
+    kwargs = dict(run_id="run", checkpoint_dir=tmp_path, checkpoint_context=context)
+    resumed = BenchmarkRunRecorder(**kwargs)
+    assert [row["iteration_index"] for row in resumed.rows] == [1, 2]
+    resumed.add_skip(dataset_name="dataset", sample_index=3, sample={"source_file": "3"}, reason="decode")
+    resumed.checkpoint()
+    assert [row["iteration_index"] for row in BenchmarkRunRecorder(**kwargs).rows] == [1, 2, 3]
 
 
 def test_archive_path_identity_matches_resume_lookup_for_every_status(tmp_path, context):

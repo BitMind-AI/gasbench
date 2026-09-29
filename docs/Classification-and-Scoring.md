@@ -46,8 +46,10 @@ Binary scoring uses `p_not_real = 1 - p_real` and predicts non-real when that
 probability exceeds `0.5`. For example, probabilities `[0.4, 0.3, 0.3]` predict
 `real` in the three-class task but `not real` in the binary task.
 
-Metrics use successful predictions; skipped samples and inference errors are
-excluded. The fields above describe the base pass unless explicitly blended.
+Metrics use successful predictions. Unreadable source samples are recorded as
+skips; inference failures invalidate the run. Every selected sample must have a
+recorded outcome before a run can complete. The fields above describe the base
+pass unless explicitly blended.
 
 ## How SN34 is calculated
 
@@ -74,7 +76,7 @@ pass_score      = sqrt(max(1e-12, mcc_component * brier_component))
 
 A perfect predictor scores approximately `1`. Brier error at or above its
 baseline gives the numerical floor, `0.000001`. A run with no successful base
-predictions returns `sn34_score = 0`.
+predictions fails instead of publishing a score.
 
 `binary_cross_entropy` (log loss) and `per_class_recall` are additional
 diagnostics; they do not enter this formula.

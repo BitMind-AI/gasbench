@@ -22,7 +22,9 @@ datasets:
     source_format: parquet
     media_per_archive: 250
     archives_per_dataset: 4
-    notes: Arabic language deepfake audio
+    filter_column: label
+    filter_value: 0
+    notes: Arabic language deepfake audio — fake rows only (label 0)
     generator_family: mixed-generation
     content_category: diverse
 

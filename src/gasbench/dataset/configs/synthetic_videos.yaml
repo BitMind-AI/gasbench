@@ -230,6 +230,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [controlable_videos_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -241,6 +242,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [inpainting_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -252,6 +254,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [local_style_transfer_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -263,6 +266,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [obj_removal_videos_upload, obj_removal_videos_upload2]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -274,6 +278,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [obj_swap_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -285,6 +290,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [style_transfer_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 

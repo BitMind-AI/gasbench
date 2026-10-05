@@ -7,9 +7,11 @@ import pandas as pd
 from PIL import Image
 import pytest
 import soundfile as sf
+import yaml
 
-from gasbench.dataset.config import BenchmarkDatasetConfig
+from gasbench.dataset.config import BenchmarkDatasetConfig, load_datasets_from_yaml
 from gasbench.dataset.download import _process_parquet
+from gasbench.dataset.download import core
 
 
 def png(red):
@@ -88,14 +90,68 @@ def test_corrupt_media_does_not_discard_other_rows(parquet):
     assert [s["image"].getpixel((0, 0))[0] for s in samples] == [10, 20]
 
 
-def test_row_filter_applies_before_sampling(parquet):
-    path = parquet([{"image": png(i), "split": "keep" if i == 5 else "drop"} for i in range(8)])
+@pytest.mark.parametrize("keep,drop", [("keep", "drop"), (0, 1), (False, True), ("", "drop")])
+def test_row_filter_applies_before_sampling(parquet, keep, drop):
+    path = parquet([{"image": png(i), "split": keep if i == 5 else drop} for i in range(8)])
     config = BenchmarkDatasetConfig(
-        "filtered", "test/images", "image", "real", filter_column="split", filter_value="keep",
+        "filtered", "test/images", "image", "real", filter_column="split", filter_value=keep,
     )
     samples = list(_process_parquet(path, config, num_items=1, seed=1))
     assert len(samples) == 1
     assert samples[0]["image"].getpixel((0, 0)) == (5, 0, 0)
+
+
+@pytest.mark.parametrize("label,media_type", [(0, "synthetic"), (1, "real")])
+def test_numeric_yaml_filter_collects_only_matching_audio_until_target(
+    tmp_path, monkeypatch, label, media_type,
+):
+    config_path = tmp_path / "datasets.yaml"
+    config_path.write_text(yaml.safe_dump({"datasets": [{
+        "name": "filtered-audio", "path": "test/audio", "modality": "audio",
+        "media_type": media_type, "source_format": "parquet",
+        "filter_column": "label", "filter_value": label,
+    }]}))
+    (config,) = load_datasets_from_yaml(str(config_path))["audio"]
+    filenames = [f"shard-{i}.parquet" for i in range(4)]
+    monkeypatch.setattr(core, "_list_remote_dataset_files", lambda *a, **k: filenames)
+    monkeypatch.setattr(core, "_get_download_urls", lambda path, files, *a: list(files))
+    downloaded = []
+
+    def download(paths, root, **kwargs):
+        for filename in paths:
+            path = root / filename
+            pd.DataFrame([
+                {"audio": {"bytes": f"{filename}:{value}".encode()}, "label": value}
+                for value in (0, 1)
+            ]).to_parquet(path)
+            downloaded.append(filename)
+            yield path
+
+    monkeypatch.setattr(core, "_stream_downloads", download)
+    monkeypatch.setattr(core, "download_files", lambda *a, **k: list(download(*a, **k)))
+    samples = list(core.download_and_extract(
+        config, media_per_archive=3, archives_per_dataset=1,
+        temp_dir=str(tmp_path), force_download=True, seed=7,
+    ))
+
+    # One matching row per shard requires continuing past the archive count,
+    # then stopping before the fourth shard once the filtered target is met.
+    assert len(samples) == len(downloaded) == 3
+    assert len(set(downloaded)) == 3
+    assert [sample["audio_bytes"] for sample in samples] == [
+        f"{filename}:{label}".encode() for filename in downloaded
+    ]
+    assert all(sample["label"] == label and sample["media_type"] == media_type for sample in samples)
+
+
+@pytest.mark.parametrize("metadata", [{}, {"label": 1}])
+def test_zero_filter_yields_nothing_when_label_is_missing_or_unmatched(parquet, metadata):
+    config = BenchmarkDatasetConfig(
+        "filtered", "test/audio", "audio", "synthetic",
+        filter_column="label", filter_value=0,
+    )
+    path = parquet([{"audio": b"excluded", **metadata}])
+    assert list(_process_parquet(path, config, num_items=-1)) == []
 
 
 def test_audio_array_preserves_sample_rate_and_waveform(parquet):

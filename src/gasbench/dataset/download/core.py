@@ -145,7 +145,7 @@ def download_and_extract(
             # one at a time and stop as soon as the sample target is hit.
             filter_column = getattr(dataset, "filter_column", None)
             filter_value = getattr(dataset, "filter_value", None)
-            if filter_column and filter_value:
+            if filter_column and filter_value is not None:
                 try:
                     all_filenames = _list_remote_dataset_files(
                         dataset.path,

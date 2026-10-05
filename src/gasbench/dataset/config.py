@@ -74,9 +74,10 @@ class BenchmarkDatasetConfig:
     # When set, gasbench downloads parquet files one at a time (sequentially)
     # and stops as soon as enough filtered samples have been collected,
     # avoiding unnecessary downloads from large datasets.
-    # Example: filter_column: "label", filter_value: "fake"
+    # Values retain their YAML scalar type for comparison with parquet columns.
+    # Examples: filter_column: "label", filter_value: "fake" or 0
     filter_column: Optional[str] = None
-    filter_value: Optional[str] = None
+    filter_value: Optional[Union[str, int, float, bool]] = None
 
     # For holdout datasets: stores the original name before obfuscation
     original_name: Optional[str] = None

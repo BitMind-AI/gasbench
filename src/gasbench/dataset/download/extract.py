@@ -426,7 +426,7 @@ def _process_parquet(
 
         filter_column = getattr(dataset, "filter_column", None)
         filter_value = getattr(dataset, "filter_value", None)
-        if filter_column and filter_value:
+        if filter_column and filter_value is not None:
             if filter_column not in df.columns:
                 logger.warning(f"filter_column '{filter_column}' not in {source_path.name}; skipping")
                 return

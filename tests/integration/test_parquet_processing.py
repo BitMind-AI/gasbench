@@ -144,6 +144,41 @@ def test_numeric_yaml_filter_collects_only_matching_audio_until_target(
     assert all(sample["label"] == label and sample["media_type"] == media_type for sample in samples)
 
 
+def test_multiple_yaml_filters_collect_only_matching_rows_across_shards(tmp_path, monkeypatch):
+    config_path = tmp_path / "datasets.yaml"
+    config_path.write_text(yaml.safe_dump({"datasets": [{
+        "name": "domain-model", "path": "test/images", "modality": "image",
+        "media_type": "synthetic", "source_format": "parquet",
+        "filter_values": {"domain": "Animals", "model": "bagel"},
+    }]}))
+    (config,) = load_datasets_from_yaml(str(config_path))["image"]
+    filenames = [f"shard-{i}.parquet" for i in range(4)]
+    monkeypatch.setattr(core, "_list_remote_dataset_files", lambda *a, **k: filenames)
+    monkeypatch.setattr(core, "_get_download_urls", lambda path, files, *a: list(files))
+    downloaded = []
+
+    def download(paths, root, **kwargs):
+        for filename in paths:
+            path = root / filename
+            pd.DataFrame([
+                {"image": png(10), "domain": "Animals", "model": "bagel"},
+                {"image": png(20), "domain": "Animals", "model": "emu"},
+                {"image": png(30), "domain": "Buildings", "model": "bagel"},
+            ]).to_parquet(path)
+            downloaded.append(filename)
+            yield path
+
+    monkeypatch.setattr(core, "_stream_downloads", download)
+    monkeypatch.setattr(core, "download_files", lambda *a, **k: list(download(*a, **k)))
+    samples = list(core.download_and_extract(
+        config, media_per_archive=3, archives_per_dataset=1,
+        temp_dir=str(tmp_path), force_download=True, seed=7,
+    ))
+
+    assert len(samples) == len(downloaded) == 3
+    assert all(sample["domain"] == "Animals" and sample["model"] == "bagel" for sample in samples)
+
+
 @pytest.mark.parametrize("metadata", [{}, {"label": 1}])
 def test_zero_filter_yields_nothing_when_label_is_missing_or_unmatched(parquet, metadata):
     config = BenchmarkDatasetConfig(

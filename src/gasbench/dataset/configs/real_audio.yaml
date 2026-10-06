@@ -896,3 +896,60 @@ datasets:
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
     hf_revision: 0699bb1d85463a1cb5928db83bc61bdd127b4590
+
+  # Released v26 holdouts — pinned upstream HF sources.
+  - name: v26-real-galgame-speech-asr-16khz
+    path: litagin/Galgame_Speech_ASR_16kHz
+    hf_revision: 3fb86654222b3f0af0f7c332ae6a0ef9752a9451
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - data/galgame-speech-asr-16kHz-train-
+    modality: audio
+    media_type: real
+  - name: v26-real-sada2022-arabic-tts
+    path: mohamedalgmaal/sada2022-arabic-tts
+    hf_revision: 10870c1a64d17a24a791ee08e8297f216f96a447
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: wav
+    include_paths:
+    - batch_
+    modality: audio
+    media_type: real
+  - name: v26-real-starrail-voice
+    path: simon3000/starrail-voice
+    hf_revision: 1e5f1e8658ab2e618c4815cf64ddf905c361067d
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - data/train-
+    data_columns:
+    - audio
+    modality: audio
+    media_type: real
+  - name: v26-real-worldspeech
+    path: disco-eth/WorldSpeech
+    hf_revision: b76b85395039f50332fbc421f7c098ee2f2653d7
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - data/af_za/test-
+    - data/am_et/test-
+    - data/ar_bh/test-
+    - data/ar_dz/test-
+    - data/ar_eg/test-
+    - data/ar_iq/test-
+    - data/ar_kw/test-
+    - data/ar_ma/test-
+    - data/ar_sa/test-
+    - data/ar_tn/test-
+    - data/ar_un/test-
+    - data/az_az/test-
+    data_columns:
+    - audio
+    modality: audio
+    media_type: real

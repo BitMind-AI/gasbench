@@ -78,6 +78,7 @@ class BenchmarkDatasetConfig:
     # Examples: filter_column: "label", filter_value: "fake" or 0
     filter_column: Optional[str] = None
     filter_value: Optional[Union[str, int, float, bool]] = None
+    filter_values: Optional[Dict[str, Union[str, int, float, bool]]] = None
 
     # For holdout datasets: stores the original name before obfuscation
     original_name: Optional[str] = None
@@ -357,6 +358,14 @@ def validate_dataset_config(
                 or not prefixes or any(not isinstance(p, str) or not p for p in prefixes)):
             errors.append(f"Dataset '{dataset_name}': s3_prefixes requires S3 and nonempty key prefixes")
 
+    filter_values = config_dict.get("filter_values")
+    if filter_values is not None and (
+        not isinstance(filter_values, dict)
+        or not filter_values
+        or any(not isinstance(key, str) or not key or value is None for key, value in filter_values.items())
+    ):
+        errors.append(f"Dataset '{dataset_name}': filter_values must map nonempty column names to values")
+
     numeric_fields = [
         "media_per_archive",
         "archives_per_dataset",
@@ -406,6 +415,7 @@ def _dataset_dict_to_config(d: dict, **overrides) -> BenchmarkDatasetConfig:
         "notes": d.get("notes"),
         "filter_column": d.get("filter_column"),
         "filter_value": d.get("filter_value"),
+        "filter_values": d.get("filter_values"),
         "generator_family": d.get("generator_family"),
         "content_category": d.get("content_category"),
     }

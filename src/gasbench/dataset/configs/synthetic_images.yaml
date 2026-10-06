@@ -1173,3 +1173,153 @@ datasets:
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
     hf_revision: 5649a33952bb8faabf3b861ad3b5024374509e72
+
+  # Released v26 holdouts — pinned upstream HF sources.
+  - name: v25-synthetic-10D-500K-images-Animals-bagel
+    path: addisonwu05/10D-500K
+    hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - data/train-
+    data_columns:
+    - image
+    filter_values:
+      domain: Animals
+      model: bagel
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-10D-500K-images-Buildings-emu
+    path: addisonwu05/10D-500K
+    hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - data/train-
+    data_columns:
+    - image
+    filter_values:
+      domain: Buildings
+      model: emu
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-10D-500K-images-Food_and_Drinks-janus
+    path: addisonwu05/10D-500K
+    hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - data/train-
+    data_columns:
+    - image
+    filter_values:
+      domain: Food_and_Drinks
+      model: janus
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-10D-500K-images-Interior_Spaces-mmada
+    path: addisonwu05/10D-500K
+    hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - data/train-
+    data_columns:
+    - image
+    filter_values:
+      domain: Interior_Spaces
+      model: mmada
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-10D-500K-images-People-showo2
+    path: addisonwu05/10D-500K
+    hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - data/train-
+    data_columns:
+    - image
+    filter_values:
+      domain: People
+      model: showo2
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-Persona-Fluxed-10k-2608_brazil-train
+    path: retowyss/Persona-Fluxed-10k-2608
+    hf_revision: abd1938c598a1f67a242bb35cd9740a5e1870e78
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: png
+    include_paths:
+    - brazil/train/
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-Persona-Fluxed-10k-2608_france-train
+    path: retowyss/Persona-Fluxed-10k-2608
+    hf_revision: abd1938c598a1f67a242bb35cd9740a5e1870e78
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: png
+    include_paths:
+    - france/train/
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-Persona-Fluxed-10k-2608_japan-train
+    path: retowyss/Persona-Fluxed-10k-2608
+    hf_revision: abd1938c598a1f67a242bb35cd9740a5e1870e78
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: png
+    include_paths:
+    - japan/train/
+    modality: image
+    media_type: synthetic
+  - name: v25-synthetic-Syn-Vis-v0-images-headshot
+    path: retowyss/Syn-Vis-v0
+    hf_revision: 100262732989e77f38cd831d70a376a93735006a
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: png
+    include_paths:
+    - images/headshot/
+    modality: image
+    media_type: synthetic
+  - name: v26-synthetic-per-400k
+    path: a1557811266/Per-400k
+    hf_revision: bbb01675182feca1434ae3fbb97a9355d9337a25
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: zip
+    include_paths:
+    - person_data/img/
+    modality: image
+    media_type: synthetic
+  - name: v26-synthetic-sora-explore-dataset
+    path: abrar71/sora-explore-dataset
+    hf_revision: 79559046d3782bb69147209bbbd72a787a326452
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: parquet
+    include_paths:
+    - dataset/train-
+    data_columns:
+    - image
+    modality: image
+    media_type: synthetic
+  - name: v26-synthetic-stylegan-face
+    path: gojay/StyleGAN-Face
+    hf_revision: d7592242ec59376dd1c418dd0353c2361631ac6e
+    media_per_archive: 1000
+    archives_per_dataset: 1
+    source_format: zip
+    include_paths:
+    - age_
+    - smile_
+    modality: image
+    media_type: synthetic

@@ -1339,3 +1339,155 @@ datasets:
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
     hf_revision: f0af08aece50ff99a9c399f063d71e455d610bbf
+
+  # Released v26 holdouts — pinned upstream HF sources.
+  - name: v25-rendered-physical-interaction-bowling-00000
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
+    hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - videos/bowling/videos-bowling-00000.tar
+    archive_include_paths:
+    - Bowler.mp4
+    - Overhead.mp4
+    - Pins.mp4
+    - Side.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physical-interaction-bowling-00042
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
+    hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - videos/bowling/videos-bowling-00042.tar
+    archive_include_paths:
+    - Bowler.mp4
+    - Overhead.mp4
+    - Pins.mp4
+    - Side.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physical-interaction-bowling-00063
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
+    hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - videos/bowling/videos-bowling-00063.tar
+    archive_include_paths:
+    - Bowler.mp4
+    - Overhead.mp4
+    - Pins.mp4
+    - Side.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physical-interaction-bowling-00084
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
+    hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - videos/bowling/videos-bowling-00084.tar
+    archive_include_paths:
+    - Bowler.mp4
+    - Overhead.mp4
+    - Pins.mp4
+    - Side.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00005
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
+    hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - artifacts/forklift_human_nearmiss/nearmiss-artifacts-00005.tar
+    archive_include_paths:
+    - .rgb.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00016
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
+    hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - artifacts/forklift_human_nearmiss/nearmiss-artifacts-00016.tar
+    archive_include_paths:
+    - .rgb.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00028
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
+    hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - artifacts/forklift_human_nearmiss/nearmiss-artifacts-00028.tar
+    archive_include_paths:
+    - .rgb.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00039
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
+    hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - artifacts/forklift_human_nearmiss/nearmiss-artifacts-00039.tar
+    archive_include_paths:
+    - .rgb.mp4
+    modality: video
+    media_type: real
+  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00050
+    path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
+    hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: tar
+    include_paths:
+    - artifacts/forklift_human_nearmiss/nearmiss-artifacts-00050.tar
+    archive_include_paths:
+    - .rgb.mp4
+    modality: video
+    media_type: real
+  - name: v26-real-physicalai-robotics-manipulation-objects
+    path: nvidia/PhysicalAI-Robotics-Manipulation-Objects
+    hf_revision: 538b6833148b4731e4ea30fe181cc4eecfc13440
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: mp4
+    include_paths:
+    - .rgb/
+    modality: video
+    media_type: real
+  - name: v26-real-pick-tblock-mp-centered-0701-rendered
+    path: younghyopark/pick_tblock_mp_centered_0701_rendered
+    hf_revision: b353fb987b6cc55524fb144ea61632168bc2ca5f
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: mp4
+    include_paths:
+    - videos/chunk-000/
+    modality: video
+    media_type: real
+  - name: v26-real-vidgen-1m
+    path: Fudan-FUXI/VIDGEN-1M
+    hf_revision: 9158f218b6b81694a7809b6ee74e30003d58a70e
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: zip
+    include_paths:
+    - VidGen_video_
+    modality: video
+    media_type: real

@@ -290,6 +290,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [style_transfer_upload]
+    exclude_paths: [local_style_transfer_upload]
     archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse

@@ -902,7 +902,7 @@ datasets:
     hf_revision: 04188209b3135617c0c682c432c2168e01b35011
 
   # Released v26 holdouts — pinned upstream HF sources.
-  - name: v25-Fake-Synthetic-Turkish-TTS-Data
+  - name: turkish-tts-data
     path: Anilosan15/Synthetic_Turkish_TTS_Data
     hf_revision: f1d0e40efb27b5e78cdd6dbd6f6b601ab2ce9ae0
     media_per_archive: 1000
@@ -914,7 +914,7 @@ datasets:
     - audio
     modality: audio
     media_type: synthetic
-  - name: v25-Fake-qwen-clones-4m-en-audio-train-00000-of-00080
+  - name: qwen-clones-4m-en-audio-train-00000-of-00080
     path: SynDataLab-EN/qwen-clones-4m-en
     hf_revision: 38769c7d96e5767035555a66ce57b1076a7dccf1
     media_per_archive: 1000
@@ -926,7 +926,7 @@ datasets:
     - audio
     modality: audio
     media_type: synthetic
-  - name: v25-Fake-qwen-clones-4m-en-audio-train-00035-of-00080
+  - name: qwen-clones-4m-en-audio-train-00035-of-00080
     path: SynDataLab-EN/qwen-clones-4m-en
     hf_revision: 38769c7d96e5767035555a66ce57b1076a7dccf1
     media_per_archive: 1000
@@ -938,7 +938,7 @@ datasets:
     - audio
     modality: audio
     media_type: synthetic
-  - name: v25-Fake-qwen-clones-4m-en-audio-train-00052-of-00080
+  - name: qwen-clones-4m-en-audio-train-00052-of-00080
     path: SynDataLab-EN/qwen-clones-4m-en
     hf_revision: 38769c7d96e5767035555a66ce57b1076a7dccf1
     media_per_archive: 1000
@@ -950,7 +950,7 @@ datasets:
     - audio
     modality: audio
     media_type: synthetic
-  - name: v25-Fake-qwen-clones-4m-en-audio-train-00074-of-00080
+  - name: qwen-clones-4m-en-audio-train-00074-of-00080
     path: SynDataLab-EN/qwen-clones-4m-en
     hf_revision: 38769c7d96e5767035555a66ce57b1076a7dccf1
     media_per_archive: 1000
@@ -962,7 +962,7 @@ datasets:
     - audio
     modality: audio
     media_type: synthetic
-  - name: v26-synthetic-echo-clones-4m-en
+  - name: echo-clones-4m-en
     path: SynDataLab-EN/echo-clones-4m-en
     hf_revision: aebc7c787c64e918b0130c04d3878f17a602c1df
     media_per_archive: 1000
@@ -974,7 +974,7 @@ datasets:
     - audio
     modality: audio
     media_type: synthetic
-  - name: v26-synthetic-steak
+  - name: steak
     path: DEEL-AI/STEAK
     hf_revision: 4ee840a09e582d23d2ce88b7f99a1996ffe9aec6
     media_per_archive: 1000

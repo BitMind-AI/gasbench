@@ -1175,7 +1175,7 @@ datasets:
     hf_revision: 5649a33952bb8faabf3b861ad3b5024374509e72
 
   # Released v26 holdouts — pinned upstream HF sources.
-  - name: v25-synthetic-10D-500K-images-Animals-bagel
+  - name: 10d-500k-animals-bagel
     path: addisonwu05/10D-500K
     hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
     media_per_archive: 1000
@@ -1190,7 +1190,7 @@ datasets:
       model: bagel
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-10D-500K-images-Buildings-emu
+  - name: 10d-500k-buildings-emu
     path: addisonwu05/10D-500K
     hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
     media_per_archive: 1000
@@ -1205,7 +1205,7 @@ datasets:
       model: emu
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-10D-500K-images-Food_and_Drinks-janus
+  - name: 10d-500k-food-and-drinks-janus
     path: addisonwu05/10D-500K
     hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
     media_per_archive: 1000
@@ -1220,7 +1220,7 @@ datasets:
       model: janus
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-10D-500K-images-Interior_Spaces-mmada
+  - name: 10d-500k-interior-spaces-mmada
     path: addisonwu05/10D-500K
     hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
     media_per_archive: 1000
@@ -1235,7 +1235,7 @@ datasets:
       model: mmada
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-10D-500K-images-People-showo2
+  - name: 10d-500k-people-showo2
     path: addisonwu05/10D-500K
     hf_revision: d5e2472237a1dc612d9b1d1bfaed8b9b90fbc0e1
     media_per_archive: 1000
@@ -1250,7 +1250,7 @@ datasets:
       model: showo2
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-Persona-Fluxed-10k-2608_brazil-train
+  - name: persona-fluxed-10k-2608-brazil-train
     path: retowyss/Persona-Fluxed-10k-2608
     hf_revision: abd1938c598a1f67a242bb35cd9740a5e1870e78
     media_per_archive: 1000
@@ -1260,7 +1260,7 @@ datasets:
     - brazil/train/
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-Persona-Fluxed-10k-2608_france-train
+  - name: persona-fluxed-10k-2608-france-train
     path: retowyss/Persona-Fluxed-10k-2608
     hf_revision: abd1938c598a1f67a242bb35cd9740a5e1870e78
     media_per_archive: 1000
@@ -1270,7 +1270,7 @@ datasets:
     - france/train/
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-Persona-Fluxed-10k-2608_japan-train
+  - name: persona-fluxed-10k-2608-japan-train
     path: retowyss/Persona-Fluxed-10k-2608
     hf_revision: abd1938c598a1f67a242bb35cd9740a5e1870e78
     media_per_archive: 1000
@@ -1280,7 +1280,7 @@ datasets:
     - japan/train/
     modality: image
     media_type: synthetic
-  - name: v25-synthetic-Syn-Vis-v0-images-headshot
+  - name: syn-vis-v0-headshot
     path: retowyss/Syn-Vis-v0
     hf_revision: 100262732989e77f38cd831d70a376a93735006a
     media_per_archive: 1000
@@ -1290,7 +1290,7 @@ datasets:
     - images/headshot/
     modality: image
     media_type: synthetic
-  - name: v26-synthetic-per-400k
+  - name: per-400k
     path: a1557811266/Per-400k
     hf_revision: bbb01675182feca1434ae3fbb97a9355d9337a25
     media_per_archive: 1000
@@ -1300,7 +1300,7 @@ datasets:
     - person_data/img/
     modality: image
     media_type: synthetic
-  - name: v26-synthetic-sora-explore-dataset
+  - name: sora-explore-dataset
     path: abrar71/sora-explore-dataset
     hf_revision: 79559046d3782bb69147209bbbd72a787a326452
     media_per_archive: 1000
@@ -1312,7 +1312,7 @@ datasets:
     - image
     modality: image
     media_type: synthetic
-  - name: v26-synthetic-stylegan-face
+  - name: stylegan-face
     path: gojay/StyleGAN-Face
     hf_revision: d7592242ec59376dd1c418dd0353c2361631ac6e
     media_per_archive: 1000

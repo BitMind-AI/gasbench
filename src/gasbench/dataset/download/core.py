@@ -141,11 +141,14 @@ def download_and_extract(
             max_files_to_list = n_files if n_files > 0 else None
 
             # ── Filtered sequential mode ─────────────────────────────────────
-            # When filter_column/filter_value are set, download parquet shards
+            # When row filters are set, download parquet shards
             # one at a time and stop as soon as the sample target is hit.
             filter_column = getattr(dataset, "filter_column", None)
             filter_value = getattr(dataset, "filter_value", None)
-            if filter_column and filter_value:
+            filter_values = dict(getattr(dataset, "filter_values", None) or {})
+            if filter_column and filter_value is not None:
+                filter_values[filter_column] = filter_value
+            if filter_values:
                 try:
                     all_filenames = _list_remote_dataset_files(
                         dataset.path,
@@ -172,7 +175,7 @@ def download_and_extract(
 
                 target_total = media_per_archive * archives_per_dataset
                 logger.info(
-                    f"Filtered mode: {dataset.name} — {filter_column}=={filter_value}, "
+                    f"Filtered mode: {dataset.name} — {filter_values}, "
                     f"target {target_total} samples from {len(all_filenames)} shards"
                 )
                 yield from _download_filtered_sequential(

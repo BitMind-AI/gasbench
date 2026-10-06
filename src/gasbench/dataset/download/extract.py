@@ -426,15 +426,19 @@ def _process_parquet(
 
         filter_column = getattr(dataset, "filter_column", None)
         filter_value = getattr(dataset, "filter_value", None)
-        if filter_column and filter_value:
-            if filter_column not in df.columns:
-                logger.warning(f"filter_column '{filter_column}' not in {source_path.name}; skipping")
+        filter_values = dict(getattr(dataset, "filter_values", None) or {})
+        if filter_column and filter_value is not None:
+            filter_values[filter_column] = filter_value
+        for column, value in filter_values.items():
+            if column not in df.columns:
+                logger.warning(f"filter column '{column}' not in {source_path.name}; skipping")
                 return
-            df = df[df[filter_column] == filter_value]
+            df = df[df[column] == value]
             if df.empty:
-                logger.info(f"No rows matching {filter_column}=={filter_value} in {source_path.name}")
+                logger.info(f"No rows matching {filter_values} in {source_path.name}")
                 return
-            logger.info(f"  {source_path.name}: {len(df)} rows after filter ({filter_column}=={filter_value})")
+        if filter_values:
+            logger.info(f"  {source_path.name}: {len(df)} rows after filter ({filter_values})")
 
         # Frames-parquet: video dataset stored as one row per frame, grouped by video_id
         if dataset.modality == "video" and "video_id" in df.columns:
@@ -689,4 +693,3 @@ def _process_frame_directory(
     except Exception as e:
         logger.warning(f"Error processing frame directory {frame_dir}: {e}")
         return
-

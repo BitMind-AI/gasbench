@@ -230,6 +230,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [controlable_videos_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -241,6 +242,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [inpainting_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -252,6 +254,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [local_style_transfer_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -263,6 +266,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [obj_removal_videos_upload, obj_removal_videos_upload2]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -274,6 +278,7 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [obj_swap_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -285,6 +290,8 @@ datasets:
     media_per_archive: 250
     archives_per_dataset: 2
     include_paths: [style_transfer_upload]
+    exclude_paths: [local_style_transfer_upload]
+    archive_exclude_paths: ["_org"]
     generator_family: mixed-generation
     content_category: diverse
 
@@ -1290,3 +1297,42 @@ datasets:
     archives_per_dataset: -1
     notes: 'Released from v24 bmcore holdouts; exact local subset. '
     hf_revision: fa7713f57249caf009200ab0f875c07cd3e20986
+
+  # Released v26 holdouts — pinned upstream HF sources.
+  - name: vera-layered-video-dataset
+    path: netflix/Vera-Layered-Video-Dataset
+    hf_revision: 8e0b98ee9bce66fdae345e75aa766ef7c0a04d4e
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: mp4
+    include_paths:
+    - train-set/49-frames/synthetic-obj-add/composite/
+    - train-set/81-frames/synthetic-obj-add/composite/
+    modality: video
+    media_type: semisynthetic
+  - name: text-2-video-human-preferences-genmo-mochi-1
+    path: Rapidata/text-2-video-human-preferences-genmo-mochi-1
+    hf_revision: 9b8c6dbba6ba4e034adaa509550e53d81e3b7148
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: mp4
+    include_paths:
+    - Videos/
+    modality: video
+    media_type: synthetic
+  - name: vbench-2-0-sampled-videos
+    path: Vchitect/VBench-2.0_sampled_videos
+    hf_revision: f9ee15efcfb86d96bd5379e8d85f8d69b901aad1
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: mp4
+    modality: video
+    media_type: synthetic
+  - name: vbench-i2v-sampled-video
+    path: Vchitect/VBench-I2V_sampled_video
+    hf_revision: d1977eff951fad22ac7ac11059f6939f570a78eb
+    media_per_archive: 250
+    archives_per_dataset: 1
+    source_format: mp4
+    modality: video
+    media_type: synthetic

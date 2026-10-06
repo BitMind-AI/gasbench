@@ -1290,7 +1290,7 @@ datasets:
     hf_revision: a3cf2557e18a832c4b2921c8d20948202eab54f5
 
   # Released v26 holdouts — pinned upstream HF sources.
-  - name: v25-real-beans-test
+  - name: beans-test
     path: AI-Lab-Makerere/beans
     hf_revision: 27aa014ce09b193e1a6f58112d4a66e0eddb69c5
     media_per_archive: 1000
@@ -1302,7 +1302,7 @@ datasets:
     - image
     modality: image
     media_type: real
-  - name: v25-real-beans-train
+  - name: beans-train
     path: AI-Lab-Makerere/beans
     hf_revision: 27aa014ce09b193e1a6f58112d4a66e0eddb69c5
     media_per_archive: 1000
@@ -1314,7 +1314,7 @@ datasets:
     - image
     modality: image
     media_type: real
-  - name: v25-real-beans-validation
+  - name: beans-validation
     path: AI-Lab-Makerere/beans
     hf_revision: 27aa014ce09b193e1a6f58112d4a66e0eddb69c5
     media_per_archive: 1000
@@ -1326,7 +1326,7 @@ datasets:
     - image
     modality: image
     media_type: real
-  - name: v25-real-oxford-iiit-pet-test
+  - name: oxford-iiit-pet-test
     path: timm/oxford-iiit-pet
     hf_revision: 089695c834a7deb60505b7cc506672db1c31a6aa
     media_per_archive: 1000
@@ -1338,7 +1338,7 @@ datasets:
     - image
     modality: image
     media_type: real
-  - name: v25-real-oxford-iiit-pet-train
+  - name: oxford-iiit-pet-train
     path: timm/oxford-iiit-pet
     hf_revision: 089695c834a7deb60505b7cc506672db1c31a6aa
     media_per_archive: 1000
@@ -1350,7 +1350,7 @@ datasets:
     - image
     modality: image
     media_type: real
-  - name: v26-real-dcvlm-pool-large-dvqa
+  - name: dcvlm-pool-large-dvqa
     path: mlfoundations/dcvlm_pool_large
     hf_revision: 479162ae38203029e06807038cd2e5e545bfd2e0
     media_per_archive: 1000
@@ -1360,7 +1360,7 @@ datasets:
     - dvqa/
     modality: image
     media_type: real
-  - name: v26-real-puffin-16m
+  - name: puffin-16m
     path: ACERobotics/Puffin-16M
     hf_revision: 2112b3502f9ea0cc1d31d2c5a2b7f2259b52cffd
     media_per_archive: 1000

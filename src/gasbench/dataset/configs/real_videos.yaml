@@ -1341,7 +1341,7 @@ datasets:
     hf_revision: f0af08aece50ff99a9c399f063d71e455d610bbf
 
   # Released v26 holdouts — pinned upstream HF sources.
-  - name: v25-rendered-physical-interaction-bowling-00000
+  - name: physical-interaction-bowling-00000
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
     hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
     media_per_archive: 250
@@ -1356,7 +1356,7 @@ datasets:
     - Side.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physical-interaction-bowling-00042
+  - name: physical-interaction-bowling-00042
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
     hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
     media_per_archive: 250
@@ -1371,7 +1371,7 @@ datasets:
     - Side.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physical-interaction-bowling-00063
+  - name: physical-interaction-bowling-00063
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
     hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
     media_per_archive: 250
@@ -1386,7 +1386,7 @@ datasets:
     - Side.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physical-interaction-bowling-00084
+  - name: physical-interaction-bowling-00084
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Physical-Interaction-Scenes
     hf_revision: bdafca2a9c575629e47509f547e27ab7f3680369
     media_per_archive: 250
@@ -1401,7 +1401,7 @@ datasets:
     - Side.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00005
+  - name: physicalai-warehouse-forklift-nearmiss-00005
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
     hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
     media_per_archive: 250
@@ -1413,7 +1413,7 @@ datasets:
     - .rgb.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00016
+  - name: physicalai-warehouse-forklift-nearmiss-00016
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
     hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
     media_per_archive: 250
@@ -1425,7 +1425,7 @@ datasets:
     - .rgb.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00028
+  - name: physicalai-warehouse-forklift-nearmiss-00028
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
     hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
     media_per_archive: 250
@@ -1437,7 +1437,7 @@ datasets:
     - .rgb.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00039
+  - name: physicalai-warehouse-forklift-nearmiss-00039
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
     hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
     media_per_archive: 250
@@ -1449,7 +1449,7 @@ datasets:
     - .rgb.mp4
     modality: video
     media_type: real
-  - name: v25-rendered-physicalai-worldmodel-synthetic-warehouse-operations-scenes-artifacts-forklift-human-nearmiss-nearmiss-artifacts-00050
+  - name: physicalai-warehouse-forklift-nearmiss-00050
     path: nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes
     hf_revision: d5b88d3abcf659f304a107f4336b71b4e2159133
     media_per_archive: 250
@@ -1461,7 +1461,7 @@ datasets:
     - .rgb.mp4
     modality: video
     media_type: real
-  - name: v26-real-physicalai-robotics-manipulation-objects
+  - name: physicalai-robotics-manipulation-objects
     path: nvidia/PhysicalAI-Robotics-Manipulation-Objects
     hf_revision: 538b6833148b4731e4ea30fe181cc4eecfc13440
     media_per_archive: 250
@@ -1471,7 +1471,7 @@ datasets:
     - .rgb/
     modality: video
     media_type: real
-  - name: v26-real-pick-tblock-mp-centered-0701-rendered
+  - name: pick-tblock-mp-centered-0701-rendered
     path: younghyopark/pick_tblock_mp_centered_0701_rendered
     hf_revision: b353fb987b6cc55524fb144ea61632168bc2ca5f
     media_per_archive: 250
@@ -1481,7 +1481,7 @@ datasets:
     - videos/chunk-000/
     modality: video
     media_type: real
-  - name: v26-real-vidgen-1m
+  - name: vidgen-1m
     path: Fudan-FUXI/VIDGEN-1M
     hf_revision: 9158f218b6b81694a7809b6ee74e30003d58a70e
     media_per_archive: 250

@@ -986,3 +986,60 @@ datasets:
     - audio
     modality: audio
     media_type: synthetic
+
+  - name: uncovai-dia2-2b
+    path: 34data/uncovai-dia2-2b
+    hf_revision: 22920d224a354fd23d1356ce5ba11be3cdab7261
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    modality: audio
+    media_type: synthetic
+  - name: uncovai-maya1
+    path: 34data/uncovai-maya1
+    hf_revision: 801bd729c2d932380640ab451605078da66b5489
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    modality: audio
+    media_type: synthetic
+  - name: voxenes-tts-chatterbox
+    path: 34data/voxenes-tts-chatterbox
+    hf_revision: 47df4526bb834f8871d526b88800e4483f9b1101
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    modality: audio
+    media_type: synthetic
+  - name: voxenes-tts-chroma
+    path: 34data/voxenes-tts-chroma
+    hf_revision: 81cc3deaa1ace06dc77dfa0620ed3e8aedf10268
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    modality: audio
+    media_type: synthetic
+  - name: voxenes-tts-glm-tts
+    path: 34data/voxenes-tts-glm-tts
+    hf_revision: 628746214963bc7789722f7911cf21990d03dd5c
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    modality: audio
+    media_type: synthetic
+  - name: voxenes-tts-vibevoice
+    path: 34data/voxenes-tts-vibevoice
+    hf_revision: 30e8165129a4af7fc476dfc9cae264a7fc87e1ff
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    modality: audio
+    media_type: synthetic
+  - name: voxenes-tts-voxcpm
+    path: 34data/voxenes-tts-voxcpm
+    hf_revision: f8b2da4246ca4530aa65b0454ffa69fdb70746da
+    source_format: zip
+    media_per_archive: -1
+    archives_per_dataset: -1
+    modality: audio
+    media_type: synthetic

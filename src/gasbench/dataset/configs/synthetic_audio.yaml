@@ -29,37 +29,31 @@ datasets:
     content_category: diverse
 
   - name: asvspoof2021-df-eval
-    path: 34data/asvspoof2021-df-eval
+    path: 34data/asvspoof2021-df-eval-provenance
     modality: audio
+    hf_revision: 58696f6e609c7c23c5bf0db47f22bf29077fa172
+    include_paths: [synthetic/]
     media_type: synthetic
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
-    notes: ASVspoof 2021 DeepFake track evaluation set
+    notes: ASVspoof 2021 DF — spoof speech selected by the official protocol; byte-verified duplicate filenames removed
     generator_family: mixed-generation
     content_category: diverse
 
   - name: asvspoof2021-la-eval
-    path: 34data/asvspoof2021-la-eval
+    path: 34data/asvspoof2021-la-eval-provenance
     modality: audio
+    hf_revision: 1d1b66f070a13ff67db97edea60df05418a4338b
+    include_paths: [synthetic/]
     media_type: synthetic
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
-    notes: ASVspoof 2021 Logical Access track evaluation set
+    notes: ASVspoof 2021 LA — spoof speech selected by the official protocol; byte-verified duplicate filenames removed
     generator_family: mixed-generation
     content_category: diverse
 
-  - name: asvspoof2021-pa-eval
-    path: 34data/asvspoof2021-pa-eval
-    modality: audio
-    media_type: synthetic
-    source_format: zip
-    media_per_archive: 500
-    archives_per_dataset: 2
-    notes: ASVspoof 2021 Physical Access track evaluation set
-    generator_family: mixed-generation
-    content_category: diverse
 
   - name: cfad-fake
     path: 34data/cfad-fake
@@ -359,13 +353,15 @@ datasets:
   # -- sounds --
 
   - name: fakesound2-fake
-    path: 34data/fakesound2-fake
+    path: ZeyuXie/FakeSound2
     modality: audio
     media_type: synthetic
     source_format: zip
     media_per_archive: 500
-    archives_per_dataset: 2
-    notes: FakeSound 2 — AI-generated environmental/ambient audio
+    archives_per_dataset: 1
+    include_paths: [test/audio.zip]
+    archive_include_paths: [audio/generation_, audio/inpainting_, audio/editing_, audio/separation_flowsep/]
+    notes: FakeSound 2 — generated, inpainted, generatively edited, and FlowSep-resynthesized audio
     generator_family: mixed-generation
     content_category: sounds
 
@@ -449,16 +445,6 @@ datasets:
     generator_family: mixed-generation
     content_category: speech
 
-  - name: thorsten-voice
-    path: Thorsten-Voice/TV-44kHz-Full
-    modality: audio
-    media_type: synthetic
-    source_format: parquet
-    media_per_archive: 100
-    archives_per_dataset: 10
-    notes: German TTS voice - Thorsten
-    generator_family: mixed-generation
-    content_category: speech
 
   - name: ultravoice-cjk
     path: tutu0604/UltraVoice
@@ -1043,3 +1029,16 @@ datasets:
     archives_per_dataset: -1
     modality: audio
     media_type: synthetic
+
+  - name: asvspoof5-codec-resynthesis
+    path: 34data/asvspoof5-bonafide-provenance
+    modality: audio
+    media_type: synthetic
+    source_format: zip
+    hf_revision: 714a61cfbbcf006e0201de5f21e5bbddf3c3a508
+    include_paths: [synthetic/]
+    media_per_archive: 500
+    archives_per_dataset: 2
+    notes: ASVspoof 5 C04/C07 — complete neural codec waveform reconstructions of human speech
+    generator_family: neural-codec
+    content_category: speech

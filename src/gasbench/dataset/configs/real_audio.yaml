@@ -355,17 +355,54 @@ datasets:
   # -- sounds --
 
   - name: fakesound2-real
-    path: 34data/fakesound2-real
+    path: ZeyuXie/FakeSound2
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 1
+    include_paths: [test/audio.zip]
+    archive_include_paths: [audio/genuine/]
+    notes: FakeSound 2 — genuine environmental/ambient audio
+    generator_family: real
+    content_category: sounds
+
+  - name: fakesound2-recorded-edits
+    path: ZeyuXie/FakeSound2
+    modality: audio
+    media_type: real
+    source_format: zip
+    media_per_archive: 500
+    archives_per_dataset: 1
+    include_paths: [test/audio.zip]
+    archive_include_paths: [audio/addition/, audio/splicing/, audio/separation_lassnet/]
+    notes: FakeSound 2 — recorded additions, splices, and LASSNet mask-based separation without generative synthesis
+    generator_family: real
+    content_category: sounds
+
+  # -- speech --
+
+  - name: thorsten-voice
+    path: Thorsten-Voice/TV-44kHz-Full
+    modality: audio
+    media_type: real
+    source_format: parquet
+    media_per_archive: 100
+    archives_per_dataset: 10
+    notes: Human German speech recordings by Thorsten Müller; training corpus, not synthesized output
+    generator_family: real
+    content_category: speech
+
+  - name: asvspoof2021-pa-eval
+    path: 34data/asvspoof2021-pa-eval
     modality: audio
     media_type: real
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
-    notes: FakeSound 2 — genuine environmental/ambient audio
+    notes: Human speech and physical replay recordings; replay does not synthesize speech
     generator_family: real
-    content_category: sounds
-
-  # -- speech --
+    content_category: diverse
 
   - name: MediaSpeech
     path: ymoslem/MediaSpeech
@@ -555,14 +592,17 @@ datasets:
     content_category: speech
 
   - name: asvspoof5-bonafide
-    path: 34data/asvspoof5-bonafide
+    path: 34data/asvspoof5-bonafide-provenance
     modality: audio
+    hf_revision: 714a61cfbbcf006e0201de5f21e5bbddf3c3a508
+    include_paths: [real/]
     media_type: real
     source_format: zip
     media_per_archive: 500
     archives_per_dataset: 2
     generator_family: real
     content_category: speech
+    notes: ASVspoof 5 — recorded speech excluding neural codec reconstructions C04/C07
 
   - name: phonemedf-real
     path: 34data/phonemedf-real
@@ -953,3 +993,29 @@ datasets:
     - audio
     modality: audio
     media_type: real
+
+  - name: asvspoof2021-la-bonafide
+    path: 34data/asvspoof2021-la-eval-provenance
+    modality: audio
+    media_type: real
+    source_format: zip
+    hf_revision: 1d1b66f070a13ff67db97edea60df05418a4338b
+    include_paths: [real/]
+    media_per_archive: 500
+    archives_per_dataset: -1
+    notes: ASVspoof 2021 LA — bona-fide recorded speech selected by the official protocol
+    generator_family: real
+    content_category: speech
+
+  - name: asvspoof2021-df-bonafide
+    path: 34data/asvspoof2021-df-eval-provenance
+    modality: audio
+    media_type: real
+    source_format: zip
+    hf_revision: 58696f6e609c7c23c5bf0db47f22bf29077fa172
+    include_paths: [real/]
+    media_per_archive: 500
+    archives_per_dataset: -1
+    notes: ASVspoof 2021 DF — bona-fide recorded speech selected by the official protocol
+    generator_family: real
+    content_category: speech

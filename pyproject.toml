@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu = [
+    "certifi>=2026.10.19",
     "numpy==2.4.2",
     "pillow==12.1.1",
     "opencv-python-headless==4.13.0.92",
